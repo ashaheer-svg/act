@@ -1,15 +1,2 @@
-# Sales BI Dashboard
-
 DirectoryIndex index.php
 Options -Indexes
-
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteBase /
-
-  # Block direct web access to sensitive folders
-  RewriteRule ^(data|classes|backups|logs|sessions|tmp)(/.*)?$ - [F,L]
-
-  # Block direct access to config.php
-  RewriteRule ^config\.php$ - [F,L]
-</IfModule>
