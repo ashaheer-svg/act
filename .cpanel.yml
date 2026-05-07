@@ -11,3 +11,8 @@ deployment:
     - /bin/rsync -avz logs/ $PRIVATEPATH/logs/
     - /bin/rsync -avz sessions/ $PRIVATEPATH/sessions/
     - /bin/rsync -avz tmp/ $PRIVATEPATH/tmp/
+    # Fix Permissions for cPanel compliance
+    - /bin/chmod 755 $DEPLOYPATH
+    - /usr/bin/find $DEPLOYPATH -type d -exec chmod 755 {} +
+    - /usr/bin/find $DEPLOYPATH -type f -exec chmod 644 {} +
+    - /bin/chmod 700 $PRIVATEPATH
