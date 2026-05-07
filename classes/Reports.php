@@ -182,7 +182,7 @@ class Reports {
             "SELECT SUM(total_amount) as total FROM sales $where", $params
         );
 
-        $total = $totalRevenue['total'] ?? 1;
+        $total = ($totalRevenue['total'] > 0) ? $totalRevenue['total'] : 1;
 
         foreach ($customers as &$customer) {
             $customer['revenue_percentage'] = round(($customer['total_revenue'] / $total) * 100, 2);
@@ -239,7 +239,7 @@ class Reports {
                 SUM(base_value) as revenue_base,
                 SUM(vat_component) as vat_total,
                 SUM(total_amount) as total_revenue,
-                ROUND(SUM(total_amount) * 100.0 / (SELECT SUM(total_amount) FROM sales $where), 2) as percentage
+                ROUND(SUM(total_amount) * 100.0 / NULLIF((SELECT SUM(total_amount) FROM sales $where), 0), 2) as percentage
             FROM sales $where
             GROUP BY product_category
             ORDER BY total_revenue DESC", $params
@@ -275,7 +275,7 @@ class Reports {
         );
 
         $top3_total = array_sum(array_column($top3, 'revenue'));
-        $top3_percentage = round(($top3_total / $totalRevenue['total']) * 100, 2);
+        $top3_percentage = ($totalRevenue['total'] > 0) ? round(($top3_total / $totalRevenue['total']) * 100, 2) : 0;
 
         return [
             'total_revenue' => $totalRevenue['total'],
