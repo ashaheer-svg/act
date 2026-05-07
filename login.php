@@ -3,6 +3,10 @@ require_once 'config.php';
 require_once 'classes/Database.php';
 require_once 'classes/Auth.php';
 
+// Suppress Referer header to prevent ModSecurity false positive (rule 340716)
+// The rule checks if Referer begins with http:// but this site uses https://
+header('Referrer-Policy: no-referrer');
+
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
 
@@ -36,6 +40,7 @@ if ($auth->isLoggedIn()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>Sales BI Dashboard - Login</title>
     <style>
         * {

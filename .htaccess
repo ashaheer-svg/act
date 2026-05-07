@@ -1,9 +1,2 @@
 DirectoryIndex index.php
 Options -Indexes
-
-# Whitelist ModSecurity rule 340716 (RFI false positive on login form)
-# This rule incorrectly flags login POST data because the site uses HTTPS
-# but the rule checks for http:// in ARGS, causing a false positive.
-<IfModule mod_security2.c>
-  SecRuleRemoveById 340716
-</IfModule>
