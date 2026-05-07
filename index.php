@@ -65,9 +65,8 @@ try {
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            position: relative;
+            z-index: 10;
         }
         .header h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
         .user-info {
@@ -143,6 +142,9 @@ try {
             flex: 1;
             padding: 40px;
             background: var(--bg);
+            position: relative;
+            z-index: 1;
+            pointer-events: auto !important;
         }
         .filters {
             background: white;
