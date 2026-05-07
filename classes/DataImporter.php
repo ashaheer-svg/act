@@ -88,8 +88,11 @@ class DataImporter {
                 if ($row == 0) {
                     $headers = $data;
                 } else {
-                    $record = array_combine($headers, $data);
-                    $records[] = $record;
+                    // Defensive check: ensure data matches header count
+                    if (count($headers) === count($data)) {
+                        $record = array_combine($headers, $data);
+                        $records[] = $record;
+                    }
                 }
                 $row++;
             }
@@ -105,7 +108,14 @@ class DataImporter {
     private function readExcel($filePath) {
         // Check if PhpSpreadsheet is available
         if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
-            // Fallback: Try to read as CSV
+            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            if ($ext !== 'csv') {
+                return [
+                    'success' => false, 
+                    'message' => 'The server is missing the Excel (PhpSpreadsheet) library. ' . 
+                                'Please "Save As" your Excel file as a CSV (Comma Separated Values) and upload that instead.'
+                ];
+            }
             return $this->readCSV($filePath);
         }
 
