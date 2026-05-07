@@ -106,39 +106,28 @@ class DataImporter {
      * Read Excel file
      */
     private function readExcel($filePath) {
-        // Check if PhpSpreadsheet is available
-        if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
-            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-            if ($ext !== 'csv') {
-                return [
-                    'success' => false, 
-                    'message' => 'The server is missing the Excel (PhpSpreadsheet) library. ' . 
-                                'Please "Save As" your Excel file as a CSV (Comma Separated Values) and upload that instead.'
-                ];
-            }
-            return $this->readCSV($filePath);
-        }
+        // Use our standalone SimpleXLSX library
+        require_once __DIR__ . '/SimpleXLSX.php';
 
         try {
-            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
-            $worksheet = $spreadsheet->getActiveSheet();
+            $xlsx = \Shuchkin\SimpleXLSX::parse($filePath);
+            if (!$xlsx) {
+                return ['success' => false, 'message' => 'Error parsing Excel: ' . \Shuchkin\SimpleXLSX::parseError()];
+            }
+
+            $rows = $xlsx->rows();
             $records = [];
-
             $headers = null;
-            foreach ($worksheet->getRowIterator() as $row) {
-                $cellIterator = $row->getCellIterator();
-                $cellIterator->setIterateOnlyExistingCells(FALSE);
 
-                $data = [];
-                foreach ($cellIterator as $cell) {
-                    $data[] = $cell->getValue();
-                }
-
+            foreach ($rows as $data) {
                 if ($headers === null) {
                     $headers = $data;
                 } else {
-                    $record = array_combine($headers, $data);
-                    $records[] = $record;
+                    // Defensive check: ensure data matches header count
+                    if (count($headers) === count($data)) {
+                        $record = array_combine($headers, $data);
+                        $records[] = $record;
+                    }
                 }
             }
 
