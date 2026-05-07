@@ -1,0 +1,52 @@
+# Sales BI Dashboard - Security Configuration
+
+# Enable GZIP compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript
+</IfModule>
+
+# Cache control
+<IfModule mod_headers.c>
+  Header set X-UA-Compatible "IE=edge"
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Deny direct access to sensitive files
+<FilesMatch "\.(php|phtml|php3|php4|php5|phtml|phps|pht|inc)$">
+  Deny from all
+</FilesMatch>
+
+<FilesMatch "^(config|classes)">
+  Deny from all
+</FilesMatch>
+
+# Allow access to main PHP files only
+<FilesMatch "^(config|login|index|upload|reports|users|logout)\.php$">
+  Allow from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes
+
+# Rewrite engine
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Prevent access to data folder
+  RewriteRule ^data/ - [F,L]
+  RewriteRule ^classes/ - [F,L]
+</IfModule>
+
+# Disable execution of files in data folder
+<Directory "data">
+  <IfModule mod_php.c>
+    php_flag engine off
+  </IfModule>
+  <FilesMatch "\.(php|phtml|php3|php4|php5|phtml|phps|pht)$">
+    Deny from all
+  </FilesMatch>
+</Directory>

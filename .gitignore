@@ -1,0 +1,31 @@
+# Database and sensitive files
+*.db
+*.sqlite
+data/*
+!data/.gitkeep
+backups/*
+!backups/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Session and temp files
+sessions/*
+!sessions/.gitkeep
+tmp/*
+!tmp/.gitkeep
+*.tmp
+
+# Environment/config (if you add .env later)
+.env
+.env.local
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Composer (if you add dependencies later)
+vendor/
+composer.lock
