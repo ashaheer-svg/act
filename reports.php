@@ -12,6 +12,7 @@ $reports = new Reports($db);
 $user = $auth->getCurrentUser();
 $currency = $db->getSetting('currency_symbol', '$');
 $vatRate = $db->getSetting('vat_rate', '0.18');
+
 $type = $_GET['type'] ?? 'monthly';
 $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');
@@ -19,20 +20,26 @@ $quarter = $_GET['quarter'] ?? ceil(date('m') / 3);
 
 $reportData = [];
 $reportTitle = '';
+$customerPivot = [];
 
-switch($type) {
-    case 'monthly':
-        $reportData = $reports->getMonthlySales($year, $month);
-        $reportTitle = 'Monthly Performance - ' . $reportData['period'];
-        break;
-    case 'quarterly':
-        $reportData = $reports->getQuarterlySales($year, $quarter);
-        $reportTitle = 'Quarterly Performance - ' . $reportData['period'];
-        break;
-    case 'yearly':
-        $reportData = $reports->getYearlySales($year);
-        $reportTitle = 'Yearly Performance - ' . $reportData['period'];
-        break;
+if ($type === 'matrix') {
+    $customerPivot = $reports->getCustomerYearlyPivot($year);
+    $reportTitle = "Customer Performance Matrix - $year";
+} else {
+    switch($type) {
+        case 'monthly':
+            $reportData = $reports->getMonthlySales($year, $month);
+            $reportTitle = 'Monthly Performance - ' . $reportData['period'];
+            break;
+        case 'quarterly':
+            $reportData = $reports->getQuarterlySales($year, $quarter);
+            $reportTitle = 'Quarterly Performance - ' . $reportData['period'];
+            break;
+        case 'yearly':
+            $reportData = $reports->getYearlySales($year);
+            $reportTitle = 'Yearly Performance - ' . $reportData['period'];
+            break;
+    }
 }
 
 $summary = $reportData['summary'] ?? [];
@@ -190,6 +197,7 @@ $summary = $reportData['summary'] ?? [];
             display: flex;
             flex-direction: column;
             gap: 25px;
+            overflow-x: hidden;
         }
 
         .metrics-grid {
@@ -212,6 +220,7 @@ $summary = $reportData['summary'] ?? [];
             border-radius: var(--radius-lg);
             padding: 30px;
             box-shadow: var(--shadow);
+            overflow-x: auto;
         }
         .card h2 { font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -1px; }
 
@@ -220,13 +229,18 @@ $summary = $reportData['summary'] ?? [];
             border-collapse: separate;
             border-spacing: 0 8px;
         }
-        .table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 0 15px 5px 15px; }
-        .table td { background: #f8fafc; padding: 15px; font-size: 14px; }
-        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 600; }
+        .table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 0 15px 5px 15px; white-space: nowrap;}
+        .table td { background: #f8fafc; padding: 15px; font-size: 14px; white-space: nowrap;}
+        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 600; position: sticky; left: 0; background: #f1f5f9; z-index: 10;}
         .table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
         
         .text-right { text-align: right; }
         .price-tag { font-weight: 800; color: var(--primary); }
+        
+        .matrix-val { font-size: 12px; font-weight: 500; color: var(--text-muted); text-align: right; }
+        .matrix-val.active { color: var(--primary); font-weight: 700; }
+        
+        .badge-vol { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -258,78 +272,122 @@ $summary = $reportData['summary'] ?? [];
 
     <div class="container">
         <div class="sidebar">
-            <h3>Report Type</h3>
+            <h3>Standard Reports</h3>
             <a href="reports.php?type=monthly" class="report-link <?php echo $type === 'monthly' ? 'active' : ''; ?>"><span>📅</span> Monthly Report</a>
             <a href="reports.php?type=quarterly" class="report-link <?php echo $type === 'quarterly' ? 'active' : ''; ?>"><span>📈</span> Quarterly Report</a>
             <a href="reports.php?type=yearly" class="report-link <?php echo $type === 'yearly' ? 'active' : ''; ?>"><span>📊</span> Yearly Report</a>
             
+            <h3 style="margin-top: 30px;">Advanced Analytics</h3>
+            <a href="reports.php?type=matrix" class="report-link <?php echo $type === 'matrix' ? 'active' : ''; ?>"><span>🏢</span> Customer Matrix</a>
+            
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
-                <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">Active Period</p>
-                <div style="font-size: 14px; font-weight: 600;"><?php echo $reportData['period']; ?></div>
+                <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">Selected Year</p>
+                <select onchange="window.location.href='reports.php?type=<?php echo $type; ?>&year='+this.value" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                    <option value="2024" <?php echo $year == '2024' ? 'selected' : ''; ?>>2024</option>
+                    <option value="2025" <?php echo $year == '2025' ? 'selected' : ''; ?>>2025</option>
+                    <option value="2026" <?php echo $year == '2026' ? 'selected' : ''; ?>>2026</option>
+                </select>
             </div>
         </div>
 
         <div class="main-content">
-            <div class="metrics-grid">
-                <div class="metric-card">
-                    <div class="metric-label">Invoices</div>
-                    <div class="metric-value"><?php echo $summary['total_invoices'] ?? 0; ?></div>
+            <?php if ($type === 'matrix'): ?>
+                <div class="card">
+                    <h2>Customer Matrix - Yearly View</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Side-by-side monthly purchasing performance by customer.</p>
+                    
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Customer Name</th>
+                                <th class="text-right">Total Rev</th>
+                                <th class="text-right">Vol</th>
+                                <th>Top Brand</th>
+                                <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
+                                <th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($customerPivot as $row): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars(substr($row['customer_name'], 0, 25)); ?></td>
+                                <td class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_revenue'], 0); ?></td>
+                                <td><span class="badge-vol"><?php echo $row['total_volume']; ?></span></td>
+                                <td style="font-size: 11px; font-weight: 700; color: var(--secondary);"><?php echo htmlspecialchars($row['top_category'] ?: 'Other'); ?></td>
+                                <?php for($m=1; $m<=12; $m++): 
+                                    $val = $row['month_'.$m];
+                                ?>
+                                <td class="matrix-val <?php echo $val > 0 ? 'active' : ''; ?>">
+                                    <?php echo $val > 0 ? number_format($val, 0) : '-'; ?>
+                                </td>
+                                <?php endfor; ?>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-label">Revenue (Base)</div>
-                    <div class="metric-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
+            <?php else: ?>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Invoices</div>
+                        <div class="metric-value"><?php echo $summary['total_invoices'] ?? 0; ?></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Revenue (Base)</div>
+                        <div class="metric-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total After VAT</div>
+                        <div class="metric-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
+                    </div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-label">Total After VAT</div>
-                    <div class="metric-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
-                </div>
-            </div>
 
-            <div class="card">
-                <h2><?php echo htmlspecialchars($reportTitle); ?></h2>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Granular view of transactions for the selected period.</p>
-                
-                <?php if ($type === 'yearly' && !empty($reportData['monthly_breakdown'])): ?>
-                <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                    <span style="color: var(--primary);">●</span> Monthly Breakdown
-                </h4>
-                <table class="table" style="margin-bottom: 40px;">
-                    <thead>
-                        <tr><th>Month</th><th class="text-right">Orders</th><th class="text-right">Revenue</th><th class="text-right">VAT</th><th class="text-right">Total</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($reportData['monthly_breakdown'] as $m): ?>
-                        <tr>
-                            <td><?php echo $m['month_name']; ?></td>
-                            <td class="text-right"><?php echo $m['invoice_count']; ?></td>
-                            <td class="text-right"><?php echo CURRENCY . number_format($m['revenue_base'], 0); ?></td>
-                            <td class="text-right"><?php echo CURRENCY . number_format($m['vat_total'], 0); ?></td>
-                            <td class="text-right" class="price-tag"><?php echo CURRENCY . number_format($m['total'], 0); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <?php endif; ?>
+                <div class="card">
+                    <h2><?php echo htmlspecialchars($reportTitle); ?></h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Granular view of transactions for the selected period.</p>
+                    
+                    <?php if ($type === 'yearly' && !empty($reportData['monthly_breakdown'])): ?>
+                    <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--primary);">●</span> Monthly Breakdown
+                    </h4>
+                    <table class="table" style="margin-bottom: 40px;">
+                        <thead>
+                            <tr><th>Month</th><th class="text-right">Orders</th><th class="text-right">Revenue</th><th class="text-right">VAT</th><th class="text-right">Total</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($reportData['monthly_breakdown'] as $m): ?>
+                            <tr>
+                                <td><?php echo $m['month_name']; ?></td>
+                                <td class="text-right"><?php echo $m['invoice_count']; ?></td>
+                                <td class="text-right"><?php echo htmlspecialchars($currency) . number_format($m['revenue_base'], 0); ?></td>
+                                <td class="text-right"><?php echo htmlspecialchars($currency) . number_format($m['vat_total'], 0); ?></td>
+                                <td class="text-right" class="price-tag"><?php echo htmlspecialchars($currency) . number_format($m['total'], 0); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php endif; ?>
 
-                <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
-                    <span style="color: var(--secondary);">●</span> Transaction Details
-                </h4>
-                <table class="table">
-                    <thead>
-                        <tr><th>Date</th><th>Invoice #</th><th>Customer</th><th class="text-right">Total Value</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($reportData['data'] ?? [] as $row): ?>
-                        <tr>
-                            <td><?php echo date('Y-m-d', strtotime($row['invoice_date'])); ?></td>
-                            <td style="font-family: monospace; font-weight: 700;"><?php echo htmlspecialchars($row['invoice_number']); ?></td>
-                            <td><?php echo htmlspecialchars(substr($row['customer_name'], 0, 40)); ?></td>
-                            <td class="text-right price-tag"><?php echo CURRENCY . number_format($row['total_amount'], 0); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                    <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: var(--secondary);">●</span> Transaction Details
+                    </h4>
+                    <table class="table">
+                        <thead>
+                            <tr><th>Date</th><th>Invoice #</th><th>Customer</th><th class="text-right">Total Value</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($reportData['data'] ?? [] as $row): ?>
+                            <tr>
+                                <td><?php echo date('Y-m-d', strtotime($row['invoice_date'])); ?></td>
+                                <td style="font-family: monospace; font-weight: 700;"><?php echo htmlspecialchars($row['invoice_number']); ?></td>
+                                <td><?php echo htmlspecialchars(substr($row['customer_name'], 0, 40)); ?></td>
+                                <td class="text-right price-tag"><?php echo htmlspecialchars($currency) . number_format($row['total_amount'], 0); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>
