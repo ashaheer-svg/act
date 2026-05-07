@@ -6,9 +6,24 @@
  * For cPanel: Update DATABASE_PATH to writable directory
  */
 
+// Detect cPanel environment
+$is_cpanel = (strpos(__DIR__, 'public_html') !== false);
+
+if ($is_cpanel) {
+    // We are in /home/user/public_html/act -> Storage in /home/user/act_storage
+    $storage_root = dirname(__DIR__, 2) . '/act_storage';
+} else {
+    // Local development
+    $storage_root = __DIR__;
+}
+
 // Database Configuration
-define('DATABASE_PATH', __DIR__ . '/data/sales_bi.db');
-define('DATA_DIR', __DIR__ . '/data');
+define('DATA_DIR', $storage_root . '/data');
+define('DATABASE_PATH', DATA_DIR . '/sales_bi.db');
+define('BACKUP_DIR', $storage_root . '/backups');
+define('LOG_DIR', $storage_root . '/logs');
+define('SESSION_DIR', $storage_root . '/sessions');
+define('TMP_DIR', $storage_root . '/tmp');
 
 // Application Settings
 define('APP_NAME', 'Sales BI Dashboard');
@@ -40,5 +55,11 @@ if (!DEBUG_MODE) {
 // Ensure data directory exists
 if (!is_dir(DATA_DIR)) {
     mkdir(DATA_DIR, 0755, true);
+}
+
+// Secure session if on cPanel
+if ($is_cpanel) {
+    if (!is_dir(SESSION_DIR)) mkdir(SESSION_DIR, 0700, true);
+    session_save_path(SESSION_DIR);
 }
 ?>

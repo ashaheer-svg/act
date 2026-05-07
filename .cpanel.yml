@@ -1,6 +1,13 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/activeme/public_html/act
+    - export DEPLOYPATH=/home/$USER/public_html/act
+    - export PRIVATEPATH=/home/$USER/act_storage
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/rsync -avz --exclude='.git*' ./ $DEPLOYPATH
+    - /bin/mkdir -p $PRIVATEPATH
+    - /bin/rsync -avz --exclude='.git*' --exclude='data' --exclude='backups' --exclude='logs' --exclude='sessions' --exclude='tmp' ./ $DEPLOYPATH
+    - /bin/rsync -avz data/ $PRIVATEPATH/data/
+    - /bin/rsync -avz backups/ $PRIVATEPATH/backups/
+    - /bin/rsync -avz logs/ $PRIVATEPATH/logs/
+    - /bin/rsync -avz sessions/ $PRIVATEPATH/sessions/
+    - /bin/rsync -avz tmp/ $PRIVATEPATH/tmp/
