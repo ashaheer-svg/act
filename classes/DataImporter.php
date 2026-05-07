@@ -144,11 +144,12 @@ class DataImporter {
         $imported = 0;
         $skipped = 0;
         $details = [
-            'missing_fields' => 0,
             'duplicates' => 0,
-            'other' => 0
+            'missing_fields' => 0,
+            'duplicate_sets' => []
         ];
         $errors = [];
+        $rowIndex = 1; // Start after header row
 
         try {
             $this->db->beginTransaction();
@@ -162,9 +163,11 @@ class DataImporter {
                     continue;
                 }
 
+                $rowIndex++;
+                
                 // Check if record already exists (Smarter check: include item and amount)
                 $existingRecord = $this->db->fetch(
-                    "SELECT id FROM sales WHERE invoice_number = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
+                    "SELECT * FROM sales WHERE invoice_number = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
                     [
                         $record['Num'] ?? '', 
                         $record['Name'] ?? '', 
@@ -176,6 +179,24 @@ class DataImporter {
                 if ($existingRecord) {
                     $skipped++;
                     $details['duplicates']++;
+                    
+                    // Capture duplicate set for auditing
+                    $details['duplicate_sets'][] = [
+                        'row' => $rowIndex,
+                        'duplicate' => [
+                            'num' => $record['Num'] ?? 'N/A',
+                            'name' => $record['Name'] ?? 'N/A',
+                            'item' => $record['Item'] ?? 'N/A',
+                            'amount' => $record['Amount'] ?? 0
+                        ],
+                        'original' => [
+                            'num' => $existingRecord['invoice_number'],
+                            'name' => $existingRecord['customer_name'],
+                            'item' => $existingRecord['item_description'],
+                            'amount' => $existingRecord['qb_amount'],
+                            'imported_at' => $existingRecord['imported_at']
+                        ]
+                    ];
                     continue;
                 }
 

@@ -240,6 +240,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
         .table td { background: #f8fafc; padding: 15px; font-size: 14px; }
         .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
         .table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+
+        /* Duplicate Audit Styling */
+        .duplicate-audit {
+            margin-top: 30px;
+        }
+        .audit-set {
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr;
+            gap: 20px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .audit-row-num {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-right: 1px solid var(--border);
+        }
+        .audit-card {
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .audit-card.original { background: #f0fdf4; border: 1px solid #dcfce7; }
+        .audit-card.duplicate { background: #fff7ed; border: 1px solid #ffedd5; }
+        .audit-card label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 5px;}
+        .audit-data { font-size: 12px; margin-bottom: 3px; }
+        .audit-data strong { color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -318,6 +349,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
                     <button type="submit" class="btn btn-primary">Start Import Process</button>
                 </form>
             </div>
+
+            <?php if (!empty($result['details']['duplicate_sets'])): ?>
+            <div class="card duplicate-audit">
+                <h2 style="color: var(--secondary);">🔍 Duplicate Audit Detail</h2>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">The following records were found in the database and skipped during this import.</p>
+                
+                <?php foreach($result['details']['duplicate_sets'] as $set): ?>
+                <div class="audit-set">
+                    <div class="audit-row-num">
+                        <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);">FILE ROW</span>
+                        <span style="font-size: 24px; font-weight: 800;"><?php echo $set['row']; ?></span>
+                    </div>
+                    
+                    <div class="audit-card original">
+                        <label>Existing in Database</label>
+                        <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['original']['num']); ?></strong></div>
+                        <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['original']['name'], 0, 30)); ?></strong></div>
+                        <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['original']['item'], 0, 30)); ?></strong></div>
+                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format($set['original']['amount'], 2); ?></strong></div>
+                        <div style="font-size: 10px; color: var(--success); margin-top: 5px;">Imported on <?php echo $set['original']['imported_at']; ?></div>
+                    </div>
+
+                    <div class="audit-card duplicate">
+                        <label>Incoming Duplicate</label>
+                        <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['duplicate']['num']); ?></strong></div>
+                        <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['duplicate']['name'], 0, 30)); ?></strong></div>
+                        <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['duplicate']['item'], 0, 30)); ?></strong></div>
+                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format($set['duplicate']['amount'], 2); ?></strong></div>
+                        <div style="font-size: 10px; color: var(--secondary); margin-top: 5px;">Row skipped by system</div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <div class="card">
                 <h2>Import History</h2>
