@@ -195,17 +195,23 @@ class Database {
         try {
             $this->db->beginTransaction();
             
-            $this->db->exec("DELETE FROM sales");
-            $this->db->exec("DELETE FROM import_logs");
-            $this->db->exec("DELETE FROM activity_logs");
+            // Check if tables exist before deleting
+            $tables = ['sales', 'import_logs', 'activity_log'];
+            foreach ($tables as $table) {
+                $this->db->exec("DELETE FROM $table");
+            }
             
-            // Reset sequences
-            $this->db->exec("DELETE FROM sqlite_sequence WHERE name IN ('sales', 'import_logs', 'activity_logs')");
+            // Reset sequences safely
+            $this->db->exec("DELETE FROM sqlite_sequence WHERE name IN ('sales', 'import_logs', 'activity_log')");
             
             $this->db->commit();
             return true;
         } catch (Exception $e) {
             $this->db->rollBack();
+            // If the error is just a missing table, we can ignore it during reset
+            if (strpos($e->getMessage(), 'no such table') !== false) {
+                return true; 
+            }
             throw $e;
         }
     }
