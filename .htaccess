@@ -19,14 +19,11 @@ Options -Indexes
 # Protect sensitive directories
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /
+  RewriteBase /act/
 
-  # COMPLETELY BLOCK ACCESS TO PRIVATE STORAGE
-  RewriteRule ^\.act_private/ - [F,L]
+  # Block access to sensitive folders
+  RewriteRule ^(data|classes|backups|logs|sessions|tmp)(/|$) - [F,L]
 
-  # Block access to legacy folders if they still exist
-  RewriteRule ^(data|classes|backups|logs|sessions|tmp)/ - [F,L]
-  
   # Block access to config.php directly
   RewriteRule ^config\.php$ - [F,L]
 </IfModule>

@@ -89,7 +89,7 @@ class DataImporter {
                     $headers = $data;
                 } else {
                     $record = array_combine($headers, $data);
-                    $records[] $record;
+                    $records[] = $record;
                 }
                 $row++;
             }
