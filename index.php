@@ -19,13 +19,18 @@ $reportType = $_GET['report'] ?? 'dashboard';
 $dateFrom = "$year-$month-01";
 $dateTo = date('Y-m-t', strtotime($dateFrom));
 
-// Get dashboard data
-$summary = $reports->getDashboardSummary($dateFrom, $dateTo);
-$topCustomers = $reports->getTopCustomers(5, $dateFrom, $dateTo);
-$topProducts = $reports->getTopProducts(5, $dateFrom, $dateTo);
-$categoryAnalysis = $reports->getSalesByCategory($dateFrom, $dateTo);
-$concentration = $reports->getCustomerConcentration($dateFrom, $dateTo);
-$vatSummary = $reports->getVATSummary($dateFrom, $dateTo);
+// Get dashboard data with error handling
+try {
+    $summary = $reports->getDashboardSummary($dateFrom, $dateTo);
+    $topCustomers = $reports->getTopCustomers(5, $dateFrom, $dateTo);
+    $topProducts = $reports->getTopProducts(5, $dateFrom, $dateTo);
+    $categoryAnalysis = $reports->getSalesByCategory($dateFrom, $dateTo);
+    $concentration = $reports->getCustomerConcentration($dateFrom, $dateTo);
+    $vatSummary = $reports->getVATSummary($dateFrom, $dateTo);
+} catch (Exception $e) {
+    error_log("Dashboard Error: " . $e->getMessage());
+    $error = "Unable to load dashboard data: " . $e->getMessage();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -342,6 +347,7 @@ $vatSummary = $reports->getVATSummary($dateFrom, $dateTo);
     </div>
 
     <script>
+        console.log("Dashboard loaded");
         function applyFilters() {
             const year = document.getElementById('yearSelect').value;
             const month = document.getElementById('monthSelect').value;
