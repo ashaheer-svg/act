@@ -162,10 +162,15 @@ class DataImporter {
                     continue;
                 }
 
-                // Check if record already exists
+                // Check if record already exists (Smarter check: include item and amount)
                 $existingRecord = $this->db->fetch(
-                    "SELECT id FROM sales WHERE invoice_number = ? AND customer_name = ?",
-                    [$record['Num'] ?? '', $record['Name'] ?? '']
+                    "SELECT id FROM sales WHERE invoice_number = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
+                    [
+                        $record['Num'] ?? '', 
+                        $record['Name'] ?? '', 
+                        $record['Item'] ?? '', 
+                        floatval($record['Amount'] ?? 0)
+                    ]
                 );
 
                 if ($existingRecord) {

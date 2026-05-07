@@ -68,7 +68,7 @@ class Database {
                     total_amount DECIMAL(12,2) NOT NULL,
                     product_category TEXT,
                     imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(invoice_number, customer_name)
+                    UNIQUE(invoice_number, customer_name, item_description, qb_amount)
                 )
             ");
 
