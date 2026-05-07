@@ -2,22 +2,12 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/$USER/public_html/act
-    - export PRIVATEPATH=/home/$USER/act_storage
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/mkdir -p $PRIVATEPATH
-    - /bin/rsync -avz --exclude='.git*' --exclude='data' --exclude='backups' --exclude='logs' --exclude='sessions' --exclude='tmp' ./ $DEPLOYPATH
-    - /bin/rsync -avz data/ $PRIVATEPATH/data/
-    - /bin/rsync -avz backups/ $PRIVATEPATH/backups/
-    - /bin/rsync -avz logs/ $PRIVATEPATH/logs/
-    - /bin/rsync -avz sessions/ $PRIVATEPATH/sessions/
-    - /bin/rsync -avz tmp/ $PRIVATEPATH/tmp/
+    - /bin/rsync -avz --exclude='.git*' ./ $DEPLOYPATH
     # Fix Permissions for cPanel compliance
     - /bin/chmod 755 $DEPLOYPATH
     - /usr/bin/find $DEPLOYPATH -type d -exec chmod 755 {} +
     - /usr/bin/find $DEPLOYPATH -type f -exec chmod 644 {} +
-    # Ensure private storage is accessible by PHP but not the web
-    - /bin/chmod 755 $PRIVATEPATH
-    - /usr/bin/find $PRIVATEPATH -type d -exec chmod 755 {} +
-    - /usr/bin/find $PRIVATEPATH -type f -exec chmod 644 {} +
-    # Specifically ensure database file is writable (Group Write)
-    - /bin/chmod 664 $PRIVATEPATH/data/sales_bi.db || true
+    # Specifically ensure the hidden private storage is writable
+    - /bin/chmod -R 755 $DEPLOYPATH/.act_private || true
+    - /bin/chmod 664 $DEPLOYPATH/.act_private/data/sales_bi.db || true
