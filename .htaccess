@@ -30,23 +30,15 @@
 </FilesMatch>
 
 # Prevent directory listing
-Options -Indexes
+<IfModule mod_options.c>
+  Options -Indexes
+</IfModule>
 
 # Rewrite engine
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Prevent access to data folder
+  # Prevent access to data folder (as a fallback)
   RewriteRule ^data/ - [F,L]
   RewriteRule ^classes/ - [F,L]
 </IfModule>
-
-# Disable execution of files in data folder
-<Directory "data">
-  <IfModule mod_php.c>
-    php_flag engine off
-  </IfModule>
-  <FilesMatch "\.(php|phtml|php3|php4|php5|phtml|phps|pht)$">
-    Deny from all
-  </FilesMatch>
-</Directory>
