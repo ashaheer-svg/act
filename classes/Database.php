@@ -236,7 +236,7 @@ class Database {
                 $ipAddress = $this->getClientIP();
             }
 
-            $stmt = $this->prepare("
+            $stmt = $this->db->prepare("
                 INSERT INTO activity_log (user_id, action, description, ip_address)
                 VALUES (?, ?, ?, ?)
             ");
