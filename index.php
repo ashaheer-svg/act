@@ -35,78 +35,114 @@ try {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales BI Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4361ee;
+            --primary-hover: #3a56d4;
+            --sidebar: #0f172a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
+            background: white;
+            color: var(--text-main);
+            padding: 0 30px;
+            height: 70px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .header h1 { font-size: 24px; }
+        .header h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
         .user-info {
             display: flex;
             align-items: center;
             gap: 15px;
         }
         .user-badge {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            background: #e0e7ff;
+            color: #4361ee;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .logout-btn {
-            background: rgba(255,255,255,0.3);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
+            background: #fee2e2;
+            color: #ef4444;
+            border: 1px solid #fecaca;
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
         }
-        .logout-btn:hover { background: rgba(255,255,255,0.4); }
+        .logout-btn:hover { background: #fecaca; }
         .container {
             display: flex;
             min-height: calc(100vh - 70px);
         }
         .sidebar {
-            width: 250px;
-            background: #2c3e50;
+            width: 260px;
+            background: var(--sidebar);
             color: white;
-            padding: 20px;
-            overflow-y: auto;
+            padding: 30px 20px;
+            flex-shrink: 0;
+        }
+        .nav-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin: 25px 0 10px 10px;
+            font-weight: 700;
         }
         .nav-item {
             padding: 12px 15px;
-            margin: 5px 0;
+            margin: 4px 0;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 10px;
             text-decoration: none;
-            color: #bbb;
-            display: block;
-            transition: all 0.3s;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
         }
-        .nav-item:hover, .nav-item.active {
-            background: #667eea;
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
             color: white;
+        }
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
         }
         .main-content {
             flex: 1;
-            padding: 30px;
-            overflow-y: auto;
+            padding: 40px;
+            background: var(--bg);
         }
         .filters {
             background: white;
@@ -143,26 +179,38 @@ try {
         }
         .card {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+            border-color: var(--primary);
         }
         .card-title {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 10px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
             text-transform: uppercase;
-            font-weight: 600;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
         .card-value {
-            font-size: 28px;
-            font-weight: bold;
-            color: #667eea;
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -1px;
         }
         .card-subtitle {
-            font-size: 12px;
-            color: #bbb;
-            margin-top: 5px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         .warning-card {
             border-left: 4px solid #ff9800;
@@ -226,16 +274,16 @@ try {
 
     <div class="container">
         <div class="sidebar">
-            <h3 style="margin-bottom: 20px; font-size: 14px;">Navigation</h3>
-            <a href="index.php" class="nav-item active">📊 Dashboard</a>
-            <a href="reports.php?type=monthly" class="nav-item">📅 Monthly Report</a>
-            <a href="reports.php?type=quarterly" class="nav-item">📈 Quarterly Report</a>
-            <a href="reports.php?type=yearly" class="nav-item">📊 Yearly Report</a>
+            <div class="nav-section-title">Main Menu</div>
+            <a href="index.php" class="nav-item active"><span>📊</span> Dashboard</a>
+            <a href="reports.php?type=monthly" class="nav-item"><span>📅</span> Monthly Report</a>
+            <a href="reports.php?type=quarterly" class="nav-item"><span>📈</span> Quarterly Report</a>
+            <a href="reports.php?type=yearly" class="nav-item"><span>📊</span> Yearly Report</a>
 
             <?php if ($auth->isAdmin()): ?>
-            <h3 style="margin: 30px 0 20px 0; font-size: 14px; border-top: 1px solid #555; padding-top: 20px;">Admin</h3>
-            <a href="upload.php" class="nav-item">📤 Upload Data</a>
-            <a href="users.php" class="nav-item">👥 Manage Users</a>
+            <div class="nav-section-title">Administration</div>
+            <a href="upload.php" class="nav-item" style="color: #4361ee; background: rgba(67,97,238,0.1);"><span>📤</span> Upload Data</a>
+            <a href="users.php" class="nav-item"><span>👥</span> Manage Users</a>
             <?php endif; ?>
         </div>
 
@@ -264,10 +312,19 @@ try {
             <h2>Dashboard - <?php echo date('F Y', strtotime("$year-$month-01")); ?></h2>
 
             <div class="dashboard-grid">
+                <?php if (($summary['total_invoices'] ?? 0) == 0): ?>
+                <div class="card table-card" style="grid-column: span 3; text-align: center; padding: 60px 20px; border: 2px dashed var(--border); background: #fcfdfe;">
+                    <div style="font-size: 50px; margin-bottom: 20px;">📂</div>
+                    <h2 style="margin-bottom: 10px;">No sales data available yet</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 30px;">Start by uploading your first sales CSV file to see the analytics.</p>
+                    <a href="upload.php" class="filter-btn" style="text-decoration: none; display: inline-block;">Upload Your First File</a>
+                </div>
+                <?php endif; ?>
+
                 <div class="card">
                     <div class="card-title">Total Revenue (Base)</div>
-                    <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
-                    <div class="card-subtitle"><?php echo $summary['total_invoices'] ?? 0; ?> invoices</div>
+                    <div class="card-value" style="color: var(--primary);"><?php echo CURRENCY; ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
+                    <div class="card-subtitle"><span>📄</span> <?php echo $summary['total_invoices'] ?? 0; ?> invoices</div>
                 </div>
 
                 <div class="card">
