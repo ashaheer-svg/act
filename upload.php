@@ -31,231 +31,259 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Sales Data</title>
+    <title>Upload Data - Sales BI</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4361ee;
-            --primary-hover: #3a56d4;
-            --sidebar: #0f172a;
-            --bg: #f8fafc;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #fb923c;
+            --bg: #f1f5f9;
+            --sidebar-bg: #ffffff;
             --card-bg: #ffffff;
-            --text-main: #1e293b;
+            --text-main: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
-            --success: #10b981;
-            --warning: #f59e0b;
             --error: #ef4444;
+            --success: #10b981;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
         }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background: var(--bg);
             color: var(--text-main);
             line-height: 1.5;
         }
+
+        /* --- Header --- */
         .header {
             background: white;
-            color: var(--text-main);
-            padding: 0 30px;
-            height: 70px;
+            padding: 0 40px;
+            height: 80px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
-            position: relative;
-            z-index: 10;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .header h1 { font-size: 20px; font-weight: 700; }
-        .container {
-            display: flex;
-            min-height: calc(100vh - 70px);
-        }
-        .sidebar {
-            width: 260px;
-            background: var(--sidebar);
-            color: white;
-            padding: 30px 20px;
-            flex-shrink: 0;
-        }
-        .nav-section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #64748b;
-            margin: 25px 0 10px 10px;
-            font-weight: 700;
-        }
-        .nav-item {
-            padding: 12px 15px;
-            margin: 4px 0;
-            cursor: pointer;
-            border-radius: 10px;
-            text-decoration: none;
-            color: #94a3b8;
+
+        .logo-container {
             display: flex;
             align-items: center;
             gap: 12px;
+            font-weight: 800;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .top-nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        .top-nav-item {
+            text-decoration: none;
+            color: var(--text-muted);
             font-size: 14px;
             font-weight: 500;
+            padding-bottom: 5px;
+            border-bottom: 2px solid transparent;
             transition: all 0.2s;
         }
-        .nav-item:hover {
-            background: rgba(255,255,255,0.05);
-            color: white;
+
+        .top-nav-item:hover, .top-nav-item.active {
+            color: var(--text-main);
+            border-bottom-color: var(--primary);
         }
-        .nav-item.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
+
+        .user-profile {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-muted);
+            border: 2px solid white;
+            box-shadow: var(--shadow);
+        }
+
+        /* --- Layout --- */
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 30px;
+            padding: 30px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 110px;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #1e40af;
+            border: 1px solid #dbeafe;
+        }
+
+        /* --- Main Content --- */
         .main-content {
-            flex: 1;
-            padding: 40px;
-            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
         }
+
         .card {
             background: white;
+            border-radius: var(--radius-lg);
             padding: 30px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            margin-bottom: 30px;
+            box-shadow: var(--shadow);
         }
-        .card h2 {
-            margin-bottom: 20px;
-            color: var(--text-main);
-            font-size: 20px;
-            font-weight: 700;
-        }
+
+        .card h2 { font-size: 24px; font-weight: 800; margin-bottom: 25px; letter-spacing: -0.5px; }
+
         .upload-area {
             border: 2px dashed var(--border);
-            border-radius: 12px;
+            border-radius: var(--radius-lg);
             padding: 60px 40px;
             text-align: center;
-            background: #fcfdfe;
-            transition: all 0.2s;
-        }
-        .upload-area:hover {
             background: #f8fafc;
-            border-color: var(--primary);
-        }
-        .upload-area input[type="file"] {
-            display: none;
-        }
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-        }
-        .upload-button {
-            background: var(--primary);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 14px;
             transition: all 0.2s;
+            cursor: pointer;
         }
-        .upload-button:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .upload-area:hover { border-color: var(--primary); background: #f1f5f9; }
+        .upload-area input { display: none; }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn-primary { background: var(--primary); color: white; margin-top: 20px; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
         .message {
             padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 30px;
+            border-radius: 16px;
+            margin-bottom: 25px;
             display: flex;
             align-items: flex-start;
             gap: 15px;
         }
         .message.success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
         .message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
+
         .skip-details {
             margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
             padding-top: 15px;
             border-top: 1px solid rgba(0,0,0,0.05);
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
         }
-        .skip-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .skip-label { font-size: 12px; font-weight: 600; text-transform: uppercase; opacity: 0.7; }
-        .skip-value { font-size: 18px; font-weight: 700; }
-        .info-box {
-            background: #eff6ff;
-            border: 1px solid #dbeafe;
-            color: #1e40af;
-            padding: 20px;
-            margin-bottom: 30px;
-            border-radius: 12px;
-        }
+        .skip-item label { font-size: 10px; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: block; }
+        .skip-item value { font-size: 18px; font-weight: 800; display: block; }
+
         .table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0 8px;
         }
-        .table th {
-            background: #f8fafc;
-            padding: 12px 15px;
-            text-align: left;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border);
-        }
-        .table td {
-            padding: 15px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
-        .table tr:hover { background: #f8fafc; }
-        .logout-btn {
-            background: #fee2e2;
-            color: #ef4444;
-            border: 1px solid #fecaca;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .user-badge {
-            background: #e0e7ff;
-            color: #4361ee;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-    </style>
+        .table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 0 15px 5px 15px; }
+        .table td { background: #f8fafc; padding: 15px; font-size: 14px; }
+        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+        .table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📤 Upload Sales Data</h1>
-        <div style="display: flex; gap: 15px; align-items: center;">
-            <span style="font-size: 14px; font-weight: 500;"><?php echo htmlspecialchars($user['username']); ?></span>
-            <div class="user-badge">ADMIN</div>
+        <div class="logo-container">
+            <div class="logo-icon">Σ</div>
+            act sales bi
+        </div>
+        
+        <div class="top-nav">
+            <a href="index.php" class="top-nav-item">Dashboard</a>
+            <a href="reports.php" class="top-nav-item">Reporting</a>
+            <?php if ($auth->isAdmin()): ?>
+            <a href="upload.php" class="top-nav-item active">Upload</a>
+            <a href="users.php" class="top-nav-item">Users</a>
+            <a href="settings.php" class="top-nav-item">Settings</a>
+            <?php endif; ?>
+        </div>
+
+        <div class="header-actions">
+            <div class="user-profile">
+                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+            </div>
             <form method="POST" action="logout.php" style="margin: 0;">
-                <button type="submit" class="logout-btn">Logout</button>
+                <button type="submit" style="background: none; border: none; font-size: 18px; cursor: pointer;">🚪</button>
             </form>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <div class="nav-section-title">Main Menu</div>
-            <a href="index.php" class="nav-item"><span>📊</span> Dashboard</a>
-            
-            <div class="nav-section-title">Administration</div>
-            <a href="upload.php" class="nav-item active"><span>📤</span> Upload Data</a>
-            <a href="users.php" class="nav-item"><span>👥</span> Manage Users</a>
+            <h3>Guidelines</h3>
+            <div class="info-box">
+                <p><strong>Accepted Formats:</strong></p>
+                <ul style="margin: 10px 0 0 15px;">
+                    <li>Excel (.xlsx, .xls)</li>
+                    <li>CSV (.csv)</li>
+                </ul>
+                <p style="margin-top: 15px;"><strong>System Logic:</strong></p>
+                <ul style="margin: 10px 0 0 15px;">
+                    <li>Duplicates are skipped</li>
+                    <li>VAT is auto-calculated</li>
+                </ul>
+            </div>
         </div>
 
         <div class="main-content">
@@ -263,23 +291,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
             <div class="message <?php echo $messageType; ?>">
                 <div style="font-size: 24px;"><?php echo $messageType === 'success' ? '✅' : '❌'; ?></div>
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; margin-bottom: 5px;"><?php echo $messageType === 'success' ? 'Import Successful' : 'Import Failed'; ?></div>
+                    <div style="font-weight: 800; margin-bottom: 4px;">Import Result</div>
                     <div><?php echo htmlspecialchars($message); ?></div>
                     
                     <?php if (isset($result['details'])): ?>
                     <div class="skip-details">
-                        <div class="skip-item">
-                            <div class="skip-label">Imported</div>
-                            <div class="skip-value" style="color: var(--success);"><?php echo $result['imported']; ?></div>
-                        </div>
-                        <div class="skip-item">
-                            <div class="skip-label">Duplicates</div>
-                            <div class="skip-value" style="color: var(--warning);"><?php echo $result['details']['duplicates']; ?></div>
-                        </div>
-                        <div class="skip-item">
-                            <div class="skip-label">Headers/Empty</div>
-                            <div class="skip-value" style="color: var(--text-muted);"><?php echo $result['details']['missing_fields']; ?></div>
-                        </div>
+                        <div class="skip-item"><label>Imported</label><value style="color: var(--success);"><?php echo $result['imported']; ?></value></div>
+                        <div class="skip-item"><label>Duplicates</label><value style="color: var(--secondary);"><?php echo $result['details']['duplicates']; ?></value></div>
+                        <div class="skip-item"><label>Headers/Other</label><value style="color: var(--text-muted);"><?php echo $result['details']['missing_fields']; ?></value></div>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -288,106 +307,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
 
             <div class="card">
                 <h2>Import Sales Data</h2>
-
-                <div class="info-box">
-                    <strong>📋 Instructions:</strong>
-                    <ul style="margin-top: 10px; margin-left: 20px;">
-                        <li>Upload your QuickBooks export file (Excel or CSV)</li>
-                        <li>Supports columns: Type, Date, Num, Name, Item, Sales Tax Code, Qty, Amount</li>
-                        <li>Only records newer than existing data will be imported</li>
-                        <li>VAT will be automatically calculated based on Tax Code</li>
-                        <li>Maximum file size: 5MB</li>
-                    </ul>
-                </div>
-
                 <form method="POST" enctype="multipart/form-data">
-                    <div class="upload-area" id="uploadArea">
-                        <label class="upload-label">
-                            <div class="upload-icon">📁</div>
-                            <div class="upload-text">Drag and drop your file here or click to select</div>
-                            <button type="button" class="upload-button" onclick="document.getElementById('fileInput').click();">
-                                Choose File
-                            </button>
-                            <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required>
-                        </label>
-                        <div id="fileInfo" style="margin-top: 15px; display: none; color: #667eea; font-weight: 600;"></div>
+                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
+                        <div style="font-weight: 700; color: var(--text-main);">Drop file here or click to browse</div>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">Supports .xlsx, .xls, and .csv files up to 5MB</div>
+                        <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this)">
+                        <div id="fileInfo" style="margin-top: 15px; font-weight: 700; color: var(--primary); display: none;"></div>
                     </div>
-
-                    <button type="submit" class="upload-button" style="width: 100%; margin-top: 20px; padding: 15px;">
-                        Upload and Import
-                    </button>
+                    <button type="submit" class="btn btn-primary">Start Import Process</button>
                 </form>
             </div>
 
             <div class="card">
                 <h2>Import History</h2>
-                <p style="color: #666; margin-bottom: 15px;">Recent uploads and import logs</p>
-
                 <?php if (!empty($importHistory)): ?>
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>Filename</th>
-                            <th>Imported By</th>
-                            <th>Records Imported</th>
-                            <th>Records Skipped</th>
-                            <th>Import Date</th>
-                        </tr>
+                        <tr><th>Filename</th><th>Imported</th><th>Skipped</th><th>Date</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach($importHistory as $log): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($log['filename']); ?></td>
-                            <td><?php echo htmlspecialchars($log['username'] ?? 'System'); ?></td>
-                            <td style="color: #4caf50; font-weight: 600;"><?php echo $log['records_imported']; ?></td>
-                            <td style="color: #ff9800;"><?php echo $log['records_skipped']; ?></td>
-                            <td><?php echo date('Y-m-d H:i', strtotime($log['import_date'])); ?></td>
+                            <td style="font-weight: 700; color: var(--success);"><?php echo $log['records_imported']; ?></td>
+                            <td style="color: var(--secondary);"><?php echo $log['records_skipped']; ?></td>
+                            <td style="color: var(--text-muted); font-size: 12px;"><?php echo date('Y-m-d H:i', strtotime($log['import_date'])); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
                 <?php else: ?>
-                <p style="color: #999;">No imports yet</p>
+                <p style="text-align: center; padding: 40px; color: var(--text-muted);">No import history found.</p>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
     <script>
-        const uploadArea = document.getElementById('uploadArea');
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-
-        // Drag and drop
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                updateFileInfo(files[0]);
+        function updateFileInfo(input) {
+            const fileInfo = document.getElementById('fileInfo');
+            if (input.files.length > 0) {
+                fileInfo.textContent = "Selected: " + input.files[0].name;
+                fileInfo.style.display = 'block';
             }
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                updateFileInfo(e.target.files[0]);
-            }
-        });
-
-        function updateFileInfo(file) {
-            const size = (file.size / 1024 / 1024).toFixed(2);
-            fileInfo.textContent = `✓ Selected: ${file.name} (${size}MB)`;
-            fileInfo.style.display = 'block';
         }
     </script>
 </body>

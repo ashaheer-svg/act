@@ -21,15 +21,15 @@ $reportTitle = '';
 switch($type) {
     case 'monthly':
         $reportData = $reports->getMonthlySales($year, $month);
-        $reportTitle = 'Monthly Sales Report - ' . $reportData['period'];
+        $reportTitle = 'Monthly Performance - ' . $reportData['period'];
         break;
     case 'quarterly':
         $reportData = $reports->getQuarterlySales($year, $quarter);
-        $reportTitle = 'Quarterly Sales Report - ' . $reportData['period'];
+        $reportTitle = 'Quarterly Performance - ' . $reportData['period'];
         break;
     case 'yearly':
         $reportData = $reports->getYearlySales($year);
-        $reportTitle = 'Yearly Sales Report - ' . $reportData['period'];
+        $reportTitle = 'Yearly Performance - ' . $reportData['period'];
         break;
 }
 
@@ -40,217 +40,289 @@ $summary = $reportData['summary'] ?? [];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $reportTitle; ?></title>
+    <title><?php echo $reportTitle; ?> - Sales BI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #fb923c;
+            --bg: #f1f5f9;
+            --sidebar-bg: #ffffff;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
         }
 
+        /* --- Header --- */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
+            background: white;
+            padding: 0 40px;
+            height: 80px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .container {
+        .logo-container {
             display: flex;
-            min-height: calc(100vh - 70px);
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 22px;
+            letter-spacing: -0.5px;
         }
 
-        .sidebar {
-            width: 250px;
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .nav-item {
-            padding: 12px 15px;
-            margin: 5px 0;
-            border-radius: 5px;
-            text-decoration: none;
-            color: #bbb;
-            display: block;
-        }
-
-        .nav-item:hover, .nav-item.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
         }
 
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
+        .top-nav {
+            display: flex;
+            gap: 30px;
         }
 
-        .table th {
-            background: #f8f9fa;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            border-bottom: 2px solid #e9ecef;
-            font-size: 13px;
+        .top-nav-item {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            padding-bottom: 5px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
         }
 
-        .table td {
-            padding: 12px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 13px;
+        .top-nav-item:hover, .top-nav-item.active {
+            color: var(--text-main);
+            border-bottom-color: var(--primary);
         }
 
-        .table tr:hover { background: #f8f9fa; }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-profile {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-muted);
+            border: 2px solid white;
+            box-shadow: var(--shadow);
+        }
+
+        /* --- Layout --- */
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 30px;
+            padding: 30px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 110px;
+        }
+
+        .sidebar h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+        .report-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            transition: all 0.2s;
+        }
+        .report-link:hover { background: #f8fafc; color: var(--text-main); }
+        .report-link.active { background: #f0f4ff; color: var(--primary); font-weight: 700; }
+
+        /* --- Main Content --- */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
 
         .metrics-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
-            margin-bottom: 30px;
         }
 
         .metric-card {
             background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            box-shadow: var(--shadow);
         }
+        .metric-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .metric-value { font-size: 24px; font-weight: 800; color: var(--text-main); }
 
-        .metric-label { font-size: 12px; color: #999; font-weight: 600; }
-        .metric-value { font-size: 24px; font-weight: bold; color: #667eea; margin-top: 10px; }
+        .card {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow);
+        }
+        .card h2 { font-size: 24px; font-weight: 800; margin-bottom: 5px; letter-spacing: -1px; }
 
-        h2 { color: #333; margin-bottom: 20px; font-size: 24px; }
-        h3 { color: #333; margin: 20px 0 15px 0; font-size: 16px; }
-
+        .table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+        .table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 0 15px 5px 15px; }
+        .table td { background: #f8fafc; padding: 15px; font-size: 14px; }
+        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 600; }
+        .table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+        
         .text-right { text-align: right; }
-        .text-center { text-align: center; }
+        .price-tag { font-weight: 800; color: var(--primary); }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1><?php echo htmlspecialchars($reportTitle); ?></h1>
-        <div style="display: flex; gap: 15px; align-items: center;">
-            <span><?php echo htmlspecialchars($user['username']); ?></span>
+        <div class="logo-container">
+            <div class="logo-icon">Σ</div>
+            act sales bi
+        </div>
+        
+        <div class="top-nav">
+            <a href="index.php" class="top-nav-item">Dashboard</a>
+            <a href="reports.php" class="top-nav-item active">Reporting</a>
+            <?php if ($auth->isAdmin()): ?>
+            <a href="upload.php" class="top-nav-item">Upload</a>
+            <a href="users.php" class="top-nav-item">Users</a>
+            <a href="settings.php" class="top-nav-item">Settings</a>
+            <?php endif; ?>
+        </div>
+
+        <div class="header-actions">
+            <div class="user-profile">
+                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+            </div>
             <form method="POST" action="logout.php" style="margin: 0;">
-                <button type="submit" style="background: rgba(255,255,255,0.3); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Logout</button>
+                <button type="submit" style="background: none; border: none; font-size: 18px; cursor: pointer;">🚪</button>
             </form>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <h3 style="margin-bottom: 20px; font-size: 14px;">Navigation</h3>
-            <a href="index.php" class="nav-item">📊 Dashboard</a>
-            <a href="reports.php?type=monthly" class="nav-item <?php echo $type === 'monthly' ? 'active' : ''; ?>">📅 Monthly</a>
-            <a href="reports.php?type=quarterly" class="nav-item <?php echo $type === 'quarterly' ? 'active' : ''; ?>">📈 Quarterly</a>
-            <a href="reports.php?type=yearly" class="nav-item <?php echo $type === 'yearly' ? 'active' : ''; ?>">📊 Yearly</a>
+            <h3>Report Type</h3>
+            <a href="reports.php?type=monthly" class="report-link <?php echo $type === 'monthly' ? 'active' : ''; ?>"><span>📅</span> Monthly Report</a>
+            <a href="reports.php?type=quarterly" class="report-link <?php echo $type === 'quarterly' ? 'active' : ''; ?>"><span>📈</span> Quarterly Report</a>
+            <a href="reports.php?type=yearly" class="report-link <?php echo $type === 'yearly' ? 'active' : ''; ?>"><span>📊</span> Yearly Report</a>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">Active Period</p>
+                <div style="font-size: 14px; font-weight: 600;"><?php echo $reportData['period']; ?></div>
+            </div>
         </div>
 
         <div class="main-content">
             <div class="metrics-grid">
                 <div class="metric-card">
-                    <div class="metric-label">Total Invoices</div>
+                    <div class="metric-label">Invoices</div>
                     <div class="metric-value"><?php echo $summary['total_invoices'] ?? 0; ?></div>
                 </div>
-
                 <div class="metric-card">
-                    <div class="metric-label">Total Revenue (Base)</div>
+                    <div class="metric-label">Revenue (Base)</div>
                     <div class="metric-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
                 </div>
-
                 <div class="metric-card">
-                    <div class="metric-label">Total VAT</div>
-                    <div class="metric-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_vat'] ?? 0, 0); ?></div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-label">Total Amount</div>
+                    <div class="metric-label">Total After VAT</div>
                     <div class="metric-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-label">Unique Customers</div>
-                    <div class="metric-value"><?php echo $summary['unique_customers'] ?? 0; ?></div>
-                </div>
-
-                <div class="metric-card">
-                    <div class="metric-label">Avg Invoice Value</div>
-                    <div class="metric-value"><?php echo CURRENCY; ?><?php echo number_format($summary['avg_invoice_value'] ?? 0, 0); ?></div>
                 </div>
             </div>
 
-            <?php if ($type === 'yearly' && !empty($reportData['monthly_breakdown'])): ?>
             <div class="card">
-                <h3>Monthly Breakdown</h3>
-                <table class="table">
+                <h2><?php echo htmlspecialchars($reportTitle); ?></h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Granular view of transactions for the selected period.</p>
+                
+                <?php if ($type === 'yearly' && !empty($reportData['monthly_breakdown'])): ?>
+                <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: var(--primary);">●</span> Monthly Breakdown
+                </h4>
+                <table class="table" style="margin-bottom: 40px;">
                     <thead>
-                        <tr>
-                            <th>Month</th>
-                            <th class="text-right">Invoices</th>
-                            <th class="text-right">Revenue (Base)</th>
-                            <th class="text-right">VAT</th>
-                            <th class="text-right">Total</th>
-                        </tr>
+                        <tr><th>Month</th><th class="text-right">Orders</th><th class="text-right">Revenue</th><th class="text-right">VAT</th><th class="text-right">Total</th></tr>
                     </thead>
                     <tbody>
-                        <?php foreach($reportData['monthly_breakdown'] as $month_data): ?>
+                        <?php foreach($reportData['monthly_breakdown'] as $m): ?>
                         <tr>
-                            <td><?php echo $month_data['month_name']; ?></td>
-                            <td class="text-right"><?php echo $month_data['invoice_count']; ?></td>
-                            <td class="text-right"><?php echo CURRENCY; ?><?php echo number_format($month_data['revenue_base'], 0); ?></td>
-                            <td class="text-right"><?php echo CURRENCY; ?><?php echo number_format($month_data['vat_total'], 0); ?></td>
-                            <td class="text-right"><?php echo CURRENCY; ?><?php echo number_format($month_data['total'], 0); ?></td>
+                            <td><?php echo $m['month_name']; ?></td>
+                            <td class="text-right"><?php echo $m['invoice_count']; ?></td>
+                            <td class="text-right"><?php echo CURRENCY . number_format($m['revenue_base'], 0); ?></td>
+                            <td class="text-right"><?php echo CURRENCY . number_format($m['vat_total'], 0); ?></td>
+                            <td class="text-right" class="price-tag"><?php echo CURRENCY . number_format($m['total'], 0); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-            </div>
-            <?php endif; ?>
+                <?php endif; ?>
 
-            <div class="card">
-                <h3>Transaction Details</h3>
+                <h4 style="font-size: 16px; font-weight: 800; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                    <span style="color: var(--secondary);">●</span> Transaction Details
+                </h4>
                 <table class="table">
                     <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Invoice #</th>
-                            <th>Customer</th>
-                            <th>Item</th>
-                            <th class="text-right">Base Value</th>
-                            <th class="text-right">VAT</th>
-                            <th class="text-right">Total</th>
-                        </tr>
+                        <tr><th>Date</th><th>Invoice #</th><th>Customer</th><th class="text-right">Total Value</th></tr>
                     </thead>
                     <tbody>
                         <?php foreach($reportData['data'] ?? [] as $row): ?>
                         <tr>
                             <td><?php echo date('Y-m-d', strtotime($row['invoice_date'])); ?></td>
-                            <td><?php echo htmlspecialchars($row['invoice_number']); ?></td>
-                            <td><?php echo htmlspecialchars(substr($row['customer_name'], 0, 30)); ?></td>
-                            <td><?php echo htmlspecialchars(substr($row['item_description'], 0, 20)); ?></td>
-                            <td class="text-right"><?php echo CURRENCY; ?><?php echo number_format($row['base_value'], 0); ?></td>
-                            <td class="text-right"><?php echo CURRENCY; ?><?php echo number_format($row['vat_component'], 0); ?></td>
-                            <td class="text-right"><?php echo CURRENCY; ?><?php echo number_format($row['total_amount'], 0); ?></td>
+                            <td style="font-family: monospace; font-weight: 700;"><?php echo htmlspecialchars($row['invoice_number']); ?></td>
+                            <td><?php echo htmlspecialchars(substr($row['customer_name'], 0, 40)); ?></td>
+                            <td class="text-right price-tag"><?php echo CURRENCY . number_format($row['total_amount'], 0); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

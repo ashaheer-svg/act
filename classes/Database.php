@@ -187,6 +187,29 @@ class Database {
     /**
      * Fetch single row
      */
+    /**
+     * Resets all sales data and import logs
+     * Preserves users and settings
+     */
+    public function resetSalesData() {
+        try {
+            $this->db->beginTransaction();
+            
+            $this->db->exec("DELETE FROM sales");
+            $this->db->exec("DELETE FROM import_logs");
+            $this->db->exec("DELETE FROM activity_logs");
+            
+            // Reset sequences
+            $this->db->exec("DELETE FROM sqlite_sequence WHERE name IN ('sales', 'import_logs', 'activity_logs')");
+            
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
     public function fetch($sql, $params = []) {
         $stmt = $this->execute($sql, $params);
         return $stmt->fetch(PDO::FETCH_ASSOC);
