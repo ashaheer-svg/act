@@ -15,30 +15,29 @@
   Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# Deny direct access to sensitive files
-<FilesMatch "\.(php|phtml|php3|php4|php5|phtml|phps|pht|inc)$">
-  Deny from all
-</FilesMatch>
-
-<FilesMatch "^(config|classes)">
-  Deny from all
-</FilesMatch>
-
-# Allow access to main PHP files only
-<FilesMatch "^(config|login|index|upload|reports|users|logout)\.php$">
-  Allow from all
-</FilesMatch>
-
 # Prevent directory listing
 <IfModule mod_options.c>
   Options -Indexes
 </IfModule>
 
-# Rewrite engine
+# Protect sensitive directories
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Prevent access to data folder (as a fallback)
+  # Block access to data and classes
   RewriteRule ^data/ - [F,L]
   RewriteRule ^classes/ - [F,L]
+  RewriteRule ^backups/ - [F,L]
+  RewriteRule ^logs/ - [F,L]
+  RewriteRule ^sessions/ - [F,L]
+  
+  # Block access to config.php directly
+  RewriteRule ^config\.php$ - [F,L]
 </IfModule>
+
+# Ensure PHP files are executable
+<FilesMatch "\.php$">
+  <IfModule mod_authz_core.c>
+    Require all granted
+  </IfModule>
+</FilesMatch>

@@ -15,4 +15,7 @@ deployment:
     - /bin/chmod 755 $DEPLOYPATH
     - /usr/bin/find $DEPLOYPATH -type d -exec chmod 755 {} +
     - /usr/bin/find $DEPLOYPATH -type f -exec chmod 644 {} +
-    - /bin/chmod 700 $PRIVATEPATH
+    # Ensure private storage is accessible by PHP but not the web
+    - /bin/chmod 755 $PRIVATEPATH
+    - /usr/bin/find $PRIVATEPATH -type d -exec chmod 755 {} +
+    - /usr/bin/find $PRIVATEPATH -type f -exec chmod 644 {} +
