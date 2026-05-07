@@ -10,6 +10,8 @@ $auth->requireLogin();
 $reports = new Reports($db);
 
 $user = $auth->getCurrentUser();
+$currency = $db->getSetting('currency_symbol', '$');
+$vatRate = $db->getSetting('vat_rate', '0.18');
 $type = $_GET['type'] ?? 'monthly';
 $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');
@@ -275,11 +277,11 @@ $summary = $reportData['summary'] ?? [];
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Revenue (Base)</div>
-                    <div class="metric-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
+                    <div class="metric-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Total After VAT</div>
-                    <div class="metric-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
+                    <div class="metric-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
                 </div>
             </div>
 

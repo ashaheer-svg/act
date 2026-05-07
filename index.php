@@ -11,6 +11,10 @@ $reports = new Reports($db);
 
 $user = $auth->getCurrentUser();
 
+// Load dynamic settings
+$currency = $db->getSetting('currency_symbol', '$');
+$vatRate = $db->getSetting('vat_rate', '0.18');
+
 // Get date range for reports
 $month = $_GET['month'] ?? date('m');
 $year = $_GET['year'] ?? date('Y');
@@ -448,19 +452,19 @@ try {
 
                 <div class="card">
                     <div class="card-label">Total Revenue (Base)</div>
-                    <div class="card-value" style="color: var(--primary);"><?php echo CURRENCY; ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
+                    <div class="card-value" style="color: var(--primary);"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
                     <div class="card-footer"><span>📄</span> <?php echo $summary['total_invoices'] ?? 0; ?> invoices</div>
                 </div>
 
                 <div class="card">
                     <div class="card-label">Total After VAT</div>
-                    <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
+                    <div class="card-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
                     <div class="card-footer">Revenue to collect</div>
                 </div>
 
                 <div class="card">
                     <div class="card-label">VAT Collected</div>
-                    <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_vat'] ?? 0, 0); ?></div>
+                    <div class="card-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_vat'] ?? 0, 0); ?></div>
                     <div class="card-footer">To be remitted</div>
                 </div>
 
@@ -472,7 +476,7 @@ try {
 
                 <div class="card">
                     <div class="card-label">Avg Invoice Value</div>
-                    <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['avg_invoice_value'] ?? 0, 0); ?></div>
+                    <div class="card-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['avg_invoice_value'] ?? 0, 0); ?></div>
                     <div class="card-footer">Per transaction</div>
                 </div>
 
@@ -500,7 +504,7 @@ try {
                                 <td><?php echo htmlspecialchars(substr($customer['customer_name'], 0, 35)); ?></td>
                                 <td><?php echo $customer['invoice_count']; ?> orders</td>
                                 <td>
-                                    <div class="price-tag"><?php echo CURRENCY; ?><?php echo number_format($customer['total_revenue'], 0); ?></div>
+                                    <div class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($customer['total_revenue'], 0); ?></div>
                                     <div class="price-sub"><?php echo $customer['revenue_percentage']; ?>% of total</div>
                                 </td>
                             </tr>
@@ -522,7 +526,7 @@ try {
                                 <td><?php echo htmlspecialchars(substr($product['item_description'], 0, 40)); ?></td>
                                 <td><?php echo (int)$product['total_quantity']; ?> units</td>
                                 <td>
-                                    <div class="price-tag"><?php echo CURRENCY; ?><?php echo number_format($product['total_revenue'], 0); ?></div>
+                                    <div class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($product['total_revenue'], 0); ?></div>
                                     <div class="price-sub"><?php echo number_format($product['total_revenue'] / max(1, $product['total_quantity']), 2); ?> avg price</div>
                                 </td>
                             </tr>
@@ -533,13 +537,13 @@ try {
 
                 <div class="card">
                     <div class="card-label">VAT - Taxable Sales</div>
-                    <div class="card-value" style="font-size: 24px;"><?php echo CURRENCY; ?><?php echo number_format($vatSummary['taxable_vat'] ?? 0, 0); ?></div>
-                    <div class="card-footer">Base: <?php echo CURRENCY; ?><?php echo number_format($vatSummary['taxable_base'] ?? 0, 0); ?></div>
+                    <div class="card-value" style="font-size: 24px;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($vatSummary['taxable_vat'] ?? 0, 0); ?></div>
+                    <div class="card-footer">Base: <?php echo htmlspecialchars($currency); ?><?php echo number_format($vatSummary['taxable_base'] ?? 0, 0); ?></div>
                 </div>
 
                 <div class="card">
                     <div class="card-label">VAT - Non-Taxable</div>
-                    <div class="card-value" style="font-size: 24px;"><?php echo CURRENCY; ?><?php echo number_format($vatSummary['non_taxable_vat'] ?? 0, 0); ?></div>
+                    <div class="card-value" style="font-size: 24px;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($vatSummary['non_taxable_vat'] ?? 0, 0); ?></div>
                     <div class="card-footer">Base: <?php echo CURRENCY; ?><?php echo number_format($vatSummary['non_taxable_base'] ?? 0, 0); ?></div>
                 </div>
             </div>

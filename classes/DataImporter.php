@@ -8,10 +8,16 @@
 class DataImporter {
     private $db;
     private $userId;
+    private $vatRate;
+    private $currency;
 
     public function __construct(Database $db, $userId) {
         $this->db = $db;
         $this->userId = $userId;
+        
+        // Load dynamic settings
+        $this->vatRate = floatval($this->db->getSetting('vat_rate', '0.18'));
+        $this->currency = $this->db->getSetting('currency_symbol', '$');
     }
 
     /**
@@ -279,17 +285,17 @@ class DataImporter {
         if ($taxCode === 'Taxable Sales') {
             // Exclusive: amount is base value
             $base = $amount;
-            $vat = $base * VAT_RATE;
+            $vat = $base * $this->vatRate;
             $total = $base + $vat;
         } elseif ($taxCode === 'Non-Taxable Sales') {
             // Inclusive: amount is total
             $total = $amount;
-            $base = $total / (1 + VAT_RATE);
+            $base = $total / (1 + $this->vatRate);
             $vat = $total - $base;
         } else {
             // Default: treat as exclusive
             $base = $amount;
-            $vat = $base * VAT_RATE;
+            $vat = $base * $this->vatRate;
             $total = $base + $vat;
         }
 
