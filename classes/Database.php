@@ -193,25 +193,16 @@ class Database {
      */
     public function resetSalesData() {
         try {
-            $this->db->beginTransaction();
+            // We drop and recreate tables to ensure schema changes (like UNIQUE constraints) are applied
+            $this->db->exec("DROP TABLE IF EXISTS sales");
+            $this->db->exec("DROP TABLE IF EXISTS import_logs");
+            $this->db->exec("DROP TABLE IF EXISTS activity_log");
             
-            // Check if tables exist before deleting
-            $tables = ['sales', 'import_logs', 'activity_log'];
-            foreach ($tables as $table) {
-                $this->db->exec("DELETE FROM $table");
-            }
+            // Re-initialize the tables with the latest schema from createTablesIfNotExists()
+            $this->createTablesIfNotExists();
             
-            // Reset sequences safely
-            $this->db->exec("DELETE FROM sqlite_sequence WHERE name IN ('sales', 'import_logs', 'activity_log')");
-            
-            $this->db->commit();
             return true;
         } catch (Exception $e) {
-            $this->db->rollBack();
-            // If the error is just a missing table, we can ignore it during reset
-            if (strpos($e->getMessage(), 'no such table') !== false) {
-                return true; 
-            }
             throw $e;
         }
     }
