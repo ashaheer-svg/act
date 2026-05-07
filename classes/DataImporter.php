@@ -143,6 +143,11 @@ class DataImporter {
     private function importData($records, $fileName) {
         $imported = 0;
         $skipped = 0;
+        $details = [
+            'missing_fields' => 0,
+            'duplicates' => 0,
+            'other' => 0
+        ];
         $errors = [];
 
         try {
@@ -150,8 +155,10 @@ class DataImporter {
 
             foreach ($records as $record) {
                 // Skip if required fields missing
+                // Skip if required fields missing
                 if (empty($record['Amount']) || empty($record['Sales Tax Code'])) {
                     $skipped++;
+                    $details['missing_fields']++;
                     continue;
                 }
 
@@ -163,6 +170,7 @@ class DataImporter {
 
                 if ($existingRecord) {
                     $skipped++;
+                    $details['duplicates']++;
                     continue;
                 }
 
@@ -207,6 +215,7 @@ class DataImporter {
                 'message' => "Import complete: $imported records imported, $skipped skipped",
                 'imported' => $imported,
                 'skipped' => $skipped,
+                'details' => $details,
                 'errors' => $errors
             ];
         } catch (Exception $e) {
