@@ -37,337 +37,471 @@ try {
 <head>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4361ee;
-            --primary-hover: #3a56d4;
-            --sidebar: #0f172a;
-            --bg: #f8fafc;
+            --primary: #6366f1; /* Soft Indigo */
+            --primary-hover: #4f46e5;
+            --secondary: #fb923c; /* Orange for badges */
+            --bg: #f1f5f9; /* Soft Slate background */
+            --sidebar-bg: #ffffff;
             --card-bg: #ffffff;
-            --text-main: #1e293b;
+            --text-main: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
         }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background: var(--bg);
             color: var(--text-main);
             line-height: 1.5;
+            overflow-x: hidden;
         }
+
+        /* --- Header --- */
         .header {
             background: white;
-            color: var(--text-main);
-            padding: 0 30px;
-            height: 70px;
+            padding: 0 40px;
+            height: 80px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid var(--border);
-            position: relative;
-            z-index: 10;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .header h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .user-badge {
-            background: #e0e7ff;
-            color: #4361ee;
-            padding: 4px 12px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .logout-btn {
-            background: #fee2e2;
-            color: #ef4444;
-            border: 1px solid #fecaca;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .logout-btn:hover { background: #fecaca; }
-        .container {
-            display: flex;
-            min-height: calc(100vh - 70px);
-        }
-        .sidebar {
-            width: 260px;
-            background: var(--sidebar);
-            color: white;
-            padding: 30px 20px;
-            flex-shrink: 0;
-        }
-        .nav-section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #64748b;
-            margin: 25px 0 10px 10px;
-            font-weight: 700;
-        }
-        .nav-item {
-            padding: 12px 15px;
-            margin: 4px 0;
-            cursor: pointer;
-            border-radius: 10px;
-            text-decoration: none;
-            color: #94a3b8;
+
+        .logo-container {
             display: flex;
             align-items: center;
             gap: 12px;
+            font-weight: 800;
+            font-size: 22px;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .top-nav {
+            display: flex;
+            gap: 30px;
+        }
+
+        .top-nav-item {
+            text-decoration: none;
+            color: var(--text-muted);
             font-size: 14px;
             font-weight: 500;
+            padding-bottom: 5px;
+            border-bottom: 2px solid transparent;
             transition: all 0.2s;
         }
-        .nav-item:hover {
-            background: rgba(255,255,255,0.05);
-            color: white;
+
+        .top-nav-item:hover, .top-nav-item.active {
+            color: var(--text-main);
+            border-bottom-color: var(--primary);
         }
-        .nav-item.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
-        }
-        .main-content {
-            flex: 1;
-            padding: 40px;
-            background: var(--bg);
-            position: relative;
-            z-index: 1;
-            pointer-events: auto !important;
-        }
-        .filters {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+
+        .header-actions {
             display: flex;
-            gap: 15px;
-            align-items: flex-end;
+            align-items: center;
+            gap: 20px;
         }
-        .filter-group {
+
+        .user-profile {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--text-muted);
+            overflow: hidden;
+            border: 2px solid white;
+            box-shadow: var(--shadow);
+        }
+
+        /* --- Layout --- */
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 30px;
+            padding: 30px 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* --- Sidebar / Filters --- */
+        .sidebar {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 110px;
+        }
+
+        .sidebar h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reset-link {
+            font-size: 12px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .filter-section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .custom-select {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
+        }
+
+        /* --- Main Content --- */
+        .main-content {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 25px;
         }
-        .filter-group label { font-weight: 600; font-size: 12px; color: #666; }
-        .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ddd; border-radius: 5px; }
-        .filter-btn {
-            background: #667eea;
+
+        .report-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
             color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
         }
-        .filter-btn:hover { background: #764ba2; }
+
+        .badge-primary { background: var(--primary); }
+        .badge-secondary { background: var(--secondary); }
+        .badge-muted { background: #e2e8f0; color: var(--text-muted); }
+
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
         }
+
         .card {
             background: white;
-            padding: 24px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            border: 1px solid transparent;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.06);
-            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border);
         }
-        .card-title {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 12px;
-            text-transform: uppercase;
+
+        .card-label {
+            font-size: 12px;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 15px;
         }
+
         .card-value {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 800;
             color: var(--text-main);
             letter-spacing: -1px;
+            line-height: 1;
         }
-        .card-subtitle {
+
+        .card-footer {
+            margin-top: 20px;
             font-size: 13px;
             color: var(--text-muted);
-            margin-top: 8px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
-        .warning-card {
-            border-left: 4px solid #ff9800;
-            background: #fff9f5;
-        }
-        .warning-card .card-value {
-            color: #ff9800;
-        }
+
+        /* --- Table Styling --- */
         .table-card {
-            grid-column: span 2;
+            grid-column: span 3;
         }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-header h4 { font-size: 16px; font-weight: 700; }
+
         .table {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+            border-collapse: separate;
+            border-spacing: 0 10px;
         }
+
         .table th {
-            background: #f8f9fa;
-            padding: 12px;
             text-align: left;
-            font-weight: 600;
-            border-bottom: 2px solid #e9ecef;
-            font-size: 12px;
-            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 0 15px 10px 15px;
         }
+
         .table td {
-            padding: 12px;
-            border-bottom: 1px solid #e9ecef;
-            font-size: 13px;
+            background: #f8fafc;
+            padding: 18px 15px;
+            font-size: 14px;
         }
-        .table tr:hover { background: #f8f9fa; }
-        .percentage {
-            background: #e3f2fd;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-weight: 600;
-            color: #667eea;
+
+        .table tr td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; font-weight: 600; }
+        .table tr td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+        .price-tag {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--primary);
         }
-        .risk-high { background: #ffebee; color: #c33; font-weight: 600; }
-        .risk-medium { background: #fff3e0; color: #ff9800; font-weight: 600; }
-        .risk-low { background: #e8f5e9; color: #4caf50; font-weight: 600; }
-        h2 { margin-bottom: 20px; color: #333; font-size: 20px; }
-        @media (max-width: 768px) {
-            .container { flex-direction: column; }
-            .sidebar { width: 100%; }
-            .table-card { grid-column: span 1; }
+
+        .price-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* --- Buttons --- */
+        .btn-primary {
+            background: var(--text-main);
+            color: white;
+            padding: 14px 28px;
+            border-radius: var(--radius-md);
+            border: none;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: scale(0.98);
+        }
+
+        @media (max-width: 1200px) {
+            .container { grid-template-columns: 1fr; }
+            .sidebar { position: relative; top: 0; width: 100%; }
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+            .table-card { grid-column: span 2; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>📊 Sales BI Dashboard</h1>
-        <div class="user-info">
-            <span><?php echo htmlspecialchars($user['username']); ?></span>
-            <div class="user-badge"><?php echo strtoupper($user['role']); ?></div>
+        <div class="logo-container">
+            <div class="logo-icon">Σ</div>
+            act sales bi
+        </div>
+        
+        <div class="top-nav">
+            <a href="index.php" class="top-nav-item active">Browse dashboard</a>
+            <a href="reports.php?type=monthly" class="top-nav-item">Reports</a>
+            <?php if ($auth->isAdmin()): ?>
+            <a href="upload.php" class="top-nav-item">Upload</a>
+            <a href="users.php" class="top-nav-item">Users</a>
+            <?php endif; ?>
+        </div>
+
+        <div class="header-actions">
+            <div style="font-size: 18px; color: var(--text-muted); cursor: pointer;">⚙️</div>
+            <div style="font-size: 18px; color: var(--text-muted); cursor: pointer;">🔔</div>
+            <div class="user-profile">
+                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+            </div>
             <form method="POST" action="logout.php" style="margin: 0;">
-                <button type="submit" class="logout-btn">Logout</button>
+                <button type="submit" style="background: none; border: none; font-size: 18px; cursor: pointer;">🚪</button>
             </form>
         </div>
     </div>
 
     <div class="container">
         <div class="sidebar">
-            <div class="nav-section-title">Main Menu</div>
-            <a href="index.php" class="nav-item active"><span>📊</span> Dashboard</a>
-            <a href="reports.php?type=monthly" class="nav-item"><span>📅</span> Monthly Report</a>
-            <a href="reports.php?type=quarterly" class="nav-item"><span>📈</span> Quarterly Report</a>
-            <a href="reports.php?type=yearly" class="nav-item"><span>📊</span> Yearly Report</a>
-
-            <?php if ($auth->isAdmin()): ?>
-            <div class="nav-section-title">Administration</div>
-            <a href="upload.php" class="nav-item" style="color: #4361ee; background: rgba(67,97,238,0.1);"><span>📤</span> Upload Data</a>
-            <a href="users.php" class="nav-item"><span>👥</span> Manage Users</a>
-            <?php endif; ?>
-        </div>
-
-        <div class="main-content">
-            <div class="filters">
-                <div class="filter-group">
-                    <label>Year</label>
-                    <select id="yearSelect" onchange="applyFilters()">
-                        <option value="2024" <?php echo $year == '2024' ? 'selected' : ''; ?>>2024</option>
-                        <option value="2025" <?php echo $year == '2025' ? 'selected' : ''; ?>>2025</option>
-                        <option value="2026" <?php echo $year == '2026' ? 'selected' : ''; ?>>2026</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Month</label>
-                    <select id="monthSelect" onchange="applyFilters()">
-                        <?php for($m = 1; $m <= 12; $m++): ?>
-                        <option value="<?php echo str_pad($m, 2, '0', STR_PAD_LEFT); ?>" <?php echo $month == str_pad($m, 2, '0', STR_PAD_LEFT) ? 'selected' : ''; ?>>
-                            <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
-                        </option>
-                        <?php endfor; ?>
-                    </select>
+            <h3>Filters <a href="index.php" class="reset-link">Reset</a></h3>
+            
+            <div class="filter-section">
+                <span class="filter-label">Reporting Period</span>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <span style="font-size: 11px; color: var(--text-muted); margin-bottom: 5px; display: block;">Year</span>
+                        <select id="yearSelect" class="custom-select" onchange="applyFilters()">
+                            <option value="2024" <?php echo $year == '2024' ? 'selected' : ''; ?>>2024</option>
+                            <option value="2025" <?php echo $year == '2025' ? 'selected' : ''; ?>>2025</option>
+                            <option value="2026" <?php echo $year == '2026' ? 'selected' : ''; ?>>2026</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span style="font-size: 11px; color: var(--text-muted); margin-bottom: 5px; display: block;">Month</span>
+                        <select id="monthSelect" class="custom-select" onchange="applyFilters()">
+                            <?php for($m = 1; $m <= 12; $m++): ?>
+                            <option value="<?php echo str_pad($m, 2, '0', STR_PAD_LEFT); ?>" <?php echo $month == str_pad($m, 2, '0', STR_PAD_LEFT) ? 'selected' : ''; ?>>
+                                <?php echo date('F', mktime(0, 0, 0, $m, 1)); ?>
+                            </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <h2>Dashboard - <?php echo date('F Y', strtotime("$year-$month-01")); ?></h2>
+            <div class="filter-section" style="border: none;">
+                <span class="filter-label">Quick Actions</span>
+                <a href="upload.php" class="btn-primary" style="text-decoration: none; display: block;">Upload New Data</a>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: var(--radius-md); padding: 15px; margin-top: 10px;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">Active Session</div>
+                <div style="font-size: 14px; font-weight: 700;"><?php echo htmlspecialchars($user['username']); ?></div>
+                <div style="font-size: 11px; color: var(--primary); font-weight: 600; text-transform: uppercase; margin-top: 4px;">● Admin Access</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="report-header">
+                <div class="badge badge-secondary">Cheapest month</div>
+                <div class="badge badge-primary">Current View</div>
+                <div class="badge badge-muted"><?php echo count($topCustomers); ?> customers active</div>
+            </div>
+            
+            <h2 style="font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 5px;">Dashboard - <?php echo date('F Y', strtotime("$year-$month-01")); ?></h2>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 10px;">Sales and VAT performance metrics</p>
 
             <div class="dashboard-grid">
                 <?php if (($summary['total_invoices'] ?? 0) == 0): ?>
-                <div class="card table-card" style="grid-column: span 3; text-align: center; padding: 60px 20px; border: 2px dashed var(--border); background: #fcfdfe;">
+                <div class="card table-card" style="text-align: center; padding: 60px 20px; border: 2px dashed var(--border); background: #fcfdfe;">
                     <div style="font-size: 50px; margin-bottom: 20px;">📂</div>
                     <h2 style="margin-bottom: 10px;">No sales data available yet</h2>
                     <p style="color: var(--text-muted); margin-bottom: 30px;">Start by uploading your first sales CSV file to see the analytics.</p>
-                    <a href="upload.php" class="filter-btn" style="text-decoration: none; display: inline-block;">Upload Your First File</a>
+                    <a href="upload.php" class="btn-primary" style="text-decoration: none; display: inline-block; width: auto;">Upload Your First File</a>
                 </div>
                 <?php endif; ?>
 
                 <div class="card">
-                    <div class="card-title">Total Revenue (Base)</div>
+                    <div class="card-label">Total Revenue (Base)</div>
                     <div class="card-value" style="color: var(--primary);"><?php echo CURRENCY; ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
-                    <div class="card-subtitle"><span>📄</span> <?php echo $summary['total_invoices'] ?? 0; ?> invoices</div>
+                    <div class="card-footer"><span>📄</span> <?php echo $summary['total_invoices'] ?? 0; ?> invoices</div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Total After VAT</div>
+                    <div class="card-label">Total After VAT</div>
                     <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
-                    <div class="card-subtitle">Revenue to collect</div>
+                    <div class="card-footer">Revenue to collect</div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">VAT Collected</div>
+                    <div class="card-label">VAT Collected</div>
                     <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['total_vat'] ?? 0, 0); ?></div>
-                    <div class="card-subtitle">To be remitted</div>
+                    <div class="card-footer">To be remitted</div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Unique Customers</div>
+                    <div class="card-label">Unique Customers</div>
                     <div class="card-value"><?php echo $summary['unique_customers'] ?? 0; ?></div>
+                    <div class="card-footer">Customer base</div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">Avg Invoice Value</div>
+                    <div class="card-label">Avg Invoice Value</div>
                     <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($summary['avg_invoice_value'] ?? 0, 0); ?></div>
+                    <div class="card-footer">Per transaction</div>
                 </div>
 
-                <div class="card warning-card">
-                    <div class="card-title">Customer Concentration</div>
+                <div class="card">
+                    <div class="card-label">Customer Concentration</div>
                     <div class="card-value"><?php echo $concentration['top_3_percentage'] ?? 0; ?>%</div>
-                    <div class="card-subtitle">Top 3 customers <span class="<?php echo 'risk-' . strtolower($concentration['risk_level']); ?>"><?php echo $concentration['risk_level']; ?></span></div>
+                    <div class="card-footer">
+                        Top 3 customers 
+                        <span class="badge" style="background: <?php echo $concentration['risk_level'] === 'High' ? 'var(--error)' : ($concentration['risk_level'] === 'Medium' ? 'var(--warning)' : 'var(--success)'); ?>; padding: 2px 8px; font-size: 10px;">
+                            <?php echo strtoupper($concentration['risk_level']); ?>
+                        </span>
+                    </div>
                 </div>
 
                 <div class="card table-card">
-                    <div class="card-title">Top 5 Customers</div>
+                    <div class="table-header">
+                        <h4>Top 5 Customers</h4>
+                        <span class="badge badge-muted">Revenue ranking</span>
+                    </div>
                     <table class="table">
-                        <thead><tr><th>Customer</th><th>Revenue</th><th>% of Total</th><th>Purchases</th></tr></thead>
+                        <thead><tr><th>Customer Name</th><th>Purchases</th><th>Revenue</th></tr></thead>
                         <tbody>
                             <?php foreach($topCustomers as $customer): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars(substr($customer['customer_name'], 0, 30)); ?></td>
-                                <td><?php echo CURRENCY; ?><?php echo number_format($customer['total_revenue'], 0); ?></td>
-                                <td><span class="percentage"><?php echo $customer['revenue_percentage']; ?>%</span></td>
-                                <td><?php echo $customer['invoice_count']; ?></td>
+                                <td><?php echo htmlspecialchars(substr($customer['customer_name'], 0, 35)); ?></td>
+                                <td><?php echo $customer['invoice_count']; ?> orders</td>
+                                <td>
+                                    <div class="price-tag"><?php echo CURRENCY; ?><?php echo number_format($customer['total_revenue'], 0); ?></div>
+                                    <div class="price-sub"><?php echo $customer['revenue_percentage']; ?>% of total</div>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -375,15 +509,21 @@ try {
                 </div>
 
                 <div class="card table-card">
-                    <div class="card-title">Top 5 Products</div>
+                    <div class="table-header">
+                        <h4>Top 5 Products</h4>
+                        <span class="badge badge-muted">Inventory performance</span>
+                    </div>
                     <table class="table">
-                        <thead><tr><th>Product</th><th>Revenue</th><th>Qty</th></tr></thead>
+                        <thead><tr><th>Item Description</th><th>Quantity Sold</th><th>Total Revenue</th></tr></thead>
                         <tbody>
                             <?php foreach($topProducts as $product): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars(substr($product['item_description'], 0, 25)); ?></td>
-                                <td><?php echo CURRENCY; ?><?php echo number_format($product['total_revenue'], 0); ?></td>
-                                <td><?php echo (int)$product['total_quantity']; ?></td>
+                                <td><?php echo htmlspecialchars(substr($product['item_description'], 0, 40)); ?></td>
+                                <td><?php echo (int)$product['total_quantity']; ?> units</td>
+                                <td>
+                                    <div class="price-tag"><?php echo CURRENCY; ?><?php echo number_format($product['total_revenue'], 0); ?></div>
+                                    <div class="price-sub"><?php echo number_format($product['total_revenue'] / max(1, $product['total_quantity']), 2); ?> avg price</div>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -391,15 +531,15 @@ try {
                 </div>
 
                 <div class="card">
-                    <div class="card-title">VAT - Taxable Sales</div>
-                    <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($vatSummary['taxable_vat'] ?? 0, 0); ?></div>
-                    <div class="card-subtitle">Base: <?php echo CURRENCY; ?><?php echo number_format($vatSummary['taxable_base'] ?? 0, 0); ?></div>
+                    <div class="card-label">VAT - Taxable Sales</div>
+                    <div class="card-value" style="font-size: 24px;"><?php echo CURRENCY; ?><?php echo number_format($vatSummary['taxable_vat'] ?? 0, 0); ?></div>
+                    <div class="card-footer">Base: <?php echo CURRENCY; ?><?php echo number_format($vatSummary['taxable_base'] ?? 0, 0); ?></div>
                 </div>
 
                 <div class="card">
-                    <div class="card-title">VAT - Non-Taxable</div>
-                    <div class="card-value"><?php echo CURRENCY; ?><?php echo number_format($vatSummary['non_taxable_vat'] ?? 0, 0); ?></div>
-                    <div class="card-subtitle">Base: <?php echo CURRENCY; ?><?php echo number_format($vatSummary['non_taxable_base'] ?? 0, 0); ?></div>
+                    <div class="card-label">VAT - Non-Taxable</div>
+                    <div class="card-value" style="font-size: 24px;"><?php echo CURRENCY; ?><?php echo number_format($vatSummary['non_taxable_vat'] ?? 0, 0); ?></div>
+                    <div class="card-footer">Base: <?php echo CURRENCY; ?><?php echo number_format($vatSummary['non_taxable_base'] ?? 0, 0); ?></div>
                 </div>
             </div>
         </div>
