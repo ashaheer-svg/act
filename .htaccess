@@ -1,9 +1,11 @@
 # Sales BI Dashboard - Security Configuration
 
+DirectoryIndex index.php
+Options -Indexes
+
 # Enable GZIP compression
 <IfModule mod_deflate.c>
   AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript
-  AddOutputFilterByType DEFLATE application/javascript application/x-javascript
 </IfModule>
 
 # Cache control
@@ -12,32 +14,16 @@
   Header set X-Content-Type-Options "nosniff"
   Header set X-Frame-Options "SAMEORIGIN"
   Header set X-XSS-Protection "1; mode=block"
-  Header set Referrer-Policy "strict-origin-when-cross-origin"
-</IfModule>
-
-# Prevent directory listing
-<IfModule mod_options.c>
-  Options -Indexes
 </IfModule>
 
 # Protect sensitive directories
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  RewriteBase /
 
-  # Block access to data and classes
-  RewriteRule ^data/ - [F,L]
-  RewriteRule ^classes/ - [F,L]
-  RewriteRule ^backups/ - [F,L]
-  RewriteRule ^logs/ - [F,L]
-  RewriteRule ^sessions/ - [F,L]
+  # Block access to private folders
+  RewriteRule ^(data|classes|backups|logs|sessions|tmp)/ - [F,L]
   
   # Block access to config.php directly
   RewriteRule ^config\.php$ - [F,L]
 </IfModule>
-
-# Ensure PHP files are executable
-<FilesMatch "\.php$">
-  <IfModule mod_authz_core.c>
-    Require all granted
-  </IfModule>
-</FilesMatch>

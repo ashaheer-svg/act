@@ -19,3 +19,5 @@ deployment:
     - /bin/chmod 755 $PRIVATEPATH
     - /usr/bin/find $PRIVATEPATH -type d -exec chmod 755 {} +
     - /usr/bin/find $PRIVATEPATH -type f -exec chmod 644 {} +
+    # Specifically ensure database file is writable (Group Write)
+    - /bin/chmod 664 $PRIVATEPATH/data/sales_bi.db || true

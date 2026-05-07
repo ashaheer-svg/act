@@ -59,7 +59,11 @@ if (!is_dir(DATA_DIR)) {
 
 // Secure session if on cPanel
 if ($is_cpanel) {
-    if (!is_dir(SESSION_DIR)) mkdir(SESSION_DIR, 0700, true);
+    if (!is_dir(SESSION_DIR)) mkdir(SESSION_DIR, 0755, true);
+    if (!is_dir(LOG_DIR)) mkdir(LOG_DIR, 0755, true);
+    if (!is_dir(BACKUP_DIR)) mkdir(BACKUP_DIR, 0755, true);
+    if (!is_dir(TMP_DIR)) mkdir(TMP_DIR, 0755, true);
+    
     session_save_path(SESSION_DIR);
 }
 ?>
