@@ -215,7 +215,7 @@ class DataImporter {
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     [
                         $record['Type'] ?? 'Invoice',
-                        $record['Date'] ?? date('Y-m-d'),
+                        $this->formatDate($record['Date'] ?? ''),
                         $record['Num'] ?? '',
                         $record['Name'] ?? '',
                         $record['Item'] ?? '',
@@ -253,6 +253,21 @@ class DataImporter {
                 'skipped' => $skipped
             ];
         }
+    }
+
+    /**
+     * Normalize date to Y-m-d format
+     */
+    private function formatDate($dateStr) {
+        if (empty($dateStr)) return date('Y-m-d');
+        
+        $timestamp = strtotime($dateStr);
+        if ($timestamp === false) {
+            // Handle Excel numeric date if necessary (though SimpleXLSX usually handles this)
+            return date('Y-m-d');
+        }
+        
+        return date('Y-m-d', $timestamp);
     }
 
     /**
