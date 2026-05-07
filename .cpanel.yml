@@ -1,0 +1,6 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/activeme/public_html/act
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/rsync -avz --exclude='.git*' ./ $DEPLOYPATH
