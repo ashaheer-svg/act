@@ -32,191 +32,215 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Sales Data</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+        :root {
+            --primary: #4361ee;
+            --primary-hover: #3a56d4;
+            --sidebar: #0f172a;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
         }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.5;
+        }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
+            background: white;
+            color: var(--text-main);
+            padding: 0 30px;
+            height: 70px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            z-index: 10;
         }
-
+        .header h1 { font-size: 20px; font-weight: 700; }
         .container {
             display: flex;
             min-height: calc(100vh - 70px);
         }
-
         .sidebar {
-            width: 250px;
-            background: #2c3e50;
+            width: 260px;
+            background: var(--sidebar);
             color: white;
-            padding: 20px;
+            padding: 30px 20px;
+            flex-shrink: 0;
         }
-
+        .nav-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin: 25px 0 10px 10px;
+            font-weight: 700;
+        }
         .nav-item {
             padding: 12px 15px;
-            margin: 5px 0;
-            border-radius: 5px;
+            margin: 4px 0;
+            cursor: pointer;
+            border-radius: 10px;
             text-decoration: none;
-            color: #bbb;
-            display: block;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
         }
-
-        .nav-item:hover, .nav-item.active {
-            background: #667eea;
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
             color: white;
         }
-
+        .nav-item.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+        }
         .main-content {
             flex: 1;
-            padding: 30px;
+            padding: 40px;
+            background: var(--bg);
         }
-
         .card {
             background: white;
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
             margin-bottom: 30px;
         }
-
         .card h2 {
             margin-bottom: 20px;
-            color: #333;
+            color: var(--text-main);
+            font-size: 20px;
+            font-weight: 700;
         }
-
         .upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            padding: 40px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 60px 40px;
             text-align: center;
-            background: #f9f9f9;
-            transition: all 0.3s;
+            background: #fcfdfe;
+            transition: all 0.2s;
         }
-
         .upload-area:hover {
-            background: #f0f0ff;
-            border-color: #764ba2;
+            background: #f8fafc;
+            border-color: var(--primary);
         }
-
-        .upload-area.dragover {
-            background: #e3f2fd;
-            border-color: #667eea;
-        }
-
         .upload-area input[type="file"] {
             display: none;
         }
-
-        .upload-label {
-            cursor: pointer;
-            display: inline-block;
-        }
-
         .upload-icon {
-            font-size: 40px;
+            font-size: 48px;
             margin-bottom: 15px;
         }
-
-        .upload-text {
-            color: #666;
-            margin-bottom: 10px;
-        }
-
         .upload-button {
-            background: #667eea;
+            background: var(--primary);
             color: white;
-            padding: 10px 30px;
+            padding: 12px 24px;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: 600;
-            margin-top: 15px;
+            font-size: 14px;
+            transition: all 0.2s;
         }
-
-        .upload-button:hover {
-            background: #764ba2;
-        }
-
+        .upload-button:hover { background: var(--primary-hover); transform: translateY(-1px); }
         .message {
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border-left: 4px solid;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
         }
-
-        .message.success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            border-color: #4caf50;
+        .message.success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
+        .message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
+        .skip-details {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
         }
-
-        .message.error {
-            background: #ffebee;
-            color: #c33;
-            border-color: #f44336;
+        .skip-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
-
+        .skip-label { font-size: 12px; font-weight: 600; text-transform: uppercase; opacity: 0.7; }
+        .skip-value { font-size: 18px; font-weight: 700; }
         .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            color: #1e40af;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 12px;
         }
-
         .table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
         }
-
         .table th {
-            background: #f8f9fa;
-            padding: 12px;
+            background: #f8fafc;
+            padding: 12px 15px;
             text-align: left;
-            font-weight: 600;
-            border-bottom: 2px solid #e9ecef;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
         }
-
         .table td {
-            padding: 12px;
-            border-bottom: 1px solid #e9ecef;
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
         }
-
-        .table tr:hover {
-            background: #f8f9fa;
-        }
-
+        .table tr:hover { background: #f8fafc; }
         .logout-btn {
-            background: rgba(255,255,255,0.3);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
+            background: #fee2e2;
+            color: #ef4444;
+            border: 1px solid #fecaca;
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
         }
-
         .user-badge {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 15px;
-            border-radius: 20px;
+            background: #e0e7ff;
+            color: #4361ee;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
         }
+    </style>
     </style>
 </head>
 <body>
     <div class="header">
         <h1>📤 Upload Sales Data</h1>
         <div style="display: flex; gap: 15px; align-items: center;">
-            <span><?php echo htmlspecialchars($user['username']); ?></span>
+            <span style="font-size: 14px; font-weight: 500;"><?php echo htmlspecialchars($user['username']); ?></span>
             <div class="user-badge">ADMIN</div>
             <form method="POST" action="logout.php" style="margin: 0;">
                 <button type="submit" class="logout-btn">Logout</button>
@@ -226,16 +250,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
 
     <div class="container">
         <div class="sidebar">
-            <h3 style="margin-bottom: 20px; font-size: 14px;">Navigation</h3>
-            <a href="index.php" class="nav-item">📊 Dashboard</a>
-            <a href="upload.php" class="nav-item active">📤 Upload Data</a>
-            <a href="users.php" class="nav-item">👥 Manage Users</a>
+            <div class="nav-section-title">Main Menu</div>
+            <a href="index.php" class="nav-item"><span>📊</span> Dashboard</a>
+            
+            <div class="nav-section-title">Administration</div>
+            <a href="upload.php" class="nav-item active"><span>📤</span> Upload Data</a>
+            <a href="users.php" class="nav-item"><span>👥</span> Manage Users</a>
         </div>
 
         <div class="main-content">
             <?php if ($message): ?>
             <div class="message <?php echo $messageType; ?>">
-                <?php echo htmlspecialchars($message); ?>
+                <div style="font-size: 24px;"><?php echo $messageType === 'success' ? '✅' : '❌'; ?></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; margin-bottom: 5px;"><?php echo $messageType === 'success' ? 'Import Successful' : 'Import Failed'; ?></div>
+                    <div><?php echo htmlspecialchars($message); ?></div>
+                    
+                    <?php if (isset($result['details'])): ?>
+                    <div class="skip-details">
+                        <div class="skip-item">
+                            <div class="skip-label">Imported</div>
+                            <div class="skip-value" style="color: var(--success);"><?php echo $result['imported']; ?></div>
+                        </div>
+                        <div class="skip-item">
+                            <div class="skip-label">Duplicates</div>
+                            <div class="skip-value" style="color: var(--warning);"><?php echo $result['details']['duplicates']; ?></div>
+                        </div>
+                        <div class="skip-item">
+                            <div class="skip-label">Headers/Empty</div>
+                            <div class="skip-value" style="color: var(--text-muted);"><?php echo $result['details']['missing_fields']; ?></div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                </div>
             </div>
             <?php endif; ?>
 
