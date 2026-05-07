@@ -1,8 +1,13 @@
 DirectoryIndex index.php
 Options -Indexes
 
-# Disable ModSecurity if it is blocking POST requests
+# Disable ModSecurity v1 if blocking POST requests
 <IfModule mod_security.c>
   SecFilterEngine Off
   SecFilterScanPOST Off
+</IfModule>
+
+# Disable ModSecurity v2 if blocking POST requests
+<IfModule mod_security2.c>
+  SecRuleEngine Off
 </IfModule>
