@@ -1,17 +1,15 @@
 <?php
 /**
  * Sales BI Application - Configuration File
- *
- * Store all configuration settings here.
- * For cPanel: Update DATABASE_PATH to writable directory
  */
 
 // Detect cPanel environment
 $is_cpanel = (strpos(__DIR__, 'public_html') !== false);
 
 if ($is_cpanel) {
-    // We are in /home/user/public_html/act -> Storage in /home/user/act_storage
-    $storage_root = dirname(__DIR__, 2) . '/act_storage';
+    // Store in a hidden folder inside the project to bypass open_basedir restrictions
+    // while maintaining security via .htaccess block
+    $storage_root = __DIR__ . '/.act_private';
 } else {
     // Local development
     $storage_root = __DIR__;
@@ -40,8 +38,8 @@ define('SESSION_NAME', 'sales_bi_session');
 define('VAT_RATE', 0.18); // 18% VAT
 define('CURRENCY', '$');
 
-// Error Display (set to false in production)
-define('DEBUG_MODE', false);
+// Error Display (set to true temporarily to debug 403/500 if they persist)
+define('DEBUG_MODE', true); 
 
 // Set timezone
 date_default_timezone_set(TIMEZONE);
@@ -50,20 +48,26 @@ date_default_timezone_set(TIMEZONE);
 if (!DEBUG_MODE) {
     error_reporting(0);
     ini_set('display_errors', 0);
+} else {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
 }
 
-// Ensure data directory exists
-if (!is_dir(DATA_DIR)) {
-    mkdir(DATA_DIR, 0755, true);
+// Ensure storage directory exists
+if (!is_dir($storage_root)) {
+    mkdir($storage_root, 0755, true);
 }
 
-// Secure session if on cPanel
+// Ensure subdirectories exist
+$subdirs = [DATA_DIR, LOG_DIR, BACKUP_DIR, SESSION_DIR, TMP_DIR];
+foreach ($subdirs as $dir) {
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+}
+
+// Secure session
 if ($is_cpanel) {
-    if (!is_dir(SESSION_DIR)) mkdir(SESSION_DIR, 0755, true);
-    if (!is_dir(LOG_DIR)) mkdir(LOG_DIR, 0755, true);
-    if (!is_dir(BACKUP_DIR)) mkdir(BACKUP_DIR, 0755, true);
-    if (!is_dir(TMP_DIR)) mkdir(TMP_DIR, 0755, true);
-    
     session_save_path(SESSION_DIR);
 }
 ?>

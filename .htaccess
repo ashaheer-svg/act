@@ -21,7 +21,10 @@ Options -Indexes
   RewriteEngine On
   RewriteBase /
 
-  # Block access to private folders
+  # COMPLETELY BLOCK ACCESS TO PRIVATE STORAGE
+  RewriteRule ^\.act_private/ - [F,L]
+
+  # Block access to legacy folders if they still exist
   RewriteRule ^(data|classes|backups|logs|sessions|tmp)/ - [F,L]
   
   # Block access to config.php directly
