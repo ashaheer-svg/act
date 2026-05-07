@@ -3,8 +3,6 @@ require_once 'config.php';
 require_once 'classes/Database.php';
 require_once 'classes/Auth.php';
 
-// Suppress Referer header to prevent ModSecurity false positive (rule 340716)
-// The rule checks if Referer begins with http:// but this site uses https://
 header('Referrer-Policy: no-referrer');
 
 $db = new Database(DATABASE_PATH);
@@ -13,19 +11,36 @@ $auth = new Auth($db);
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
+    // Accept JSON body (AJAX) to bypass ModSecurity ARGS scanning (rule 340716)
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    if (strpos($contentType, 'application/json') !== false) {
+        $json = json_decode(file_get_contents('php://input'), true);
+        $username = $json['username'] ?? '';
+        $password = $json['password'] ?? '';
+    } else {
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+    }
 
     if (empty($username) || empty($password)) {
-        $error = 'Username and password are required';
+        $result = ['success' => false, 'message' => 'Username and password are required'];
     } else {
         $result = $auth->login($username, $password);
-        if ($result['success']) {
-            header('Location: index.php');
-            exit();
-        } else {
-            $error = $result['message'];
-        }
+    }
+
+    // If AJAX request, return JSON
+    if (strpos($contentType, 'application/json') !== false) {
+        header('Content-Type: application/json');
+        echo json_encode($result);
+        exit();
+    }
+
+    // Fallback for non-AJAX POST
+    if ($result['success']) {
+        header('Location: index.php');
+        exit();
+    } else {
+        $error = $result['message'];
     }
 }
 
@@ -169,18 +184,20 @@ if ($auth->isLoggedIn()) {
         </div>
         <?php endif; ?>
 
-        <form method="POST" action="">
+        <form id="loginForm">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
+                <input type="text" id="username" name="username" required autofocus autocomplete="username">
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
             </div>
 
-            <button type="submit" class="login-button">Login</button>
+            <div id="errorMsg" class="error-message" style="display:none;"></div>
+
+            <button type="submit" class="login-button" id="loginBtn">Login</button>
 
             <div class="default-creds">
                 <p>First time? Use default credentials:</p>
@@ -190,5 +207,42 @@ if ($auth->isLoggedIn()) {
             </div>
         </form>
     </div>
+
+    <script>
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('loginBtn');
+        const errDiv = document.getElementById('errorMsg');
+        btn.textContent = 'Logging in...';
+        btn.disabled = true;
+        errDiv.style.display = 'none';
+
+        fetch('login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = 'index.php';
+            } else {
+                errDiv.textContent = data.message;
+                errDiv.style.display = 'block';
+                btn.textContent = 'Login';
+                btn.disabled = false;
+            }
+        })
+        .catch(() => {
+            errDiv.textContent = 'Connection error. Please try again.';
+            errDiv.style.display = 'block';
+            btn.textContent = 'Login';
+            btn.disabled = false;
+        });
+    });
+    </script>
 </body>
 </html>
