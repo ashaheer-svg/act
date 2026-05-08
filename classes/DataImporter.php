@@ -245,6 +245,10 @@ class DataImporter {
 
             // Log import
             $this->logImport($fileName, $imported, $skipped);
+            
+            // NEW: Sync new customers to CRM profiles
+            $this->db->syncCustomerProfiles();
+            
             $this->db->commit();
 
             return [
