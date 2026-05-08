@@ -209,21 +209,6 @@ class Database {
     }
 
     /**
-     * Transaction Management
-     */
-    public function beginTransaction() {
-        return $this->db->beginTransaction();
-    }
-
-    public function commit() {
-        return $this->db->commit();
-    }
-
-    public function rollBack() {
-        return $this->db->rollBack();
-    }
-
-    /**
      * Fetch all results
      */
     public function fetchAll($sql, $params = []) {
@@ -285,6 +270,13 @@ class Database {
      */
     public function commit() {
         $this->db->commit();
+    }
+
+    /**
+     * Rollback transaction
+     */
+    public function rollBack() {
+        $this->db->rollBack();
     }
 
     /**
