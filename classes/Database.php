@@ -456,7 +456,8 @@ class Database {
             $needed = [
                 'gross_profit' => "ALTER TABLE sales ADD COLUMN gross_profit DECIMAL(12,2) DEFAULT 0",
                 'applied_tax_rate' => "ALTER TABLE sales ADD COLUMN applied_tax_rate DECIMAL(5,4)",
-                'product_category' => "ALTER TABLE sales ADD COLUMN product_category TEXT"
+                'product_category' => "ALTER TABLE sales ADD COLUMN product_category TEXT",
+                'sales_rep_code' => "ALTER TABLE sales ADD COLUMN sales_rep_code TEXT"
             ];
 
             foreach ($needed as $col => $sql) {
@@ -520,6 +521,23 @@ class Database {
      */
     public function __destruct() {
         $this->db = null;
+    }
+    /**
+     * Sales Rep Mapping Methods
+     */
+    public function getSalesReps() {
+        return $this->fetchAll("SELECT * FROM sales_rep_mapping ORDER BY rep_name ASC");
+    }
+
+    public function addSalesRep($code, $name) {
+        return $this->execute(
+            "INSERT OR REPLACE INTO sales_rep_mapping (rep_code, rep_name, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)",
+            [$code, $name]
+        );
+    }
+
+    public function deleteSalesRep($code) {
+        return $this->execute("DELETE FROM sales_rep_mapping WHERE rep_code = ?", [$code]);
     }
 }
 ?>

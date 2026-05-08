@@ -19,6 +19,8 @@ $month = $_GET['month'] ?? date('m');
 $quarter = $_GET['quarter'] ?? ceil(date('m') / 3);
 $brand = $_GET['brand'] ?? null;
 $customer_type = $_GET['customer_type'] ?? null;
+$rep_code = $_GET['rep_code'] ?? null;
+$salesReps = $db->getSalesReps();
 
 $reportData = [];
 $reportTitle = '';
@@ -26,7 +28,7 @@ $customerPivot = [];
 $uniqueBrands = $reports->getUniqueBrands();
 
 if ($type === 'matrix') {
-    $customerPivot = $reports->getCustomerYearlyPivot($year, $brand, $customer_type);
+    $customerPivot = $reports->getCustomerYearlyPivot($year, $brand, $customer_type, $rep_code);
     $reportTitle = "Customer Performance Matrix - $year" . ($brand ? " ($brand)" : "");
 } else {
     switch($type) {
@@ -323,8 +325,8 @@ $summary = $reportData['summary'] ?? [];
                     
                     <div class="filter-controls">
                         <div class="filter-group">
-                            <span class="filter-label">Filter by Brand/Category</span>
-                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&customer_type=<?php echo $customer_type; ?>&brand='+encodeURIComponent(this.value)">
+                            <span class="filter-label">Brand</span>
+                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&customer_type=<?php echo $customer_type; ?>&rep_code=<?php echo $rep_code; ?>&brand='+encodeURIComponent(this.value)">
                                 <option value="">All Brands</option>
                                 <?php foreach($uniqueBrands as $b): ?>
                                 <option value="<?php echo htmlspecialchars($b['product_category']); ?>" <?php echo $brand === $b['product_category'] ? 'selected' : ''; ?>>
@@ -336,10 +338,22 @@ $summary = $reportData['summary'] ?? [];
 
                         <div class="filter-group">
                             <span class="filter-label">Customer Category</span>
-                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&brand=<?php echo $brand; ?>&customer_type='+encodeURIComponent(this.value)">
+                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&brand=<?php echo $brand; ?>&rep_code=<?php echo $rep_code; ?>&customer_type='+encodeURIComponent(this.value)">
                                 <option value="">All Customers</option>
                                 <option value="Partner" <?php echo $customer_type === 'Partner' ? 'selected' : ''; ?>>Partners Only</option>
                                 <option value="End Customer" <?php echo $customer_type === 'End Customer' ? 'selected' : ''; ?>>End Customers Only</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group">
+                            <span class="filter-label">Sales Rep</span>
+                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&brand=<?php echo $brand; ?>&customer_type=<?php echo $customer_type; ?>&rep_code='+encodeURIComponent(this.value)">
+                                <option value="">All Reps</option>
+                                <?php foreach($salesReps as $r): ?>
+                                <option value="<?php echo htmlspecialchars($r['rep_code']); ?>" <?php echo $rep_code === $r['rep_code'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($r['rep_name']); ?> (<?php echo htmlspecialchars($r['rep_code']); ?>)
+                                </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>

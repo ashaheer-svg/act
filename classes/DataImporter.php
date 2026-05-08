@@ -239,8 +239,9 @@ class DataImporter {
                     "INSERT INTO sales (
                         invoice_type, invoice_date, invoice_number, customer_name,
                         item_description, tax_code, quantity, qb_amount,
-                        base_value, vat_component, applied_tax_rate, total_amount, product_category
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        base_value, vat_component, applied_tax_rate, total_amount, 
+                        product_category, sales_rep_code
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     [
                         $record['Type'] ?? 'Invoice',
                         $invoiceDate,
@@ -254,7 +255,8 @@ class DataImporter {
                         $calcResult['vat'],
                         $currentVatRate,
                         $calcResult['total'],
-                        $this->categorizeProduct($record['Item'] ?? '')
+                        $record['Product Category'] ?? ($record['Item'] ?? ''),
+                        $record['Rep'] ?? ''
                     ]
                 );
 
