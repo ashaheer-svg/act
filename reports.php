@@ -17,14 +17,16 @@ $type = $_GET['type'] ?? 'monthly';
 $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');
 $quarter = $_GET['quarter'] ?? ceil(date('m') / 3);
+$brand = $_GET['brand'] ?? null;
 
 $reportData = [];
 $reportTitle = '';
 $customerPivot = [];
+$uniqueBrands = $reports->getUniqueBrands();
 
 if ($type === 'matrix') {
-    $customerPivot = $reports->getCustomerYearlyPivot($year);
-    $reportTitle = "Customer Performance Matrix - $year";
+    $customerPivot = $reports->getCustomerYearlyPivot($year, $brand);
+    $reportTitle = "Customer Performance Matrix - $year" . ($brand ? " ($brand)" : "");
 } else {
     switch($type) {
         case 'monthly':
@@ -241,6 +243,20 @@ $summary = $reportData['summary'] ?? [];
         .matrix-val.active { color: var(--primary); font-weight: 700; }
         
         .badge-vol { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+
+        /* Filter Controls */
+        .filter-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .filter-select { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; min-width: 180px; }
     </style>
 </head>
 <body>
@@ -282,7 +298,7 @@ $summary = $reportData['summary'] ?? [];
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
                 <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">Selected Year</p>
-                <select onchange="window.location.href='reports.php?type=<?php echo $type; ?>&year='+this.value" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+                <select onchange="window.location.href='reports.php?type=<?php echo $type; ?>&brand=<?php echo $brand; ?>&year='+this.value" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
                     <option value="2024" <?php echo $year == '2024' ? 'selected' : ''; ?>>2024</option>
                     <option value="2025" <?php echo $year == '2025' ? 'selected' : ''; ?>>2025</option>
                     <option value="2026" <?php echo $year == '2026' ? 'selected' : ''; ?>>2026</option>
@@ -293,14 +309,28 @@ $summary = $reportData['summary'] ?? [];
         <div class="main-content">
             <?php if ($type === 'matrix'): ?>
                 <div class="card">
-                    <h2>Customer Matrix - Yearly View</h2>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">Side-by-side monthly purchasing performance by customer.</p>
+                    <h2>Customer Matrix - Net Sales (Before VAT)</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 30px;">12-month pivot of net revenue performance.</p>
+                    
+                    <div class="filter-controls">
+                        <div class="filter-group">
+                            <span class="filter-label">Filter by Brand/Category</span>
+                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&brand='+encodeURIComponent(this.value)">
+                                <option value="">All Brands</option>
+                                <?php foreach($uniqueBrands as $b): ?>
+                                <option value="<?php echo htmlspecialchars($b['product_category']); ?>" <?php echo $brand === $b['product_category'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($b['product_category']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
                     
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Customer Name</th>
-                                <th class="text-right">Total Rev</th>
+                                <th class="text-right">Total Net</th>
                                 <th class="text-right">Vol</th>
                                 <th>Top Brand</th>
                                 <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
@@ -310,7 +340,9 @@ $summary = $reportData['summary'] ?? [];
                         <tbody>
                             <?php foreach($customerPivot as $row): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars(substr($row['customer_name'], 0, 25)); ?></td>
+                                <td title="<?php echo htmlspecialchars($row['customer_name']); ?>">
+                                    <?php echo htmlspecialchars($row['customer_name']); ?>
+                                </td>
                                 <td class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_revenue'], 0); ?></td>
                                 <td><span class="badge-vol"><?php echo $row['total_volume']; ?></span></td>
                                 <td style="font-size: 11px; font-weight: 700; color: var(--secondary);"><?php echo htmlspecialchars($row['top_category'] ?: 'Other'); ?></td>

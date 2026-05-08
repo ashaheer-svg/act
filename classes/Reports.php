@@ -105,27 +105,42 @@ class Reports {
      * Get Customer Yearly Matrix (Pivot)
      * Rows: Customers, Columns: Jan-Dec Sales
      */
-    public function getCustomerYearlyPivot($year) {
+    public function getCustomerYearlyPivot($year, $brand = null) {
         $months = [];
         for ($m = 1; $m <= 12; $m++) {
             $monthStr = str_pad($m, 2, '0', STR_PAD_LEFT);
-            $months[$m] = "SUM(CASE WHEN strftime('%m', invoice_date) = '$monthStr' THEN total_amount ELSE 0 END) as month_$m";
+            $months[$m] = "SUM(CASE WHEN strftime('%m', invoice_date) = '$monthStr' THEN base_value ELSE 0 END) as month_$m";
         }
         
         $monthSql = implode(", ", $months);
+        $params = [$year];
+        $brandFilter = "";
+        
+        if ($brand) {
+            $brandFilter = " AND product_category = ? ";
+            $params[] = $brand;
+        }
         
         return $this->db->fetchAll("
             SELECT 
                 customer_name,
                 COUNT(*) as total_volume,
-                SUM(total_amount) as total_revenue,
+                SUM(base_value) as total_revenue,
                 (SELECT product_category FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY product_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
                 $monthSql
             FROM sales
             WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
+            $brandFilter
             GROUP BY customer_name
             ORDER BY total_revenue DESC
-        ", [$year]);
+        ", $params);
+    }
+
+    /**
+     * Get unique product categories (brands)
+     */
+    public function getUniqueBrands() {
+        return $this->db->fetchAll("SELECT DISTINCT product_category FROM sales ORDER BY product_category ASC");
     }
 
     /**
