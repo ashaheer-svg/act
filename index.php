@@ -5,6 +5,7 @@ require_once 'classes/Auth.php';
 require_once 'classes/Reports.php';
 
 $db = new Database(DATABASE_PATH);
+$db->syncSchema();
 $auth = new Auth($db);
 $auth->requireLogin();
 $reports = new Reports($db);
