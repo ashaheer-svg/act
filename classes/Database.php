@@ -415,18 +415,6 @@ class Database {
     }
 
     /**
-     * Get setting value
-     */
-    public function getSetting($key, $default = '') {
-        try {
-            $result = $this->fetch("SELECT setting_value FROM settings WHERE setting_key = ?", [$key]);
-            return $result ? $result['setting_value'] : $default;
-        } catch (Exception $e) {
-            return $default;
-        }
-    }
-
-    /**
      * Update setting
      */
     public function setSetting($key, $value) {
