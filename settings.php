@@ -100,6 +100,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         }
     }
+
+    if ($action === 'force_sync') {
+        $syncResult = $db->syncSchema();
+        if ($syncResult['success']) {
+            $message = 'Database sync successful. ' . implode(' ', $syncResult['messages']);
+            $messageType = 'success';
+            if (empty($syncResult['messages'])) $message = 'Database is already up to date.';
+        } else {
+            $message = 'Database sync failed: ' . implode(' ', $syncResult['messages']);
+            $messageType = 'error';
+        }
+    }
 }
 
 // Get current settings
@@ -433,6 +445,17 @@ $taxRules = $db->getTaxRules();
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="width: 200px;">Set Limit</button>
+                </form>
+
+                <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                    <input type="hidden" name="action" value="force_sync">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <p style="font-weight: 700; font-size: 14px;">Database Schema Repair</p>
+                            <p style="font-size: 12px; color: var(--text-muted);">Manually check and add missing columns/tables if you encounter SQL errors.</p>
+                        </div>
+                        <button type="submit" class="btn" style="background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border);">Force Sync Database</button>
+                    </div>
                 </form>
             </div>
 

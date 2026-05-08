@@ -446,7 +446,8 @@ class Database {
     /**
      * Ensure all columns exist in existing tables (Migration)
      */
-    private function syncSchema() {
+    public function syncSchema() {
+        $results = ['success' => true, 'messages' => []];
         try {
             // Check for columns in sales table
             $cols = $this->db->query("PRAGMA table_info(sales)")->fetchAll();
@@ -461,11 +462,19 @@ class Database {
             foreach ($needed as $col => $sql) {
                 if (!in_array($col, $colNames)) {
                     $this->db->exec($sql);
+                    $results['messages'][] = "Added column '$col' to sales table.";
                 }
             }
+            
+            // Check for customer_profiles table
+            $this->createTablesIfNotExists();
+            
         } catch (Exception $e) {
+            $results['success'] = false;
+            $results['messages'][] = "Schema sync error: " . $e->getMessage();
             error_log('Schema sync error: ' . $e->getMessage());
         }
+        return $results;
     }
 
     /**
