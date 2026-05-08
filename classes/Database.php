@@ -416,6 +416,7 @@ class Database {
      */
     public function initializeSettings() {
         try {
+            $this->createTablesIfNotExists();
             $defaults = [
                 'vat_rate' => '0.18',
                 'currency_symbol' => '$',
