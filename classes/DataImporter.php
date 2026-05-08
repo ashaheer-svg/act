@@ -256,7 +256,7 @@ class DataImporter {
                         $currentVatRate,
                         $calcResult['total'],
                         $record['Product Category'] ?? ($record['Item'] ?? ''),
-                        $record['Rep'] ?? ''
+                        $this->findRepCode($record)
                     ]
                 );
 
@@ -380,6 +380,18 @@ class DataImporter {
              LEFT JOIN users u ON l.imported_by = u.id
              ORDER BY l.import_date DESC LIMIT 50"
         );
+    }
+    /**
+     * Find Sales Rep code using common header variations
+     */
+    private function findRepCode($record) {
+        $possibleKeys = ['Rep', 'Sales Rep', 'Representative', 'Assigned To', 'Sales Person'];
+        foreach ($possibleKeys as $key) {
+            if (isset($record[$key]) && !empty(trim($record[$key]))) {
+                return trim($record[$key]);
+            }
+        }
+        return '';
     }
 }
 ?>
