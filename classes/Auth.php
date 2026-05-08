@@ -1,22 +1,4 @@
 <?php
-// --- UNIVERSAL REPAIR TOOL ---
-if (isset($_GET['repair_db']) && $_GET['repair_db'] == '1') {
-    require_once 'config.php';
-    try {
-        $pdo = new PDO('sqlite:' . DATABASE_PATH);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $needed = [
-            "ALTER TABLE sales ADD COLUMN gross_profit DECIMAL(12,2) DEFAULT 0",
-            "ALTER TABLE sales ADD COLUMN applied_tax_rate DECIMAL(5,4)",
-            "ALTER TABLE sales ADD COLUMN product_category TEXT",
-            "CREATE TABLE IF NOT EXISTS tax_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, tax_name TEXT DEFAULT 'VAT', tax_rate REAL NOT NULL, effective_from DATE NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)",
-            "CREATE TABLE IF NOT EXISTS customer_profiles (customer_name TEXT PRIMARY KEY, customer_type TEXT DEFAULT 'End Customer', updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)"
-        ];
-        foreach ($needed as $sql) { try { $pdo->exec($sql); } catch (Exception $e) {} }
-        echo "REPAIR_COMPLETE";
-        exit;
-    } catch (Exception $e) { die("Repair failed: " . $e->getMessage()); }
-}
 /**
  * Auth Class - User Authentication & RBAC (ENHANCED)
  *
