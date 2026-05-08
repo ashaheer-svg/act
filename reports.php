@@ -213,12 +213,12 @@ $summary = $reportData['summary'] ?? [];
             box-shadow: var(--shadow);
         }
         .metric-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
-        .metric-value { font-size: 24px; font-weight: 800; color: var(--text-main); }
+        .metric-value { font-size: 20px; font-weight: 800; color: var(--text-main); }
 
         .card {
             background: white;
             border-radius: var(--radius-lg);
-            padding: 30px;
+            padding: 25px;
             box-shadow: var(--shadow);
             overflow-x: auto;
         }
@@ -229,9 +229,9 @@ $summary = $reportData['summary'] ?? [];
             border-collapse: separate;
             border-spacing: 0 8px;
         }
-        .table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); padding: 0 15px 5px 15px; white-space: nowrap;}
-        .table td { background: #f8fafc; padding: 15px; font-size: 14px; white-space: nowrap;}
-        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 600; position: sticky; left: 0; background: #f1f5f9; z-index: 10;}
+        .table th { text-align: left; font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 0 10px 5px 10px; white-space: nowrap;}
+        .table td { background: #f8fafc; padding: 12px 10px; font-size: 13px; white-space: nowrap;}
+        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 600; position: sticky; left: 0; background: #f1f5f9; z-index: 10; max-width: 180px; overflow: hidden; text-overflow: ellipsis;}
         .table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
         
         .text-right { text-align: right; }

@@ -268,10 +268,12 @@ try {
         }
 
         .card-value {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 800;
-            color: var(--text-main);
+            margin-bottom: 5px;
             letter-spacing: -1px;
+            word-break: break-all;
+            color: var(--text-main);
             line-height: 1;
         }
 
