@@ -419,7 +419,7 @@ class Database {
             $defaults = [
                 'vat_rate' => '0.18',
                 'currency_symbol' => '$',
-                'company_name' => 'My Company',
+                'company_name' => 'Activity',
                 'date_format' => 'Y-m-d',
                 'backup_enabled' => '1',
                 'limit_year' => date('Y'),

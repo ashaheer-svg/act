@@ -59,7 +59,7 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Users - Sales BI</title>
+    <title>Users - Activity</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -265,8 +265,8 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
 <body>
     <div class="header">
         <div class="logo-container">
-            <div class="logo-icon">Σ</div>
-            act sales bi
+            <div class="logo-icon">A</div>
+            Activity
         </div>
         
         <div class="top-nav">

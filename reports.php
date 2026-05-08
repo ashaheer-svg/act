@@ -262,8 +262,8 @@ $summary = $reportData['summary'] ?? [];
 <body>
     <div class="header">
         <div class="logo-container">
-            <div class="logo-icon">Σ</div>
-            act sales bi
+            <div class="logo-icon">A</div>
+            Activity
         </div>
         
         <div class="top-nav">
