@@ -7,9 +7,21 @@
 
 class Reports {
     private $db;
+    private $limitDate = null;
 
-    public function __construct(Database $db) {
+    public function __construct(Database $db, $userRole = 'admin') {
         $this->db = $db;
+        
+        // If not admin, set the visibility limit
+        if ($userRole !== 'admin') {
+            $ly = $this->db->getSetting('limit_year', date('Y'));
+            $lm = $this->db->getSetting('limit_month', date('m'));
+            $this->limitDate = "$ly-$lm-31"; // End of that month
+        }
+    }
+
+    private function getLimitSql($column = 'invoice_date') {
+        return $this->limitDate ? " AND $column <= '{$this->limitDate}' " : "";
     }
 
     /**
@@ -112,31 +124,31 @@ class Reports {
             $months[$m] = "SUM(CASE WHEN strftime('%m', invoice_date) = '$monthStr' THEN base_value ELSE 0 END) as month_$m";
         }
         
-        $monthSql = implode(", ", $months);
-        $params = [$year];
-        $brandFilter = "";
-        
-        if ($brand) {
-            $brandFilter = " AND product_category = ? ";
-            $params[] = $brand;
-        }
-        
-        return $this->db->fetchAll("
-            SELECT 
-                sales.customer_name,
-                p.customer_type,
-                COUNT(*) as total_volume,
-                SUM(base_value) as total_revenue,
-                SUM(gross_profit) as total_profit,
-                (SELECT product_category FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY product_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
-                $monthSql
-            FROM sales
-            LEFT JOIN customer_profiles p ON sales.customer_name = p.customer_name
-            WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
-            $brandFilter
-            GROUP BY sales.customer_name
-            ORDER BY total_revenue DESC
-        ", $params);
+            $monthSql = implode(", ", $months);
+            $params = [$year];
+            $where = $this->getLimitSql('invoice_date');
+            
+            if ($brand) {
+                $where .= " AND product_category = ? ";
+                $params[] = $brand;
+            }
+            
+            return $this->db->fetchAll("
+                SELECT 
+                    sales.customer_name,
+                    p.customer_type,
+                    COUNT(*) as total_volume,
+                    SUM(base_value) as total_revenue,
+                    SUM(gross_profit) as total_profit,
+                    (SELECT product_category FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY product_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
+                    $monthSql
+                FROM sales
+                LEFT JOIN customer_profiles p ON sales.customer_name = p.customer_name
+                WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
+                $where
+                GROUP BY sales.customer_name
+                ORDER BY total_revenue DESC
+            ", $params);
     }
 
     /**

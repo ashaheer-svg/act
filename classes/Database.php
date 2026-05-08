@@ -421,7 +421,9 @@ class Database {
                 'currency_symbol' => '$',
                 'company_name' => 'My Company',
                 'date_format' => 'Y-m-d',
-                'backup_enabled' => '1'
+                'backup_enabled' => '1',
+                'limit_year' => date('Y'),
+                'limit_month' => date('m')
             ];
 
             foreach ($defaults as $key => $value) {

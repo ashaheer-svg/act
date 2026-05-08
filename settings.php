@@ -6,7 +6,7 @@ require_once 'classes/Validator.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireAdmin();
+$auth->requireAccounts(); // Admin or Accounts
 
 $user = $auth->getCurrentUser();
 $message = '';
@@ -81,6 +81,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->logActivity($user['id'], 'TAX_RULE_DELETED', "Deleted tax rule ID: $ruleId");
         } catch (Exception $e) {
             $message = 'Error deleting tax rule: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    if ($action === 'update_limit') {
+        try {
+            $limitYear = $_POST['limit_year'] ?? date('Y');
+            $limitMonth = $_POST['limit_month'] ?? date('m');
+            
+            $db->setSetting('limit_year', $limitYear);
+            $db->setSetting('limit_month', $limitMonth);
+            
+            $message = 'Reporting period limit updated';
+            $messageType = 'success';
+            $db->logActivity($user['id'], 'LIMIT_UPDATED', "Limit set to $limitYear-$limitMonth");
+        } catch (Exception $e) {
+            $message = 'Error: ' . $e->getMessage();
             $messageType = 'error';
         }
     }
@@ -313,10 +328,10 @@ $taxRules = $db->getTaxRules();
             <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
             <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item">Upload</a>
+            <a href="settings.php" class="top-nav-item active">Settings</a>
             <?php endif; ?>
             <?php if ($auth->isAdmin()): ?>
             <a href="users.php" class="top-nav-item">Users</a>
-            <a href="settings.php" class="top-nav-item active">Settings</a>
             <?php endif; ?>
         </div>
 
@@ -383,6 +398,44 @@ $taxRules = $db->getTaxRules();
             </div>
 
             <div class="card" style="margin-top: 30px;">
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                    Reporting Visibility Limit
+                    <span style="font-size: 11px; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Control Period</span>
+                </h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Non-admin users (Accounts/Viewers) can only view reports up to this date. Useful for locking reports during profit entry.</p>
+                
+                <form method="POST" style="display: flex; gap: 20px; align-items: flex-end;">
+                    <input type="hidden" name="action" value="update_limit">
+                    
+                    <div class="form-group" style="flex: 1; margin: 0;">
+                        <label>Limit Year</label>
+                        <select name="limit_year" class="form-control">
+                            <?php 
+                            $currLimitY = $db->getSetting('limit_year', date('Y'));
+                            for($y=2023; $y<=2026; $y++): 
+                            ?>
+                            <option value="<?php echo $y; ?>" <?php echo $currLimitY == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="flex: 1; margin: 0;">
+                        <label>Limit Month</label>
+                        <select name="limit_month" class="form-control">
+                            <?php 
+                            $currLimitM = $db->getSetting('limit_month', date('m'));
+                            for($m=1; $m<=12; $m++): $mStr = str_pad($m, 2, '0', STR_PAD_LEFT);
+                            ?>
+                            <option value="<?php echo $mStr; ?>" <?php echo $currLimitM == $mStr ? 'selected' : ''; ?>><?php echo date('F', mktime(0,0,0,$m,1)); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 200px;">Set Limit</button>
+                </form>
+            </div>
+
+            <?php if ($auth->isAdmin()): ?>
                 <h2 style="display: flex; justify-content: space-between; align-items: center;">
                     Tax History & Future Rules
                     <span style="font-size: 11px; font-weight: 700; color: var(--success); background: #dcfce7; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Compliance Mode Active</span>
@@ -461,6 +514,7 @@ $taxRules = $db->getTaxRules();
                     <button type="submit" class="btn btn-danger">Full Database Reset</button>
                 </form>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </body>
