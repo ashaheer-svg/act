@@ -127,6 +127,7 @@ class Reports {
                 p.customer_type,
                 COUNT(*) as total_volume,
                 SUM(base_value) as total_revenue,
+                SUM(gross_profit) as total_profit,
                 (SELECT product_category FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY product_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
                 $monthSql
             FROM sales

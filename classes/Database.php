@@ -67,6 +67,7 @@ class Database {
                     vat_component DECIMAL(12,2) NOT NULL,
                     applied_tax_rate DECIMAL(5,4),
                     total_amount DECIMAL(12,2) NOT NULL,
+                    gross_profit DECIMAL(12,2) DEFAULT 0,
                     product_category TEXT,
                     imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(invoice_number, customer_name, item_description, qb_amount)
@@ -351,6 +352,29 @@ class Database {
      */
     public function deleteTaxRule($id) {
         return $this->execute("DELETE FROM tax_rules WHERE id = ?", [$id]);
+    }
+
+    /**
+     * PROFIT: Update gross profit for a line item
+     */
+    public function updateGrossProfit($id, $gp) {
+        return $this->execute(
+            "UPDATE sales SET gross_profit = ? WHERE id = ?",
+            [$gp, $id]
+        );
+    }
+
+    /**
+     * PROFIT: Get sales with profit data for entry
+     */
+    public function getSalesForProfitEntry($year, $month) {
+        $monthStr = str_pad($month, 2, '0', STR_PAD_LEFT);
+        return $this->fetchAll("
+            SELECT * FROM sales 
+            WHERE strftime('%Y', invoice_date) = ? 
+            AND strftime('%m', invoice_date) = ?
+            ORDER BY invoice_date DESC, invoice_number DESC
+        ", [$year, $monthStr]);
     }
 
     /**

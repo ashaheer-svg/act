@@ -309,9 +309,12 @@ $taxRules = $db->getTaxRules();
         <div class="top-nav">
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item">Reporting</a>
-            <?php if ($auth->isAdmin()): ?>
+            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
+            <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
             <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item">Upload</a>
+            <?php endif; ?>
+            <?php if ($auth->isAdmin()): ?>
             <a href="users.php" class="top-nav-item">Users</a>
             <a href="settings.php" class="top-nav-item active">Settings</a>
             <?php endif; ?>

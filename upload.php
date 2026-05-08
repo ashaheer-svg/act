@@ -6,7 +6,7 @@ require_once 'classes/DataImporter.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireAdmin();
+$auth->requireAccounts(); // Admin or Accounts
 
 $user = $auth->getCurrentUser();
 $currency = $db->getSetting('currency_symbol', '$');
@@ -284,9 +284,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
         <div class="top-nav">
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item">Reporting</a>
-            <?php if ($auth->isAdmin()): ?>
+            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
+            <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
             <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item active">Upload</a>
+            <?php endif; ?>
+            <?php if ($auth->isAdmin()): ?>
             <a href="users.php" class="top-nav-item">Users</a>
             <a href="settings.php" class="top-nav-item">Settings</a>
             <?php endif; ?>

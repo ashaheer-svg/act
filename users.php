@@ -248,6 +248,7 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
             text-transform: uppercase;
         }
         .role-admin { background: #e0e7ff; color: var(--primary); }
+        .role-accounts { background: #dcfce7; color: #166534; }
         .role-viewer { background: #f1f5f9; color: var(--text-muted); }
 
         .table {
@@ -271,9 +272,12 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
         <div class="top-nav">
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item">Reporting</a>
-            <?php if ($auth->isAdmin()): ?>
+            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
+            <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
             <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item">Upload</a>
+            <?php endif; ?>
+            <?php if ($auth->isAdmin()): ?>
             <a href="users.php" class="top-nav-item active">Users</a>
             <a href="settings.php" class="top-nav-item">Settings</a>
             <?php endif; ?>
@@ -308,8 +312,9 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
                 <div class="form-group">
                     <label>Role</label>
                     <select name="role" class="form-control">
-                        <option value="viewer">Viewer</option>
-                        <option value="admin">Administrator</option>
+                        <option value="viewer">Viewer (Read-only)</option>
+                        <option value="accounts">Accounts (Finance & CRM)</option>
+                        <option value="admin">Administrator (Full Access)</option>
                     </select>
                 </div>
 

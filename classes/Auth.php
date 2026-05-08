@@ -128,6 +128,13 @@ class Auth {
     }
 
     /**
+     * Check if user is accounts
+     */
+    public function isAccounts() {
+        return $this->hasRole('accounts');
+    }
+
+    /**
      * Check if user is viewer
      */
     public function isViewer() {
@@ -156,11 +163,22 @@ class Auth {
     }
 
     /**
+     * Require Accounts or Admin role
+     */
+    public function requireAccounts() {
+        $this->requireLogin();
+        if (!$this->isAdmin() && !$this->isAccounts()) {
+            header('HTTP/1.0 403 Forbidden');
+            die('Access Denied: Accounts or Admin role required');
+        }
+    }
+
+    /**
      * Register new user (Admin only)
      */
     public function registerUser($username, $password, $email, $role = 'viewer') {
         try {
-            if (!in_array($role, ['admin', 'viewer'])) {
+            if (!in_array($role, ['admin', 'accounts', 'viewer'])) {
                 return ['success' => false, 'message' => 'Invalid role'];
             }
 

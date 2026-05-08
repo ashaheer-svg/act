@@ -269,9 +269,12 @@ $summary = $reportData['summary'] ?? [];
         <div class="top-nav">
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item active">Reporting</a>
-            <?php if ($auth->isAdmin()): ?>
+            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
+            <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
             <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item">Upload</a>
+            <?php endif; ?>
+            <?php if ($auth->isAdmin()): ?>
             <a href="users.php" class="top-nav-item">Users</a>
             <a href="settings.php" class="top-nav-item">Settings</a>
             <?php endif; ?>
@@ -333,6 +336,8 @@ $summary = $reportData['summary'] ?? [];
                                 <th>Customer Name</th>
                                 <th>Type</th>
                                 <th class="text-right">Total Net</th>
+                                <th class="text-right">Profit</th>
+                                <th class="text-right">GP%</th>
                                 <th class="text-right">Vol</th>
                                 <th>Top Brand</th>
                                 <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
@@ -351,6 +356,13 @@ $summary = $reportData['summary'] ?? [];
                                     </span>
                                 </td>
                                 <td class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_revenue'], 0); ?></td>
+                                <td style="text-align: right; font-weight: 800; color: #166534;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_profit'], 0); ?></td>
+                                <td style="text-align: right; font-weight: 700; font-size: 11px;">
+                                    <?php 
+                                        $margin = $row['total_revenue'] > 0 ? ($row['total_profit'] / $row['total_revenue']) * 100 : 0;
+                                        echo number_format($margin, 1) . '%';
+                                    ?>
+                                </td>
                                 <td><span class="badge-vol"><?php echo $row['total_volume']; ?></span></td>
                                 <td style="font-size: 11px; font-weight: 700; color: var(--secondary);"><?php echo htmlspecialchars($row['top_category'] ?: 'Other'); ?></td>
                                 <?php for($m=1; $m<=12; $m++): 
