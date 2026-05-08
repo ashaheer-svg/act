@@ -176,10 +176,16 @@ class Auth {
     /**
      * Register new user (Admin only)
      */
-    public function registerUser($username, $password, $email, $role = 'viewer') {
+    public function register($username, $password, $role = 'viewer', $email = '') {
         try {
+            // Check if user already exists
+            $existing = $this->db->fetch("SELECT id FROM users WHERE username = ?", [$username]);
+            if ($existing) {
+                return false;
+            }
+
             if (!in_array($role, ['admin', 'accounts', 'viewer'])) {
-                return ['success' => false, 'message' => 'Invalid role'];
+                throw new Exception('Invalid role specified');
             }
 
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
@@ -188,9 +194,9 @@ class Auth {
                 [$username, $hashedPassword, $email, $role]
             );
 
-            return ['success' => true, 'message' => 'User created successfully'];
+            return true;
         } catch (Exception $e) {
-            return ['success' => false, 'message' => 'Error: ' . $e->getMessage()];
+            throw $e;
         }
     }
 
