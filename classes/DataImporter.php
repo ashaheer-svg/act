@@ -172,13 +172,14 @@ class DataImporter {
                 $rowIndex++;
                 
                 // Check if record already exists (Smarter check: include item and amount)
+                $cleanAmount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
                 $existingRecord = $this->db->fetch(
                     "SELECT * FROM sales WHERE invoice_number = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
                     [
                         $record['Num'] ?? '', 
                         $record['Name'] ?? '', 
                         $record['Item'] ?? '', 
-                        floatval($record['Amount'] ?? 0)
+                        $cleanAmount
                     ]
                 );
 
@@ -207,8 +208,8 @@ class DataImporter {
                 }
 
                 // Calculate VAT values
-                $amount = floatval($record['Amount']);
-                $taxCode = trim($record['Sales Tax Code']);
+                $amount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
+                $taxCode = trim($record['Sales Tax Code'] ?? '');
 
                 $calcResult = $this->calculateVAT($amount, $taxCode);
 
@@ -226,7 +227,7 @@ class DataImporter {
                         $record['Name'] ?? '',
                         $record['Item'] ?? '',
                         $taxCode,
-                        floatval($record['Qty'] ?? 1),
+                        floatval(str_replace(',', '', $record['Qty'] ?? 1)),
                         $amount,
                         $calcResult['base'],
                         $calcResult['vat'],
@@ -283,17 +284,17 @@ class DataImporter {
      */
     private function calculateVAT($amount, $taxCode) {
         if ($taxCode === 'Taxable Sales') {
-            // Exclusive: amount is base value
+            // Exclusive: amount is base value, add VAT on top
             $base = $amount;
             $vat = $base * $this->vatRate;
             $total = $base + $vat;
         } elseif ($taxCode === 'Non-Taxable Sales') {
-            // Inclusive: amount is total
+            // Inclusive: amount is TOTAL (includes VAT), extract base
             $total = $amount;
             $base = $total / (1 + $this->vatRate);
             $vat = $total - $base;
         } else {
-            // Default: treat as exclusive
+            // Default: treat as exclusive (standard for QB)
             $base = $amount;
             $vat = $base * $this->vatRate;
             $total = $base + $vat;
