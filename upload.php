@@ -372,7 +372,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
                         <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['original']['num']); ?></strong></div>
                         <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['original']['name'], 0, 30)); ?></strong></div>
                         <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['original']['item'], 0, 30)); ?></strong></div>
-                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format($set['original']['amount'], 2); ?></strong></div>
+                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['original']['amount']), 2); ?></strong></div>
                         <div style="font-size: 10px; color: var(--success); margin-top: 5px;">Imported on <?php echo $set['original']['imported_at']; ?></div>
                     </div>
 
@@ -381,7 +381,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
                         <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['duplicate']['num']); ?></strong></div>
                         <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['duplicate']['name'], 0, 30)); ?></strong></div>
                         <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['duplicate']['item'], 0, 30)); ?></strong></div>
-                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format($set['duplicate']['amount'], 2); ?></strong></div>
+                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['duplicate']['amount']), 2); ?></strong></div>
                         <div style="font-size: 10px; color: var(--secondary); margin-top: 5px;">Row skipped by system</div>
                     </div>
                 </div>
