@@ -158,10 +158,10 @@ $summary = $reportData['summary'] ?? [];
         /* --- Layout --- */
         .container {
             display: grid;
-            grid-template-columns: 320px 1fr;
+            grid-template-columns: 280px 1fr;
             gap: 30px;
-            padding: 30px 40px;
-            max-width: 1600px;
+            padding: 20px 30px;
+            max-width: 1800px;
             margin: 0 auto;
         }
 
@@ -231,15 +231,15 @@ $summary = $reportData['summary'] ?? [];
             border-collapse: separate;
             border-spacing: 0 8px;
         }
-        .table th { text-align: left; font-size: 10px; text-transform: uppercase; color: var(--text-muted); padding: 0 10px 5px 10px; white-space: nowrap;}
-        .table td { background: #f8fafc; padding: 12px 10px; font-size: 13px; white-space: nowrap;}
-        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 600; position: sticky; left: 0; background: #f1f5f9; z-index: 10; max-width: 180px; overflow: hidden; text-overflow: ellipsis;}
+        .table th { text-align: left; font-size: 9px; text-transform: uppercase; color: var(--text-muted); padding: 0 8px 5px 8px; white-space: nowrap;}
+        .table td { background: #f8fafc; padding: 8px 8px; font-size: 11px; white-space: nowrap;}
+        .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 700; position: sticky; left: 0; background: #f1f5f9; z-index: 10; max-width: 250px; overflow: hidden; text-overflow: ellipsis; font-size: 11px;}
         .table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
         
         .text-right { text-align: right; }
         .price-tag { font-weight: 800; color: var(--primary); }
         
-        .matrix-val { font-size: 12px; font-weight: 500; color: var(--text-muted); text-align: right; }
+        .matrix-val { font-size: 10px; font-weight: 500; color: var(--text-muted); text-align: right; }
         .matrix-val.active { color: var(--primary); font-weight: 700; }
         
         .badge-vol { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
@@ -337,7 +337,6 @@ $summary = $reportData['summary'] ?? [];
                                 <th>Type</th>
                                 <th class="text-right">Total Net</th>
                                 <th class="text-right">Vol</th>
-                                <th>Top Brand</th>
                                 <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
                                 <th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th>
                             </tr>
@@ -355,7 +354,6 @@ $summary = $reportData['summary'] ?? [];
                                 </td>
                                 <td class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_revenue'], 0); ?></td>
                                 <td><span class="badge-vol"><?php echo $row['total_volume']; ?></span></td>
-                                <td style="font-size: 11px; font-weight: 700; color: var(--secondary);"><?php echo htmlspecialchars($row['top_category'] ?: 'Other'); ?></td>
                                 <?php for($m=1; $m<=12; $m++): 
                                     $val = $row['month_'.$m];
                                 ?>
