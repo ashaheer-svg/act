@@ -490,6 +490,68 @@ $salesReps = $db->getSalesReps();
                 </form>
             </div>
 
+            <div class="card" style="margin-top: 30px;">
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                    Sales Rep Mapping
+                    <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Team Management</span>
+                </h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Map system Sales Rep codes to their actual names for easier reporting.</p>
+
+                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
+                    <div>
+                        <table class="tax-table">
+                            <thead>
+                                <tr>
+                                    <th>Rep Code</th>
+                                    <th>Display Name</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($salesReps)): ?>
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings defined yet.</td>
+                                </tr>
+                                <?php else: ?>
+                                    <?php foreach ($salesReps as $rep): ?>
+                                    <tr>
+                                        <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;"><?php echo htmlspecialchars($rep['rep_code']); ?></code></td>
+                                        <td><strong><?php echo htmlspecialchars($rep['rep_name']); ?></strong></td>
+                                        <td style="text-align: right;">
+                                            <form method="POST" onsubmit="return confirm('Delete this mapping?');">
+                                                <input type="hidden" name="action" value="delete_sales_rep">
+                                                <input type="hidden" name="rep_code" value="<?php echo htmlspecialchars($rep['rep_code']); ?>">
+                                                <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
+                        <h3 style="font-size: 16px; margin-bottom: 20px;">Add/Update Mapping</h3>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="add_sales_rep">
+                            
+                            <div class="form-group">
+                                <label>Sales Rep Code (from ERP)</label>
+                                <input type="text" name="rep_code" class="form-control" placeholder="e.g. SR01" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Full Name / Display Name</label>
+                                <input type="text" name="rep_name" class="form-control" placeholder="e.g. John Doe" required>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Mapping</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <?php if ($auth->isAdmin()): ?>
                 <h2 style="display: flex; justify-content: space-between; align-items: center;">
                     Tax History & Future Rules
@@ -561,67 +623,7 @@ $salesReps = $db->getSalesReps();
                 </div>
             </div>
 
-            <div class="card" style="margin-top: 30px;">
-                <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                    Sales Rep Mapping
-                    <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Team Management</span>
-                </h2>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Map system Sales Rep codes to their actual names for easier reporting.</p>
 
-                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
-                    <div>
-                        <table class="tax-table">
-                            <thead>
-                                <tr>
-                                    <th>Rep Code</th>
-                                    <th>Display Name</th>
-                                    <th style="text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($salesReps)): ?>
-                                <tr>
-                                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings defined yet.</td>
-                                </tr>
-                                <?php else: ?>
-                                    <?php foreach ($salesReps as $rep): ?>
-                                    <tr>
-                                        <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;"><?php echo htmlspecialchars($rep['rep_code']); ?></code></td>
-                                        <td><strong><?php echo htmlspecialchars($rep['rep_name']); ?></strong></td>
-                                        <td style="text-align: right;">
-                                            <form method="POST" onsubmit="return confirm('Delete this mapping?');">
-                                                <input type="hidden" name="action" value="delete_sales_rep">
-                                                <input type="hidden" name="rep_code" value="<?php echo htmlspecialchars($rep['rep_code']); ?>">
-                                                <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
-                        <h3 style="font-size: 16px; margin-bottom: 20px;">Add/Update Mapping</h3>
-                        <form method="POST">
-                            <input type="hidden" name="action" value="add_sales_rep">
-                            
-                            <div class="form-group">
-                                <label>Sales Rep Code (from ERP)</label>
-                                <input type="text" name="rep_code" class="form-control" placeholder="e.g. SR01" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Full Name / Display Name</label>
-                                <input type="text" name="rep_name" class="form-control" placeholder="e.g. John Doe" required>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Mapping</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
 
             <div class="card" style="margin-top: 30px; border: 2px dashed #fee2e2;">
                 <h2 style="color: var(--error);">Danger Zone</h2>
