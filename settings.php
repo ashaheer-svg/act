@@ -83,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Error deleting tax rule: ' . $e->getMessage();
             $messageType = 'error';
         }
+    }
     if ($action === 'update_limit') {
         try {
             $limitYear = $_POST['limit_year'] ?? date('Y');
