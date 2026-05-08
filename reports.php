@@ -259,18 +259,25 @@ $summary = $reportData['summary'] ?? [];
             padding: 0 4px 4px 4px; 
             font-size: 9px;
             font-weight: 800;
+            text-align: center;
         }
         .matrix-table td { 
             padding: 6px 4px; 
             font-size: 10px;
         }
         .matrix-table tr td:first-child { 
-            max-width: 220px; 
+            max-width: 160px; 
             padding-left: 10px;
             font-size: 10px;
+            text-align: left;
         }
         .matrix-table .price-tag { 
             font-size: 10px;
+            text-align: center;
+        }
+        .matrix-table .matrix-val {
+            min-width: 40px;
+            text-align: center;
         }
         .matrix-table .badge-vol {
             padding: 1px 4px;
