@@ -57,7 +57,7 @@ $summary = $reportData['summary'] ?? [];
     <title><?php echo $reportTitle; ?> - Activity</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #6366f1;
@@ -248,6 +248,34 @@ $summary = $reportData['summary'] ?? [];
         
         .matrix-val { font-size: 10px; font-weight: 500; color: var(--text-muted); text-align: right; }
         .matrix-val.active { color: var(--primary); font-weight: 700; }
+
+        /* --- High Density Matrix --- */
+        .matrix-table {
+            border-spacing: 0 4px;
+            font-family: 'Inter Tight', sans-serif;
+            letter-spacing: -0.2px;
+        }
+        .matrix-table th { 
+            padding: 0 4px 4px 4px; 
+            font-size: 9px;
+            font-weight: 800;
+        }
+        .matrix-table td { 
+            padding: 6px 4px; 
+            font-size: 10px;
+        }
+        .matrix-table tr td:first-child { 
+            max-width: 220px; 
+            padding-left: 10px;
+            font-size: 10px;
+        }
+        .matrix-table .price-tag { 
+            font-size: 10px;
+        }
+        .matrix-table .badge-vol {
+            padding: 1px 4px;
+            font-size: 9px;
+        }
         
         .badge-vol { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
 
@@ -358,7 +386,7 @@ $summary = $reportData['summary'] ?? [];
                         </div>
                     </div>
                     
-                    <table class="table">
+                    <table class="table matrix-table">
                         <thead>
                             <tr>
                                 <th>Customer Name</th>
