@@ -32,6 +32,7 @@ class Database {
      */
     public function initialize() {
         $this->createTablesIfNotExists();
+        $this->syncSchema();
         $this->createDefaultUser();
     }
 
@@ -417,6 +418,7 @@ class Database {
     public function initializeSettings() {
         try {
             $this->createTablesIfNotExists();
+            $this->syncSchema();
             $defaults = [
                 'vat_rate' => '0.18',
                 'currency_symbol' => '$',
@@ -436,8 +438,33 @@ class Database {
                     ", [$key, $value]);
                 }
             }
+        } catch (PDOException $e) {
+            error_log('Table creation error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Ensure all columns exist in existing tables (Migration)
+     */
+    private function syncSchema() {
+        try {
+            // Check for columns in sales table
+            $cols = $this->db->query("PRAGMA table_info(sales)")->fetchAll();
+            $colNames = array_column($cols, 'name');
+
+            $needed = [
+                'gross_profit' => "ALTER TABLE sales ADD COLUMN gross_profit DECIMAL(12,2) DEFAULT 0",
+                'applied_tax_rate' => "ALTER TABLE sales ADD COLUMN applied_tax_rate DECIMAL(5,4)",
+                'product_category' => "ALTER TABLE sales ADD COLUMN product_category TEXT"
+            ];
+
+            foreach ($needed as $col => $sql) {
+                if (!in_array($col, $colNames)) {
+                    $this->db->exec($sql);
+                }
+            }
         } catch (Exception $e) {
-            error_log('Settings initialization error: ' . $e->getMessage());
+            error_log('Schema sync error: ' . $e->getMessage());
         }
     }
 
