@@ -123,15 +123,17 @@ class Reports {
         
         return $this->db->fetchAll("
             SELECT 
-                customer_name,
+                sales.customer_name,
+                p.customer_type,
                 COUNT(*) as total_volume,
                 SUM(base_value) as total_revenue,
                 (SELECT product_category FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY product_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
                 $monthSql
             FROM sales
+            LEFT JOIN customer_profiles p ON sales.customer_name = p.customer_name
             WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
             $brandFilter
-            GROUP BY customer_name
+            GROUP BY sales.customer_name
             ORDER BY total_revenue DESC
         ", $params);
     }

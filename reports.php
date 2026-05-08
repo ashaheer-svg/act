@@ -270,6 +270,7 @@ $summary = $reportData['summary'] ?? [];
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item active">Reporting</a>
             <?php if ($auth->isAdmin()): ?>
+            <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item">Upload</a>
             <a href="users.php" class="top-nav-item">Users</a>
             <a href="settings.php" class="top-nav-item">Settings</a>
@@ -330,6 +331,7 @@ $summary = $reportData['summary'] ?? [];
                         <thead>
                             <tr>
                                 <th>Customer Name</th>
+                                <th>Type</th>
                                 <th class="text-right">Total Net</th>
                                 <th class="text-right">Vol</th>
                                 <th>Top Brand</th>
@@ -342,6 +344,11 @@ $summary = $reportData['summary'] ?? [];
                             <tr>
                                 <td title="<?php echo htmlspecialchars($row['customer_name']); ?>">
                                     <?php echo htmlspecialchars($row['customer_name']); ?>
+                                </td>
+                                <td>
+                                    <span style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: <?php echo $row['customer_type'] === 'Partner' ? '#dcfce7; color: #15803d;' : '#e0e7ff; color: #4338ca;'; ?>">
+                                        <?php echo $row['customer_type'] ?: 'End Customer'; ?>
+                                    </span>
                                 </td>
                                 <td class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_revenue'], 0); ?></td>
                                 <td><span class="badge-vol"><?php echo $row['total_volume']; ?></span></td>

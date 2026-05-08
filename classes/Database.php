@@ -111,6 +111,15 @@ class Database {
                 )
             ");
 
+            // Customer Profiles (CRM metadata)
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS customer_profiles (
+                    customer_name TEXT PRIMARY KEY,
+                    customer_type TEXT DEFAULT 'End Customer',
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
             // Password reset tokens
             $this->db->exec("
                 CREATE TABLE IF NOT EXISTS password_resets (
@@ -241,10 +250,49 @@ class Database {
     }
 
     /**
-     * Rollback transaction
+     * Get setting value by key
      */
-    public function rollBack() {
-        $this->db->rollBack();
+    public function getSetting($key, $default = '') {
+        $stmt = $this->db->prepare("SELECT setting_value FROM settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $row['setting_value'] : $default;
+    }
+
+    /**
+     * CRM: Sync unique customers from sales into profiles
+     */
+    public function syncCustomerProfiles() {
+        $this->db->exec("
+            INSERT OR IGNORE INTO customer_profiles (customer_name)
+            SELECT DISTINCT customer_name FROM sales
+        ");
+    }
+
+    /**
+     * CRM: Get all customer profiles with their types
+     */
+    public function getCustomerProfiles() {
+        $this->syncCustomerProfiles(); // Ensure we have latest names
+        return $this->fetchAll("
+            SELECT p.*, 
+                   COUNT(s.id) as lifetime_invoices,
+                   SUM(s.base_value) as lifetime_revenue
+            FROM customer_profiles p
+            LEFT JOIN sales s ON p.customer_name = s.customer_name
+            GROUP BY p.customer_name
+            ORDER BY lifetime_revenue DESC
+        ");
+    }
+
+    /**
+     * CRM: Update customer type
+     */
+    public function updateCustomerType($name, $type) {
+        return $this->execute(
+            "UPDATE customer_profiles SET customer_type = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_name = ?",
+            [$type, $name]
+        );
     }
 
     /**

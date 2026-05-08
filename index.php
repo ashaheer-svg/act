@@ -374,6 +374,7 @@ try {
             <a href="index.php" class="top-nav-item active">Dashboard</a>
             <a href="reports.php" class="top-nav-item">Reporting</a>
             <?php if ($auth->isAdmin()): ?>
+            <a href="customers.php" class="top-nav-item">Customers</a>
             <a href="upload.php" class="top-nav-item">Upload</a>
             <a href="users.php" class="top-nav-item">Users</a>
             <a href="settings.php" class="top-nav-item">Settings</a>
