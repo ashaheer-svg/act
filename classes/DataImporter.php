@@ -208,21 +208,24 @@ class DataImporter {
                 }
 
                 // Calculate VAT values
+                $invoiceDate = $this->formatDate($record['Date'] ?? '');
                 $amount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
                 $taxCode = trim($record['Sales Tax Code'] ?? '');
-
-                $calcResult = $this->calculateVAT($amount, $taxCode);
+                
+                // NEW: Get dynamic rate for THIS SPECIFIC DATE
+                $currentVatRate = $this->db->getTaxRateForDate($invoiceDate);
+                $calcResult = $this->calculateVAT($amount, $taxCode, $currentVatRate);
 
                 // Insert record
                 $stmt = $this->db->execute(
                     "INSERT INTO sales (
                         invoice_type, invoice_date, invoice_number, customer_name,
                         item_description, tax_code, quantity, qb_amount,
-                        base_value, vat_component, total_amount, product_category
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        base_value, vat_component, applied_tax_rate, total_amount, product_category
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     [
                         $record['Type'] ?? 'Invoice',
-                        $this->formatDate($record['Date'] ?? ''),
+                        $invoiceDate,
                         $record['Num'] ?? '',
                         $record['Name'] ?? '',
                         $record['Item'] ?? '',
@@ -231,6 +234,7 @@ class DataImporter {
                         $amount,
                         $calcResult['base'],
                         $calcResult['vat'],
+                        $currentVatRate,
                         $calcResult['total'],
                         $this->categorizeProduct($record['Item'] ?? '')
                     ]
@@ -282,21 +286,23 @@ class DataImporter {
      * Taxable Sales = exclusive (add VAT)
      * Non-Taxable Sales = inclusive (extract VAT)
      */
-    private function calculateVAT($amount, $taxCode) {
+    private function calculateVAT($amount, $taxCode, $rate = null) {
+        $rate = ($rate !== null) ? $rate : $this->vatRate;
+
         if ($taxCode === 'Taxable Sales') {
             // Exclusive: amount is base value, add VAT on top
             $base = $amount;
-            $vat = $base * $this->vatRate;
+            $vat = $base * $rate;
             $total = $base + $vat;
         } elseif ($taxCode === 'Non-Taxable Sales') {
             // Inclusive: amount is TOTAL (includes VAT), extract base
             $total = $amount;
-            $base = $total / (1 + $this->vatRate);
+            $base = $total / (1 + $rate);
             $vat = $total - $base;
         } else {
             // Default: treat as exclusive (standard for QB)
             $base = $amount;
-            $vat = $base * $this->vatRate;
+            $vat = $base * $rate;
             $total = $base + $vat;
         }
 

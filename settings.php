@@ -55,6 +55,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         }
     }
+
+    if ($action === 'add_tax_rule') {
+        try {
+            $taxName = $_POST['tax_name'] ?? 'VAT';
+            $taxRate = $_POST['tax_rate'] ?? '0.18';
+            $effectiveFrom = $_POST['effective_from'] ?? date('Y-m-d');
+            
+            $db->addTaxRule($taxName, $taxRate, $effectiveFrom);
+            $message = 'New tax rule added successfully';
+            $messageType = 'success';
+            $db->logActivity($user['id'], 'TAX_RULE_ADDED', "Added $taxName rule: $taxRate from $effectiveFrom");
+        } catch (Exception $e) {
+            $message = 'Error adding tax rule: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+
+    if ($action === 'delete_tax_rule') {
+        try {
+            $ruleId = $_POST['rule_id'] ?? 0;
+            $db->deleteTaxRule($ruleId);
+            $message = 'Tax rule deleted';
+            $messageType = 'success';
+            $db->logActivity($user['id'], 'TAX_RULE_DELETED', "Deleted tax rule ID: $ruleId");
+        } catch (Exception $e) {
+            $message = 'Error deleting tax rule: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
 // Get current settings
@@ -62,6 +91,7 @@ $vatRate = $db->getSetting('vat_rate', '0.18');
 $currency = $db->getSetting('currency_symbol', '$');
 $companyName = $db->getSetting('company_name', '');
 $dbSize = $db->getDatabaseSize();
+$taxRules = $db->getTaxRules();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -214,6 +244,15 @@ $dbSize = $db->getDatabaseSize();
             gap: 25px;
         }
 
+        .tax-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .tax-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;}
+        .tax-table td { padding: 12px 0; font-size: 14px; border-bottom: 1px solid #f8fafc; }
+        .tax-badge { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px;}
+
         .card {
             background: white;
             border-radius: var(--radius-lg);
@@ -258,14 +297,6 @@ $dbSize = $db->getDatabaseSize();
         }
         .message.success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
         .message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
-
-        .danger-zone {
-            border: 2px dashed #fee2e2;
-            background: #fffafb;
-            padding: 30px;
-            border-radius: var(--radius-lg);
-        }
-        .danger-zone h2 { color: var(--error); }
     </style>
 </head>
 <body>
@@ -348,20 +379,84 @@ $dbSize = $db->getDatabaseSize();
                 </form>
             </div>
 
-            <div class="danger-zone">
-                <h2>Danger Zone</h2>
-                <p style="color: var(--text-muted); margin-bottom: 20px;">The following actions are destructive and cannot be undone. Please proceed with caution.</p>
-                
-                <div style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 20px; border-radius: 12px; border: 1px solid #fee2e2;">
+            <div class="card" style="margin-top: 30px;">
+                <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                    Tax History & Future Rules
+                    <span style="font-size: 11px; font-weight: 700; color: var(--success); background: #dcfce7; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Compliance Mode Active</span>
+                </h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Define VAT changes based on effective dates. Invoices will automatically use the rate active on their transaction date.</p>
+
+                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
                     <div>
-                        <h4 style="font-weight: 700;">Reset All Sales Data</h4>
-                        <p style="font-size: 13px; color: var(--text-muted);">Delete all sales records, import logs, and activity history.</p>
+                        <table class="tax-table">
+                            <thead>
+                                <tr>
+                                    <th>Tax Name</th>
+                                    <th>Rate</th>
+                                    <th>Effective From</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($taxRules)): ?>
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No specific tax rules defined. Using global fallback.</td>
+                                </tr>
+                                <?php else: ?>
+                                    <?php foreach ($taxRules as $rule): ?>
+                                    <tr>
+                                        <td><strong><?php echo htmlspecialchars($rule['tax_name']); ?></strong></td>
+                                        <td><span class="tax-badge"><?php echo ($rule['tax_rate'] * 100); ?>%</span></td>
+                                        <td><?php echo date('M d, Y', strtotime($rule['effective_from'])); ?></td>
+                                        <td style="text-align: right;">
+                                            <form method="POST" onsubmit="return confirm('Delete this tax rule?');">
+                                                <input type="hidden" name="action" value="delete_tax_rule">
+                                                <input type="hidden" name="rule_id" value="<?php echo $rule['id']; ?>">
+                                                <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
-                    <form method="POST" onsubmit="return confirm('CRITICAL WARNING: This will permanently delete ALL sales records and import history. This action cannot be undone. Are you absolutely sure?');">
-                        <input type="hidden" name="action" value="reset_database">
-                        <button type="submit" class="btn btn-danger">Reset Database</button>
-                    </form>
+
+                    <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
+                        <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Tax Rule</h3>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="add_tax_rule">
+                            
+                            <div class="form-group">
+                                <label>Tax Description</label>
+                                <input type="text" name="tax_name" class="form-control" value="VAT" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tax Rate (as decimal, e.g. 0.18)</label>
+                                <input type="number" step="0.001" name="tax_rate" class="form-control" value="0.180" required>
+                                <small style="color: var(--text-muted); font-size: 11px;">0.15 = 15%, 0.18 = 18%</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Effective From Date</label>
+                                <input type="date" name="effective_from" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                                <small style="color: var(--text-muted); font-size: 11px;">This rate applies to all invoices on or after this date.</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Add Rule</button>
+                        </form>
+                    </div>
                 </div>
+            </div>
+
+            <div class="card" style="margin-top: 30px; border: 2px dashed #fee2e2;">
+                <h2 style="color: var(--error);">Danger Zone</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">These actions are destructive and cannot be undone.</p>
+                <form method="POST" onsubmit="return confirm('WARNING: This will delete ALL sales records and import logs. Are you absolutely sure?');">
+                    <input type="hidden" name="action" value="reset_database">
+                    <button type="submit" class="btn btn-danger">Full Database Reset</button>
+                </form>
             </div>
         </div>
     </div>

@@ -65,10 +65,22 @@ class Database {
                     qb_amount DECIMAL(12,2) NOT NULL,
                     base_value DECIMAL(12,2) NOT NULL,
                     vat_component DECIMAL(12,2) NOT NULL,
+                    applied_tax_rate DECIMAL(5,4),
                     total_amount DECIMAL(12,2) NOT NULL,
                     product_category TEXT,
                     imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(invoice_number, customer_name, item_description, qb_amount)
+                )
+            ");
+
+            // Tax Rules (Date-based VAT rates)
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS tax_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tax_name TEXT DEFAULT 'VAT',
+                    tax_rate REAL NOT NULL,
+                    effective_from DATE NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ");
 
@@ -293,6 +305,52 @@ class Database {
             "UPDATE customer_profiles SET customer_type = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_name = ?",
             [$type, $name]
         );
+    }
+
+    /**
+     * TAX: Get effective tax rate for a specific date
+     */
+    public function getTaxRateForDate($date) {
+        $stmt = $this->db->prepare("
+            SELECT tax_rate 
+            FROM tax_rules 
+            WHERE effective_from <= ? 
+            ORDER BY effective_from DESC 
+            LIMIT 1
+        ");
+        $stmt->execute([$date]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($row) {
+            return floatval($row['tax_rate']);
+        }
+        
+        // Fallback to global setting if no rule matches
+        return floatval($this->getSetting('vat_rate', '0.18'));
+    }
+
+    /**
+     * TAX: Add a new tax rule
+     */
+    public function addTaxRule($name, $rate, $date) {
+        return $this->execute(
+            "INSERT INTO tax_rules (tax_name, tax_rate, effective_from) VALUES (?, ?, ?)",
+            [$name, $rate, $date]
+        );
+    }
+
+    /**
+     * TAX: Get all tax rules
+     */
+    public function getTaxRules() {
+        return $this->fetchAll("SELECT * FROM tax_rules ORDER BY effective_from DESC");
+    }
+
+    /**
+     * TAX: Delete tax rule
+     */
+    public function deleteTaxRule($id) {
+        return $this->execute("DELETE FROM tax_rules WHERE id = ?", [$id]);
     }
 
     /**
