@@ -157,26 +157,30 @@ $summary = $reportData['summary'] ?? [];
 
         /* --- Layout --- */
         .container {
-            display: grid;
-            grid-template-columns: 280px 1fr;
-            gap: 30px;
             padding: 20px 30px;
             max-width: 1800px;
             margin: 0 auto;
         }
 
-        /* --- Sidebar --- */
-        .sidebar {
+        /* --- Horizontal Nav --- */
+        .report-nav {
             background: white;
             border-radius: var(--radius-lg);
-            padding: 30px;
+            padding: 15px 25px;
             box-shadow: var(--shadow);
-            height: fit-content;
-            position: sticky;
-            top: 110px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
         }
 
-        .sidebar h3 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+        .report-nav-links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
 
         .report-link {
             display: flex;
@@ -291,18 +295,18 @@ $summary = $reportData['summary'] ?? [];
     </div>
 
     <div class="container">
-        <div class="sidebar">
-            <h3>Standard Reports</h3>
-            <a href="reports.php?type=monthly" class="report-link <?php echo $type === 'monthly' ? 'active' : ''; ?>"><span>📅</span> Monthly Report</a>
-            <a href="reports.php?type=quarterly" class="report-link <?php echo $type === 'quarterly' ? 'active' : ''; ?>"><span>📈</span> Quarterly Report</a>
-            <a href="reports.php?type=yearly" class="report-link <?php echo $type === 'yearly' ? 'active' : ''; ?>"><span>📊</span> Yearly Report</a>
+        <div class="report-nav">
+            <div class="report-nav-links">
+                <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-right: 10px;">Reports:</span>
+                <a href="reports.php?type=monthly" class="report-link <?php echo $type === 'monthly' ? 'active' : ''; ?>"><span>📅</span> Monthly</a>
+                <a href="reports.php?type=quarterly" class="report-link <?php echo $type === 'quarterly' ? 'active' : ''; ?>"><span>📈</span> Quarterly</a>
+                <a href="reports.php?type=yearly" class="report-link <?php echo $type === 'yearly' ? 'active' : ''; ?>"><span>📊</span> Yearly</a>
+                <a href="reports.php?type=matrix" class="report-link <?php echo $type === 'matrix' ? 'active' : ''; ?>"><span>🏢</span> Matrix</a>
+            </div>
             
-            <h3 style="margin-top: 30px;">Advanced Analytics</h3>
-            <a href="reports.php?type=matrix" class="report-link <?php echo $type === 'matrix' ? 'active' : ''; ?>"><span>🏢</span> Customer Matrix</a>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
-                <p style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px;">Selected Year</p>
-                <select onchange="window.location.href='reports.php?type=<?php echo $type; ?>&brand=<?php echo $brand; ?>&year='+this.value" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Year:</span>
+                <select onchange="window.location.href='reports.php?type=<?php echo $type; ?>&brand=<?php echo $brand; ?>&year='+this.value" style="padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; font-weight: 700;">
                     <option value="2024" <?php echo $year == '2024' ? 'selected' : ''; ?>>2024</option>
                     <option value="2025" <?php echo $year == '2025' ? 'selected' : ''; ?>>2025</option>
                     <option value="2026" <?php echo $year == '2026' ? 'selected' : ''; ?>>2026</option>
