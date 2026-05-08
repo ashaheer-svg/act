@@ -353,12 +353,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
                     </div>
                     <button type="submit" class="btn btn-primary">Start Import Process</button>
                 </form>
-            </div>
-
-            <?php if (!empty($result['details']['duplicate_sets'])): ?>
+                      <?php if (!empty($result['details']['duplicate_sets'])): ?>
             <div class="card duplicate-audit">
                 <h2 style="color: var(--secondary);">🔍 Duplicate Audit Detail</h2>
-                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">The following records were found in the database and skipped during this import.</p>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Side-by-side comparison of duplicates found in the database.</p>
                 
                 <?php foreach($result['details']['duplicate_sets'] as $set): ?>
                 <div class="audit-set">
@@ -375,7 +373,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
                         <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['original']['amount']), 2); ?></strong></div>
                         <div style="font-size: 10px; color: var(--success); margin-top: 5px;">Imported on <?php echo $set['original']['imported_at']; ?></div>
                     </div>
-
                     <div class="audit-card duplicate">
                         <label>Incoming Duplicate</label>
                         <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['duplicate']['num']); ?></strong></div>
@@ -386,6 +383,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
                     </div>
                 </div>
                 <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($result['details']['skipped_rows'])): ?>
+            <div class="card">
+                <h2 style="color: var(--text-main);">📋 Detailed Skip Audit</h2>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Complete list of records skipped and the specific reason for each.</p>
+                
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px;">Row #</th>
+                            <th>Invoice #</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($result['details']['skipped_rows'] as $row): ?>
+                        <tr>
+                            <td style="font-weight: 800; color: var(--text-main);">#<?php echo $row['row']; ?></td>
+                            <td><?php echo htmlspecialchars($row['num']); ?></td>
+                            <td><?php echo htmlspecialchars(substr($row['name'], 0, 30)); ?></td>
+                            <td style="font-weight: 700; color: var(--primary);"><?php echo CURRENCY . number_format((float)str_replace(',', '', $row['amount']), 2); ?></td>
+                            <td>
+                                <span class="badge" style="background: <?php echo str_contains($row['reason'], 'Duplicate') ? '#fff7ed' : '#fef2f2'; ?>; color: <?php echo str_contains($row['reason'], 'Duplicate') ? '#c2410c' : '#b91c1c'; ?>; border: 1px solid currentColor;">
+                                    <?php echo htmlspecialchars($row['reason']); ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
             <?php endif; ?>
 

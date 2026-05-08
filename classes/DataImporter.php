@@ -152,7 +152,8 @@ class DataImporter {
         $details = [
             'duplicates' => 0,
             'missing_fields' => 0,
-            'duplicate_sets' => []
+            'duplicate_sets' => [],
+            'skipped_rows' => []
         ];
         $errors = [];
         $rowIndex = 1; // Start after header row
@@ -161,11 +162,20 @@ class DataImporter {
             $this->db->beginTransaction();
 
             foreach ($records as $record) {
-                // Skip if required fields missing
+                $rowIndex++;
+
                 // Skip if required fields missing
                 if (empty($record['Amount']) || empty($record['Sales Tax Code'])) {
                     $skipped++;
                     $details['missing_fields']++;
+                    $details['skipped_rows'][] = [
+                        'row' => $rowIndex,
+                        'num' => $record['Num'] ?? 'N/A',
+                        'name' => $record['Name'] ?? 'N/A',
+                        'item' => $record['Item'] ?? 'N/A',
+                        'amount' => $record['Amount'] ?? 0,
+                        'reason' => 'Missing required fields (Amount or Tax Code)'
+                    ];
                     continue;
                 }
 
@@ -186,6 +196,14 @@ class DataImporter {
                 if ($existingRecord) {
                     $skipped++;
                     $details['duplicates']++;
+                    $details['skipped_rows'][] = [
+                        'row' => $rowIndex,
+                        'num' => $record['Num'] ?? 'N/A',
+                        'name' => $record['Name'] ?? 'N/A',
+                        'item' => $record['Item'] ?? 'N/A',
+                        'amount' => $record['Amount'] ?? 0,
+                        'reason' => 'Duplicate record (same Invoice, Customer, Item, and Amount)'
+                    ];
                     
                     // Capture duplicate set for auditing
                     $details['duplicate_sets'][] = [
