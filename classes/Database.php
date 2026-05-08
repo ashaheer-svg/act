@@ -158,6 +158,15 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_import_logs_date ON import_logs(import_date);
             ");
 
+            // Sales Rep Mapping
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS sales_rep_mapping (
+                    rep_code TEXT PRIMARY KEY,
+                    rep_name TEXT NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
             return true;
         } catch (PDOException $e) {
             throw new Exception('Failed to create tables: ' . $e->getMessage());
@@ -526,7 +535,16 @@ class Database {
      * Sales Rep Mapping Methods
      */
     public function getSalesReps() {
-        return $this->fetchAll("SELECT * FROM sales_rep_mapping ORDER BY rep_name ASC");
+        try {
+            return $this->fetchAll("SELECT * FROM sales_rep_mapping ORDER BY rep_name ASC");
+        } catch (Exception $e) {
+            // Self-healing: if table is missing, try to sync schema and retry
+            if (strpos($e->getMessage(), 'no such table') !== false) {
+                $this->syncSchema();
+                return $this->fetchAll("SELECT * FROM sales_rep_mapping ORDER BY rep_name ASC");
+            }
+            throw $e;
+        }
     }
 
     public function addSalesRep($code, $name) {
