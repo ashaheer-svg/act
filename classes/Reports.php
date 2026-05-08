@@ -117,7 +117,7 @@ class Reports {
      * Get Customer Yearly Matrix (Pivot)
      * Rows: Customers, Columns: Jan-Dec Sales
      */
-    public function getCustomerYearlyPivot($year, $brand = null) {
+    public function getCustomerYearlyPivot($year, $brand = null, $customerType = null) {
         $months = [];
         for ($m = 1; $m <= 12; $m++) {
             $monthStr = str_pad($m, 2, '0', STR_PAD_LEFT);
@@ -131,6 +131,11 @@ class Reports {
             if ($brand) {
                 $where .= " AND product_category = ? ";
                 $params[] = $brand;
+            }
+
+            if ($customerType) {
+                $where .= " AND p.customer_type = ? ";
+                $params[] = $customerType;
             }
             
             return $this->db->fetchAll("

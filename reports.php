@@ -18,6 +18,7 @@ $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');
 $quarter = $_GET['quarter'] ?? ceil(date('m') / 3);
 $brand = $_GET['brand'] ?? null;
+$customer_type = $_GET['customer_type'] ?? null;
 
 $reportData = [];
 $reportTitle = '';
@@ -25,7 +26,7 @@ $customerPivot = [];
 $uniqueBrands = $reports->getUniqueBrands();
 
 if ($type === 'matrix') {
-    $customerPivot = $reports->getCustomerYearlyPivot($year, $brand);
+    $customerPivot = $reports->getCustomerYearlyPivot($year, $brand, $customer_type);
     $reportTitle = "Customer Performance Matrix - $year" . ($brand ? " ($brand)" : "");
 } else {
     switch($type) {
@@ -323,7 +324,7 @@ $summary = $reportData['summary'] ?? [];
                     <div class="filter-controls">
                         <div class="filter-group">
                             <span class="filter-label">Filter by Brand/Category</span>
-                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&brand='+encodeURIComponent(this.value)">
+                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&customer_type=<?php echo $customer_type; ?>&brand='+encodeURIComponent(this.value)">
                                 <option value="">All Brands</option>
                                 <?php foreach($uniqueBrands as $b): ?>
                                 <option value="<?php echo htmlspecialchars($b['product_category']); ?>" <?php echo $brand === $b['product_category'] ? 'selected' : ''; ?>>
@@ -332,13 +333,21 @@ $summary = $reportData['summary'] ?? [];
                                 <?php endforeach; ?>
                             </select>
                         </div>
+
+                        <div class="filter-group">
+                            <span class="filter-label">Customer Category</span>
+                            <select class="filter-select" onchange="window.location.href='reports.php?type=matrix&year=<?php echo $year; ?>&brand=<?php echo $brand; ?>&customer_type='+encodeURIComponent(this.value)">
+                                <option value="">All Customers</option>
+                                <option value="Partner" <?php echo $customer_type === 'Partner' ? 'selected' : ''; ?>>Partners Only</option>
+                                <option value="End Customer" <?php echo $customer_type === 'End Customer' ? 'selected' : ''; ?>>End Customers Only</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Customer Name</th>
-                                <th>Type</th>
                                 <th class="text-right">Total Net</th>
                                 <th class="text-right">Vol</th>
                                 <th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th>
@@ -350,11 +359,6 @@ $summary = $reportData['summary'] ?? [];
                             <tr>
                                 <td title="<?php echo htmlspecialchars($row['customer_name']); ?>">
                                     <?php echo htmlspecialchars($row['customer_name']); ?>
-                                </td>
-                                <td>
-                                    <span style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: <?php echo $row['customer_type'] === 'Partner' ? '#dcfce7; color: #15803d;' : '#e0e7ff; color: #4338ca;'; ?>">
-                                        <?php echo $row['customer_type'] ?: 'End Customer'; ?>
-                                    </span>
                                 </td>
                                 <td class="price-tag"><?php echo htmlspecialchars($currency); ?><?php echo number_format($row['total_revenue'], 0); ?></td>
                                 <td><span class="badge-vol"><?php echo $row['total_volume']; ?></span></td>
