@@ -45,9 +45,12 @@ class Reports {
                 SUM(total_amount) as total_amount,
                 AVG(total_amount) as avg_invoice_value,
                 MAX(total_amount) as largest_invoice,
-                MIN(total_amount) as smallest_invoice
+                MIN(total_amount) as smallest_invoice,
+                (SELECT SUM(amount) FROM payments) as total_payments_received
             FROM sales $where", $params
         );
+
+        $summary['total_outstanding'] = ($summary['total_amount'] ?? 0) - ($summary['total_payments_received'] ?? 0);
 
         // Format numbers
         foreach ($summary as $key => $value) {
@@ -436,6 +439,81 @@ class Reports {
         return $this->db->fetchAll(
             "SELECT DISTINCT product_category FROM sales WHERE product_category IS NOT NULL ORDER BY product_category ASC"
         );
+    /**
+     * Get Collection Status (Sales vs Payments)
+     */
+    public function getCollectionStatus() {
+        return $this->db->fetchAll("
+            SELECT 
+                s.customer_name,
+                SUM(CASE WHEN s.invoice_type = 'Invoice' THEN s.total_amount ELSE -s.total_amount END) as total_invoiced,
+                COALESCE(p.total_paid, 0) as total_paid,
+                (SUM(CASE WHEN s.invoice_type = 'Invoice' THEN s.total_amount ELSE -s.total_amount END) - COALESCE(p.total_paid, 0)) as balance,
+                AVG(s.days_to_pay) as avg_days_to_pay,
+                COUNT(s.days_to_pay) as paid_invoices_count
+            FROM sales s
+            LEFT JOIN (
+                SELECT customer_name, SUM(amount) as total_paid
+                FROM payments
+                GROUP BY customer_name
+            ) p ON s.customer_name = p.customer_name
+            GROUP BY s.customer_name
+            HAVING total_invoiced > 0 OR total_paid > 0
+            ORDER BY balance DESC, total_invoiced DESC
+        ");
+    }
+
+    /**
+     * Get Customer Credit Scores based on payment history
+     */
+    public function getCustomerCreditScores() {
+        $data = $this->db->fetchAll("
+            SELECT 
+                customer_name,
+                COUNT(*) as total_invoices,
+                COUNT(days_to_pay) as paid_count,
+                AVG(days_to_pay) as avg_days,
+                MAX(days_to_pay) as max_days,
+                SUM(total_amount) as total_volume
+            FROM sales
+            WHERE invoice_type = 'Invoice'
+            GROUP BY customer_name
+            HAVING paid_count > 0
+            ORDER BY avg_days ASC
+        ");
+
+        foreach ($data as &$row) {
+            $adp = $row['avg_days'];
+            
+            // Scoring Logic:
+            // 30 days or less = 100 (Perfect)
+            // 31-60 days = Scale down to 55
+            // 61-90 days = Scale down to 25
+            // > 90 days = 0-25
+            
+            if ($adp <= 30) {
+                $score = 100;
+            } else if ($adp <= 60) {
+                $score = 100 - (($adp - 30) * 1.5);
+            } else if ($adp <= 90) {
+                $score = 55 - (($adp - 60) * 1);
+            } else {
+                $score = max(0, 25 - (($adp - 90) * 0.5));
+            }
+            
+            $row['credit_score'] = round($score);
+            $row['risk_level'] = $this->getRiskLevel($score);
+        }
+        
+        return $data;
+    }
+
+    private function getRiskLevel($score) {
+        if ($score >= 85) return 'Excellent';
+        if ($score >= 70) return 'Good';
+        if ($score >= 50) return 'Fair';
+        if ($score >= 30) return 'At Risk';
+        return 'Critical';
     }
 }
 ?>

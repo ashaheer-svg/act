@@ -70,6 +70,9 @@ class Database {
                     total_amount DECIMAL(12,2) NOT NULL,
                     gross_profit DECIMAL(12,2) DEFAULT 0,
                     product_category TEXT,
+                    sales_rep_code TEXT,
+                    paid_date DATE,
+                    days_to_pay INTEGER,
                     imported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE(invoice_number, customer_name, item_description, qb_amount)
                 )
@@ -158,8 +161,21 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_import_logs_date ON import_logs(import_date);
             ");
 
-            // Sales Rep Mapping
-            $this->db->exec("
+            // Payments Table
+            $this->execute("
+                CREATE TABLE IF NOT EXISTS payments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    customer_name TEXT,
+                    invoice_num TEXT,
+                    payment_date DATE,
+                    reference_num TEXT,
+                    amount DECIMAL(12,2),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
+            // Sales Rep Mapping Table
+            $this->execute("
                 CREATE TABLE IF NOT EXISTS sales_rep_mapping (
                     rep_code TEXT PRIMARY KEY,
                     rep_name TEXT NOT NULL,
@@ -205,7 +221,7 @@ class Database {
             return $stmt;
         } catch (PDOException $e) {
             // Self-healing: if column is missing, try to sync schema and retry once
-            if (strpos($e->getMessage(), 'no such column') !== false) {
+            if (strpos($e->getMessage(), 'no such column') !== false || strpos($e->getMessage(), 'no such table') !== false) {
                 $this->syncSchema();
                 try {
                     $stmt = $this->db->prepare($sql);
@@ -313,7 +329,23 @@ class Database {
     /**
      * CRM: Get all customer profiles with their types
      */
-    public function getCustomerProfiles() {
+    public function clearPayments() {
+        return $this->execute("DELETE FROM payments");
+    }
+
+    public function addPayment($customer, $date, $ref, $amount, $invoiceNum = null) {
+        $sql = "INSERT INTO payments (customer_name, payment_date, reference_num, amount, invoice_num) VALUES (?, ?, ?, ?, ?)";
+        // Convert date from MM/DD/YYYY to YYYY-MM-DD if needed
+        if (strpos($date, '/') !== false) {
+            $parts = explode('/', $date);
+            if (count($parts) == 3) {
+                $date = $parts[2] . '-' . $parts[0] . '-' . $parts[1];
+            }
+        }
+        return $this->execute($sql, [$customer, $date, $ref, $amount, $invoiceNum]);
+    }
+
+    public function getCustomerPayments($customerName) {
         $this->syncCustomerProfiles(); // Ensure we have latest names
         return $this->fetchAll("
             SELECT p.*, 
@@ -484,7 +516,9 @@ class Database {
                 'gross_profit' => "ALTER TABLE sales ADD COLUMN gross_profit DECIMAL(12,2) DEFAULT 0",
                 'applied_tax_rate' => "ALTER TABLE sales ADD COLUMN applied_tax_rate DECIMAL(5,4)",
                 'product_category' => "ALTER TABLE sales ADD COLUMN product_category TEXT",
-                'sales_rep_code' => "ALTER TABLE sales ADD COLUMN sales_rep_code TEXT"
+                'sales_rep_code' => "ALTER TABLE sales ADD COLUMN sales_rep_code TEXT",
+                'paid_date' => "ALTER TABLE sales ADD COLUMN paid_date DATE",
+                'days_to_pay' => "ALTER TABLE sales ADD COLUMN days_to_pay INTEGER"
             ];
 
             foreach ($needed as $col => $sql) {

@@ -16,13 +16,18 @@ $message = '';
 $messageType = '';
 $importHistory = $importer->getImportHistory();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
-    $result = $importer->processUpload($_FILES['sales_file']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_FILES['sales_file'])) {
+        $result = $importer->processUpload($_FILES['sales_file']);
+        $messageType = $result['success'] ? 'success' : 'error';
+        $message = $result['message'];
+    } else if (isset($_FILES['ledger_file'])) {
+        $result = $importer->processLedgerUpload($_FILES['ledger_file']);
+        $messageType = $result['success'] ? 'success' : 'error';
+        $message = $result['message'];
+    }
 
-    $messageType = $result['success'] ? 'success' : 'error';
-    $message = $result['message'];
-
-    if ($result['success']) {
+    if (isset($result['success']) && $result['success']) {
         $importHistory = $importer->getImportHistory();
     }
 }
@@ -341,18 +346,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
             </div>
             <?php endif; ?>
 
-            <div class="card">
-                <h2>Import Sales Data</h2>
-                <form method="POST" enctype="multipart/form-data">
-                    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-                        <div style="font-size: 48px; margin-bottom: 15px;">📁</div>
-                        <div style="font-weight: 700; color: var(--text-main);">Drop file here or click to browse</div>
-                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">Supports .xlsx, .xls, and .csv files up to 5MB</div>
-                        <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this)">
-                        <div id="fileInfo" style="margin-top: 15px; font-weight: 700; color: var(--primary); display: none;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+                <!-- Sales Import Card -->
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">📦</div>
+                        <h2>Import Sales Data</h2>
                     </div>
-                    <button type="submit" class="btn btn-primary">Start Import Process</button>
-                </form>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px; margin-top: -15px;">Standard itemized sales report with VAT details.</p>
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                            <div style="font-size: 40px; margin-bottom: 10px;">📊</div>
+                            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">Drop sales file or click</div>
+                            <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this, 'fileInfo')">
+                            <div id="fileInfo" style="margin-top: 10px; font-weight: 700; color: var(--primary); font-size: 12px; display: none;"></div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Import Sales</button>
+                    </form>
+                </div>
+
+                <!-- Ledger Import Card -->
+                <div class="card">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: var(--secondary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">💰</div>
+                        <h2>QuickBooks Ledger</h2>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px; margin-top: -15px;">Customer ledger CSV for payments & collection tracking.</p>
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="upload-area" onclick="document.getElementById('ledgerInput').click()" style="border-color: #fbd38d;">
+                            <div style="font-size: 40px; margin-bottom: 10px;">🏦</div>
+                            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">Drop ledger file or click</div>
+                            <input type="file" id="ledgerInput" name="ledger_file" accept=".csv" required onchange="updateFileInfo(this, 'ledgerInfo')">
+                            <div id="ledgerInfo" style="margin-top: 10px; font-weight: 700; color: var(--secondary); font-size: 12px; display: none;"></div>
+                        </div>
+                        <button type="submit" class="btn" style="background: var(--secondary); color: white; margin-top: 20px;">Import Payments</button>
+                    </form>
+                </div>
+            </div>
                       <?php if (!empty($result['details']['duplicate_sets'])): ?>
             <div class="card duplicate-audit">
                 <h2 style="color: var(--secondary);">🔍 Duplicate Audit Detail</h2>
@@ -446,11 +476,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['sales_file'])) {
     </div>
 
     <script>
-        function updateFileInfo(input) {
-            const fileInfo = document.getElementById('fileInfo');
-            if (input.files.length > 0) {
-                fileInfo.textContent = "Selected: " + input.files[0].name;
-                fileInfo.style.display = 'block';
+        function updateFileInfo(input, infoId) {
+            const info = document.getElementById(infoId);
+            if (input.files && input.files[0]) {
+                info.textContent = 'Selected: ' + input.files[0].name;
+                info.style.display = 'block';
             }
         }
     </script>

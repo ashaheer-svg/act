@@ -41,6 +41,108 @@ class DataImporter {
     }
 
     /**
+     * Process Ledger Upload (QuickBooks Style Grouped CSV)
+     */
+    public function processLedgerUpload($file) {
+        $validation = $this->validateFile($file);
+        if (!$validation['valid']) {
+            return $validation;
+        }
+
+        return $this->importLedgerData($file['tmp_name'], $file['name']);
+    }
+
+    /**
+     * Specialized parser for Grouped Ledger CSV
+     */
+    private function importLedgerData($filePath, $fileName) {
+        $imported = 0;
+        $settled = 0;
+        $currentCustomer = '';
+        $lastInvoice = null;
+        
+        try {
+            $this->db->beginTransaction();
+            $this->db->clearPayments();
+
+            if (($handle = fopen($filePath, "r")) !== FALSE) {
+                while (($data = fgetcsv($handle, 2000, ",")) !== FALSE) {
+                    $customerHeader = trim($data[1] ?? '');
+                    $type = trim($data[4] ?? '');
+                    
+                    // Identify Customer Header Row
+                    if (!empty($customerHeader) && empty($type) && strpos($customerHeader, 'Total ') === false) {
+                        $currentCustomer = $customerHeader;
+                        $lastInvoice = null; // Reset for new customer
+                        continue;
+                    }
+
+                    if (empty($currentCustomer)) continue;
+
+                    $dateStr = $data[6] ?? '';
+                    $num = trim($data[8] ?? '');
+                    $amountStr = $data[24] ?? '0';
+                    $amount = abs(floatval(str_replace(['"', ','], '', $amountStr)));
+
+                    if ($type === 'Invoice') {
+                        // Store invoice info to match with next payment
+                        $lastInvoice = [
+                            'num' => $num,
+                            'date' => $dateStr,
+                            'amount' => $amount
+                        ];
+                    } else if (($type === 'Payment' || $type === 'Credit Memo') && $amount > 0) {
+                        // Record payment
+                        $this->db->addPayment($currentCustomer, $dateStr, $num, $amount);
+                        $imported++;
+
+                        // Logic: If this payment follows an invoice and amounts match, calculate days to pay
+                        if ($lastInvoice && $lastInvoice['amount'] == $amount) {
+                            $invDate = strtotime($this->formatDate($lastInvoice['date']));
+                            $payDate = strtotime($this->formatDate($dateStr));
+                            
+                            if ($invDate && $payDate) {
+                                $diff = round(($payDate - $invDate) / (60 * 60 * 24));
+                                if ($diff < 0) $diff = 0; // Pre-payments or same day
+
+                                // Update sales record
+                                $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
+                                        WHERE invoice_number = ? AND customer_name = ? AND total_amount = ?";
+                                $this->db->execute($sql, [
+                                    $this->formatDate($dateStr),
+                                    $diff,
+                                    $lastInvoice['num'],
+                                    $currentCustomer,
+                                    $lastInvoice['amount']
+                                ]);
+                                $settled++;
+                            }
+                        }
+                        $lastInvoice = null; // Reset after payment
+                    }
+                }
+                fclose($handle);
+            }
+
+            $this->logImport($fileName, $imported, 0);
+            $this->db->commit();
+
+            return [
+                'success' => true,
+                'message' => "Ledger import complete: $imported payments recorded, $settled invoices settled with payment speed data.",
+                'imported' => $imported,
+                'settled' => $settled
+            ];
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return [
+                'success' => false,
+                'message' => 'Ledger import error: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
      * Validate uploaded file
      */
     private function validateFile($file) {
