@@ -204,6 +204,17 @@ class Database {
             $stmt->execute($params);
             return $stmt;
         } catch (PDOException $e) {
+            // Self-healing: if column is missing, try to sync schema and retry once
+            if (strpos($e->getMessage(), 'no such column') !== false) {
+                $this->syncSchema();
+                try {
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute($params);
+                    return $stmt;
+                } catch (PDOException $e2) {
+                    throw new Exception('Database Error after Sync: ' . $e2->getMessage());
+                }
+            }
             throw new Exception('Database Error: ' . $e->getMessage());
         }
     }
