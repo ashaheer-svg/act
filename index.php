@@ -476,6 +476,18 @@ try {
                     <div class="card-footer">To be remitted</div>
                 </div>
 
+                <div class="card" style="background: #fffbeb; border: 1px solid #fde68a;">
+                    <div class="card-label" style="color: #92400e;">Total Payments</div>
+                    <div class="card-value" style="color: #b45309;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_payments_received'] ?? 0, 0); ?></div>
+                    <div class="card-footer" style="color: #d97706;">Historical Collection</div>
+                </div>
+
+                <div class="card" style="background: #fef2f2; border: 1px solid #fecaca;">
+                    <div class="card-label" style="color: #991b1b;">Total Outstanding</div>
+                    <div class="card-value" style="color: #dc2626;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_outstanding'] ?? 0, 0); ?></div>
+                    <div class="card-footer" style="color: #ef4444;">Accounts Receivable</div>
+                </div>
+
                 <div class="card">
                     <div class="card-label">Unique Customers</div>
                     <div class="card-value"><?php echo $summary['unique_customers'] ?? 0; ?></div>
