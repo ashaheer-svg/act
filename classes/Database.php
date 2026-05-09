@@ -327,7 +327,7 @@ class Database {
     }
 
     /**
-     * CRM: Get all customer profiles with their types
+     * Ledger / Payment Management
      */
     public function clearPayments() {
         return $this->execute("DELETE FROM payments");
@@ -345,7 +345,10 @@ class Database {
         return $this->execute($sql, [$customer, $date, $ref, $amount, $invoiceNum]);
     }
 
-    public function getCustomerPayments($customerName) {
+    /**
+     * CRM: Get all customer profiles with their types
+     */
+    public function getCustomerProfiles() {
         $this->syncCustomerProfiles(); // Ensure we have latest names
         return $this->fetchAll("
             SELECT p.*, 
@@ -356,6 +359,14 @@ class Database {
             GROUP BY p.customer_name
             ORDER BY lifetime_revenue DESC
         ");
+    }
+
+    public function getCustomerPayments($customerName) {
+        return $this->fetchAll("
+            SELECT * FROM payments 
+            WHERE customer_name = ? 
+            ORDER BY payment_date DESC
+        ", [$customerName]);
     }
 
     /**
