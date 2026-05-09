@@ -356,6 +356,54 @@ $salesReps = $db->getSalesReps();
         }
         .message.success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
         .message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
+
+        /* --- Tabs --- */
+        .settings-nav {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 25px;
+            background: #e2e8f0;
+            padding: 5px;
+            border-radius: 12px;
+            width: fit-content;
+        }
+        .tab-btn {
+            padding: 10px 25px;
+            border-radius: 8px;
+            border: none;
+            background: none;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { background: white; color: var(--primary); shadow: var(--shadow); }
+
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #fff1f2;
+            color: #e11d48;
+            border: 1px solid #fecdd3;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+        .logout-btn:hover { background: #ffe4e6; transform: translateY(-1px); }
     </style>
 </head>
 <body>
@@ -384,257 +432,281 @@ $salesReps = $db->getSalesReps();
                 <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
             </div>
             <form method="POST" action="logout.php" style="margin: 0;">
-                <button type="submit" style="background: none; border: none; font-size: 18px; cursor: pointer;">🚪</button>
+                <button type="submit" class="logout-btn" title="Logout">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+                </button>
             </form>
         </div>
     </div>
 
     <div class="container">
-        <div class="sidebar">
-            <h3>System Info</h3>
-            
-            <div class="stat-small">
-                <label>Database Size</label>
-                <value><?php echo $dbSize; ?> MB</value>
+        <div class="main-content" style="width: 100%;">
+            <div class="settings-nav">
+                <button class="tab-btn active" onclick="showTab('general')">⚙️ General</button>
+                <button class="tab-btn" onclick="showTab('team')">👥 Sales Team</button>
+                <?php if ($auth->isAdmin()): ?>
+                <button class="tab-btn" onclick="showTab('tax')">🏦 Tax & History</button>
+                <button class="tab-btn" onclick="showTab('advanced')" style="color: var(--error);">⚠️ Advanced</button>
+                <?php endif; ?>
             </div>
 
-            <div class="stat-small">
-                <label>Active Admin</label>
-                <value><?php echo htmlspecialchars($user['username']); ?></value>
-            </div>
-
-            <div style="margin-top: 30px; font-size: 12px; color: var(--text-muted);">
-                <p>Version 1.2.0</p>
-                <p style="margin-top: 5px;">Build: Premium Dashboard Edition</p>
-            </div>
-        </div>
-
-        <div class="main-content">
             <?php if ($message): ?>
             <div class="message <?php echo $messageType; ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
             <?php endif; ?>
 
-            <div class="card">
-                <h2>General Configuration</h2>
-                <form method="POST">
-                    <input type="hidden" name="action" value="update_settings">
-                    
-                    <div class="form-group">
-                        <label>Company Name</label>
-                        <input type="text" name="company_name" class="form-control" value="<?php echo htmlspecialchars($companyName); ?>">
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div id="general" class="tab-content active">
+                <div class="card">
+                    <h2>General Configuration</h2>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_settings">
+                        
                         <div class="form-group">
-                            <label>VAT Rate (e.g., 0.18 for 18%)</label>
-                            <input type="number" name="vat_rate" class="form-control" value="<?php echo $vatRate; ?>" step="0.01" min="0" max="1">
+                            <label>Company Name</label>
+                            <input type="text" name="company_name" class="form-control" value="<?php echo htmlspecialchars($companyName); ?>">
                         </div>
-                        <div class="form-group">
-                            <label>Currency Symbol</label>
-                            <input type="text" name="currency_symbol" class="form-control" value="<?php echo htmlspecialchars($currency); ?>">
-                        </div>
-                    </div>
 
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </form>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>VAT Rate (e.g., 0.18 for 18%)</label>
+                                <input type="number" name="vat_rate" class="form-control" value="<?php echo $vatRate; ?>" step="0.01" min="0" max="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Currency Symbol</label>
+                                <input type="text" name="currency_symbol" class="form-control" value="<?php echo htmlspecialchars($currency); ?>">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
             </div>
 
-            <div class="card" style="margin-top: 30px;">
-                <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                    Reporting Visibility Limit
-                    <span style="font-size: 11px; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Control Period</span>
-                </h2>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Non-admin users (Accounts/Viewers) can only view reports up to this date. Useful for locking reports during profit entry.</p>
-                
-                <form method="POST" style="display: flex; gap: 20px; align-items: flex-end;">
-                    <input type="hidden" name="action" value="update_limit">
-                    
-                    <div class="form-group" style="flex: 1; margin: 0;">
-                        <label>Limit Year</label>
-                        <select name="limit_year" class="form-control">
-                            <?php 
-                            $currLimitY = $db->getSetting('limit_year', date('Y'));
-                            for($y=2023; $y<=2026; $y++): 
-                            ?>
-                            <option value="<?php echo $y; ?>" <?php echo $currLimitY == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
+            <div id="team" class="tab-content">
+                <div class="card">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                        Sales Rep Mapping
+                        <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Team Management</span>
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Map system Sales Rep codes to their actual names for easier reporting.</p>
 
-                    <div class="form-group" style="flex: 1; margin: 0;">
-                        <label>Limit Month</label>
-                        <select name="limit_month" class="form-control">
-                            <?php 
-                            $currLimitM = $db->getSetting('limit_month', date('m'));
-                            for($m=1; $m<=12; $m++): $mStr = str_pad($m, 2, '0', STR_PAD_LEFT);
-                            ?>
-                            <option value="<?php echo $mStr; ?>" <?php echo $currLimitM == $mStr ? 'selected' : ''; ?>><?php echo date('F', mktime(0,0,0,$m,1)); ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" style="width: 200px;">Set Limit</button>
-                </form>
-
-                <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
-                    <input type="hidden" name="action" value="force_sync">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
                         <div>
-                            <p style="font-weight: 700; font-size: 14px;">Database Schema Repair</p>
-                            <p style="font-size: 12px; color: var(--text-muted);">Manually check and add missing columns/tables if you encounter SQL errors.</p>
-                        </div>
-                        <button type="submit" class="btn" style="background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border);">Force Sync Database</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="card" style="margin-top: 30px;">
-                <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                    Sales Rep Mapping
-                    <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Team Management</span>
-                </h2>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Map system Sales Rep codes to their actual names for easier reporting.</p>
-
-                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
-                    <div>
-                        <table class="tax-table">
-                            <thead>
-                                <tr>
-                                    <th>Rep Code</th>
-                                    <th>Display Name</th>
-                                    <th style="text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($salesReps)): ?>
-                                <tr>
-                                    <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings defined yet.</td>
-                                </tr>
-                                <?php else: ?>
-                                    <?php foreach ($salesReps as $rep): ?>
+                            <table class="tax-table">
+                                <thead>
                                     <tr>
-                                        <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;"><?php echo htmlspecialchars($rep['rep_code']); ?></code></td>
-                                        <td><strong><?php echo htmlspecialchars($rep['rep_name']); ?></strong></td>
-                                        <td style="text-align: right;">
-                                            <form method="POST" onsubmit="return confirm('Delete this mapping?');">
-                                                <input type="hidden" name="action" value="delete_sales_rep">
-                                                <input type="hidden" name="rep_code" value="<?php echo htmlspecialchars($rep['rep_code']); ?>">
-                                                <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
-                                            </form>
-                                        </td>
+                                        <th>Rep Code</th>
+                                        <th>Display Name</th>
+                                        <th style="text-align: right;">Action</th>
                                     </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($salesReps)): ?>
+                                    <tr>
+                                        <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings defined yet.</td>
+                                    </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($salesReps as $rep): ?>
+                                        <tr>
+                                            <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;"><?php echo htmlspecialchars($rep['rep_code']); ?></code></td>
+                                            <td><strong><?php echo htmlspecialchars($rep['rep_name']); ?></strong></td>
+                                            <td style="text-align: right;">
+                                                <form method="POST" onsubmit="return confirm('Delete this mapping?');">
+                                                    <input type="hidden" name="action" value="delete_sales_rep">
+                                                    <input type="hidden" name="rep_code" value="<?php echo htmlspecialchars($rep['rep_code']); ?>">
+                                                    <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
-                        <h3 style="font-size: 16px; margin-bottom: 20px;">Add/Update Mapping</h3>
-                        <form method="POST">
-                            <input type="hidden" name="action" value="add_sales_rep">
-                            
-                            <div class="form-group">
-                                <label>Sales Rep Code (from ERP)</label>
-                                <input type="text" name="rep_code" class="form-control" placeholder="e.g. SR01" required>
-                            </div>
+                        <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
+                            <h3 style="font-size: 16px; margin-bottom: 20px;">Add/Update Mapping</h3>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="add_sales_rep">
+                                
+                                <div class="form-group">
+                                    <label>Sales Rep Code (from ERP)</label>
+                                    <input type="text" name="rep_code" class="form-control" placeholder="e.g. SR01" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Full Name / Display Name</label>
-                                <input type="text" name="rep_name" class="form-control" placeholder="e.g. John Doe" required>
-                            </div>
+                                <div class="form-group">
+                                    <label>Full Name / Display Name</label>
+                                    <input type="text" name="rep_name" class="form-control" placeholder="e.g. John Doe" required>
+                                </div>
 
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Mapping</button>
-                        </form>
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Mapping</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <?php if ($auth->isAdmin()): ?>
-                <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                    Tax History & Future Rules
-                    <span style="font-size: 11px; font-weight: 700; color: var(--success); background: #dcfce7; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Compliance Mode Active</span>
-                </h2>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Define VAT changes based on effective dates. Invoices will automatically use the rate active on their transaction date.</p>
+            <div id="tax" class="tab-content">
+                <div class="card">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                        Reporting Visibility Limit
+                        <span style="font-size: 11px; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Control Period</span>
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Non-admin users (Accounts/Viewers) can only view reports up to this date. Useful for locking reports during profit entry.</p>
+                    
+                    <form method="POST" style="display: flex; gap: 20px; align-items: flex-end;">
+                        <input type="hidden" name="action" value="update_limit">
+                        
+                        <div class="form-group" style="flex: 1; margin: 0;">
+                            <label>Limit Year</label>
+                            <select name="limit_year" class="form-control">
+                                <?php 
+                                $currLimitY = $db->getSetting('limit_year', date('Y'));
+                                for($y=2023; $y<=2026; $y++): 
+                                ?>
+                                <option value="<?php echo $y; ?>" <?php echo $currLimitY == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
-                    <div>
-                        <table class="tax-table">
-                            <thead>
-                                <tr>
-                                    <th>Tax Name</th>
-                                    <th>Rate</th>
-                                    <th>Effective From</th>
-                                    <th style="text-align: right;">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($taxRules)): ?>
-                                <tr>
-                                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No specific tax rules defined. Using global fallback.</td>
-                                </tr>
-                                <?php else: ?>
-                                    <?php foreach ($taxRules as $rule): ?>
+                        <div class="form-group" style="flex: 1; margin: 0;">
+                            <label>Limit Month</label>
+                            <select name="limit_month" class="form-control">
+                                <?php 
+                                $currLimitM = $db->getSetting('limit_month', date('m'));
+                                for($m=1; $m<=12; $m++): $mStr = str_pad($m, 2, '0', STR_PAD_LEFT);
+                                ?>
+                                <option value="<?php echo $mStr; ?>" <?php echo $currLimitM == $mStr ? 'selected' : ''; ?>><?php echo date('F', mktime(0,0,0,$m,1)); ?></option>
+                                <?php endfor; ?>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 200px;">Set Limit</button>
+                    </form>
+                </div>
+
+                <div class="card" style="margin-top: 30px;">
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                        Tax History & Future Rules
+                        <span style="font-size: 11px; font-weight: 700; color: var(--success); background: #dcfce7; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Compliance Mode Active</span>
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Define VAT changes based on effective dates. Invoices will automatically use the rate active on their transaction date.</p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
+                        <div>
+                            <table class="tax-table">
+                                <thead>
                                     <tr>
-                                        <td><strong><?php echo htmlspecialchars($rule['tax_name']); ?></strong></td>
-                                        <td><span class="tax-badge"><?php echo ($rule['tax_rate'] * 100); ?>%</span></td>
-                                        <td><?php echo date('M d, Y', strtotime($rule['effective_from'])); ?></td>
-                                        <td style="text-align: right;">
-                                            <form method="POST" onsubmit="return confirm('Delete this tax rule?');">
-                                                <input type="hidden" name="action" value="delete_tax_rule">
-                                                <input type="hidden" name="rule_id" value="<?php echo $rule['id']; ?>">
-                                                <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
-                                            </form>
-                                        </td>
+                                        <th>Tax Name</th>
+                                        <th>Rate</th>
+                                        <th>Effective From</th>
+                                        <th style="text-align: right;">Action</th>
                                     </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($taxRules)): ?>
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No specific tax rules defined. Using global fallback.</td>
+                                    </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($taxRules as $rule): ?>
+                                        <tr>
+                                            <td><strong><?php echo htmlspecialchars($rule['tax_name']); ?></strong></td>
+                                            <td><span class="tax-badge"><?php echo ($rule['tax_rate'] * 100); ?>%</span></td>
+                                            <td><?php echo date('M d, Y', strtotime($rule['effective_from'])); ?></td>
+                                            <td style="text-align: right;">
+                                                <form method="POST" onsubmit="return confirm('Delete this tax rule?');">
+                                                    <input type="hidden" name="action" value="delete_tax_rule">
+                                                    <input type="hidden" name="rule_id" value="<?php echo $rule['id']; ?>">
+                                                    <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
 
-                    <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
-                        <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Tax Rule</h3>
-                        <form method="POST">
-                            <input type="hidden" name="action" value="add_tax_rule">
-                            
-                            <div class="form-group">
-                                <label>Tax Description</label>
-                                <input type="text" name="tax_name" class="form-control" value="VAT" required>
-                            </div>
+                        <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
+                            <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Tax Rule</h3>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="add_tax_rule">
+                                
+                                <div class="form-group">
+                                    <label>Tax Description</label>
+                                    <input type="text" name="tax_name" class="form-control" value="VAT" required>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Tax Rate (as decimal, e.g. 0.18)</label>
-                                <input type="number" step="0.001" name="tax_rate" class="form-control" value="0.180" required>
-                                <small style="color: var(--text-muted); font-size: 11px;">0.15 = 15%, 0.18 = 18%</small>
-                            </div>
+                                <div class="form-group">
+                                    <label>Tax Rate (as decimal, e.g. 0.18)</label>
+                                    <input type="number" step="0.001" name="tax_rate" class="form-control" value="0.180" required>
+                                    <small style="color: var(--text-muted); font-size: 11px;">0.15 = 15%, 0.18 = 18%</small>
+                                </div>
 
-                            <div class="form-group">
-                                <label>Effective From Date</label>
-                                <input type="date" name="effective_from" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
-                                <small style="color: var(--text-muted); font-size: 11px;">This rate applies to all invoices on or after this date.</small>
-                            </div>
+                                <div class="form-group">
+                                    <label>Effective From Date</label>
+                                    <input type="date" name="effective_from" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                                    <small style="color: var(--text-muted); font-size: 11px;">This rate applies to all invoices on or after this date.</small>
+                                </div>
 
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">Add Rule</button>
-                        </form>
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Rule</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <div id="advanced" class="tab-content">
+                <div class="card" style="border: 2px dashed #fee2e2;">
+                    <h2 style="color: var(--error);">Danger Zone</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">These actions are destructive and cannot be undone.</p>
+                    <form method="POST" onsubmit="return confirm('WARNING: This will delete ALL sales records and import logs. Are you absolutely sure?');">
+                        <input type="hidden" name="action" value="reset_database">
+                        <button type="submit" class="btn btn-danger">Full Database Reset</button>
+                    </form>
 
-
-            <div class="card" style="margin-top: 30px; border: 2px dashed #fee2e2;">
-                <h2 style="color: var(--error);">Danger Zone</h2>
-                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">These actions are destructive and cannot be undone.</p>
-                <form method="POST" onsubmit="return confirm('WARNING: This will delete ALL sales records and import logs. Are you absolutely sure?');">
-                    <input type="hidden" name="action" value="reset_database">
-                    <button type="submit" class="btn btn-danger">Full Database Reset</button>
-                </form>
+                    <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                        <input type="hidden" name="action" value="force_sync">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <p style="font-weight: 700; font-size: 14px;">Database Schema Repair</p>
+                                <p style="font-size: 12px; color: var(--text-muted);">Manually check and add missing columns/tables if you encounter SQL errors.</p>
+                            </div>
+                            <button type="submit" class="btn" style="background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border);">Force Sync Database</button>
+                        </div>
+                    </form>
+                </div>
+                <div style="margin-top: 30px; background: white; padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow);">
+                    <h3>System Status</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                        <div class="stat-small">
+                            <label>Database Size</label>
+                            <value><?php echo $dbSize; ?> MB</value>
+                        </div>
+                        <div class="stat-small">
+                            <label>Active User</label>
+                            <value><?php echo htmlspecialchars($user['username']); ?></value>
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted);">
+                        Build: Premium Dashboard Edition v1.2.0
+                    </div>
+                </div>
             </div>
             <?php endif; ?>
         </div>
     </div>
+
+    <script>
+    function showTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+    </script>
 </body>
 </html>
