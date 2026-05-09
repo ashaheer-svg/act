@@ -357,29 +357,39 @@ $salesReps = $db->getSalesReps();
         .message.success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
         .message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
 
-        /* --- Tabs --- */
+        /* --- Tabs (Matching Reports UI) --- */
         .settings-nav {
-            display: flex;
-            gap: 5px;
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 15px 25px;
+            box-shadow: var(--shadow);
             margin-bottom: 25px;
-            background: #e2e8f0;
-            padding: 5px;
-            border-radius: 12px;
-            width: fit-content;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .settings-nav-links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
         .tab-btn {
-            padding: 10px 25px;
-            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            border-radius: 10px;
             border: none;
             background: none;
-            font-size: 13px;
-            font-weight: 700;
             color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
         }
-        .tab-btn:hover { color: var(--text-main); }
-        .tab-btn.active { background: white; color: var(--primary); shadow: var(--shadow); }
+        .tab-btn:hover { background: #f8fafc; color: var(--text-main); }
+        .tab-btn.active { background: #f0f4ff; color: var(--primary); font-weight: 700; }
 
         .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
@@ -439,13 +449,17 @@ $salesReps = $db->getSalesReps();
         </div>
     </div>
 
-    <div class="container">
+    <div class="container" style="display: block; max-width: 1800px;">
         <div class="main-content" style="width: 100%;">
             <div class="settings-nav">
-                <button class="tab-btn active" onclick="showTab('general')">⚙️ General</button>
-                <button class="tab-btn" onclick="showTab('team')">👥 Sales Team</button>
+                <div class="settings-nav-links">
+                    <button class="tab-btn active" onclick="showTab('general')">⚙️ General</button>
+                    <button class="tab-btn" onclick="showTab('team')">👥 Sales Team</button>
+                    <?php if ($auth->isAdmin()): ?>
+                    <button class="tab-btn" onclick="showTab('tax')">🏦 Tax & History</button>
+                    <?php endif; ?>
+                </div>
                 <?php if ($auth->isAdmin()): ?>
-                <button class="tab-btn" onclick="showTab('tax')">🏦 Tax & History</button>
                 <button class="tab-btn" onclick="showTab('advanced')" style="color: var(--error);">⚠️ Advanced</button>
                 <?php endif; ?>
             </div>
