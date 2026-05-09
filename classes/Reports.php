@@ -439,6 +439,8 @@ class Reports {
         return $this->db->fetchAll(
             "SELECT DISTINCT product_category FROM sales WHERE product_category IS NOT NULL ORDER BY product_category ASC"
         );
+    }
+
     /**
      * Get Collection Status (Sales vs Payments)
      */
