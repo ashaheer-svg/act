@@ -110,6 +110,7 @@ class DataImporter {
                     $amount = abs(floatval(str_replace(['"', ',', ' '], '', $amountStr)));
 
                     if (strcasecmp($type, 'Invoice') === 0) {
+                        // In grouped report, we track the invoice as it appears
                         $lastInvoice = [
                             'num' => $num,
                             'date' => $dateStr,
@@ -119,24 +120,33 @@ class DataImporter {
                         $this->db->addPayment($currentCustomer, $dateStr, $num, $amount);
                         $imported++;
 
-                        if ($lastInvoice && abs($lastInvoice['amount'] - $amount) < 0.01) {
-                            $invDate = strtotime($this->formatDate($lastInvoice['date']));
-                            $payDate = strtotime($this->formatDate($dateStr));
-                            
-                            if ($invDate && $payDate) {
-                                $diff = round(($payDate - $invDate) / (60 * 60 * 24));
-                                if ($diff < 0) $diff = 0;
+                        // Logic: Find the total amount for this invoice number in our sales table
+                        // If it matches the payment, we mark all items as paid
+                        if ($lastInvoice) {
+                            $invNum = $lastInvoice['num'];
+                            $invTotal = $this->db->fetchColumn(
+                                "SELECT SUM(total_amount) FROM sales WHERE invoice_number = ? AND customer_name = ?",
+                                [$invNum, $currentCustomer]
+                            );
 
-                                $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
-                                        WHERE invoice_number = ? AND customer_name = ? AND ABS(total_amount - ?) < 0.01";
-                                $this->db->execute($sql, [
-                                    $this->formatDate($dateStr),
-                                    $diff,
-                                    $lastInvoice['num'],
-                                    $currentCustomer,
-                                    $lastInvoice['amount']
-                                ]);
-                                $settled++;
+                            if ($invTotal && abs($invTotal - $amount) < 1.0) { // Using 1.0 for rounding safety in large totals
+                                $invDate = strtotime($this->formatDate($lastInvoice['date']));
+                                $payDate = strtotime($this->formatDate($dateStr));
+                                
+                                if ($invDate && $payDate) {
+                                    $diff = round(($payDate - $invDate) / (60 * 60 * 24));
+                                    if ($diff < 0) $diff = 0;
+
+                                    $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
+                                            WHERE invoice_number = ? AND customer_name = ?";
+                                    $this->db->execute($sql, [
+                                        $this->formatDate($dateStr),
+                                        $diff,
+                                        $invNum,
+                                        $currentCustomer
+                                    ]);
+                                    $settled++;
+                                }
                             }
                         }
                         $lastInvoice = null;

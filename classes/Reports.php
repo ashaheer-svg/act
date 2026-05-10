@@ -517,5 +517,21 @@ class Reports {
         if ($score >= 30) return 'At Risk';
         return 'Critical';
     }
+
+    public function getCustomerHistory($customerName) {
+        return $this->db->fetchAll("
+            SELECT 
+                invoice_number,
+                invoice_date,
+                SUM(total_amount) as amount,
+                paid_date,
+                days_to_pay,
+                (CASE WHEN paid_date IS NOT NULL THEN 'Paid' ELSE 'Pending' END) as status
+            FROM sales
+            WHERE customer_name = ? AND invoice_type = 'Invoice'
+            GROUP BY invoice_number
+            ORDER BY invoice_date DESC
+        ", [$customerName]);
+    }
 }
 ?>

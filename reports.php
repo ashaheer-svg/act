@@ -9,6 +9,14 @@ $auth = new Auth($db);
 $auth->requireLogin();
 $reports = new Reports($db);
 
+// AJAX Handler for Customer Details
+if (isset($_GET['ajax_customer_history'])) {
+    header('Content-Type: application/json');
+    $name = $_GET['ajax_customer_history'];
+    echo json_encode($reports->getCustomerHistory($name));
+    exit;
+}
+
 $user = $auth->getCurrentUser();
 $currency = $db->getSetting('currency_symbol', '$');
 $vatRate = $db->getSetting('vat_rate', '0.18');
@@ -242,6 +250,82 @@ $summary = $reportData['summary'] ?? [];
             border-collapse: separate;
             border-spacing: 0 8px;
         }
+
+        .btn-view {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .btn-view:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal {
+            background: white;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 1100px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            animation: modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes modalSlideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            padding: 30px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+        }
+        .modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .modal-close {
+            background: #e2e8f0;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .modal-close:hover { background: #cbd5e1; transform: rotate(90deg); }
+
         .table th { text-align: left; font-size: 9px; text-transform: uppercase; color: var(--text-muted); padding: 0 8px 5px 8px; white-space: nowrap;}
         .table td { background: #f8fafc; padding: 8px 8px; font-size: 11px; white-space: nowrap;}
         .table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; font-weight: 700; position: sticky; left: 0; background: #f1f5f9; z-index: 10; max-width: 250px; overflow: hidden; text-overflow: ellipsis; font-size: 11px;}
@@ -454,6 +538,7 @@ $summary = $reportData['summary'] ?? [];
                                 <th class="text-right">Max Delay</th>
                                 <th class="text-center">Risk Level</th>
                                 <th class="text-right">Credit Score</th>
+                                <th class="text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -477,6 +562,9 @@ $summary = $reportData['summary'] ?? [];
                                 </td>
                                 <td class="text-right" style="font-family: 'Inter Tight', sans-serif; font-weight: 800; font-size: 16px;">
                                     <?php echo $row['credit_score']; ?>
+                                </td>
+                                <td class="text-center">
+                                    <button onclick="viewCustomerDetails('<?php echo addslashes($row['customer_name']); ?>')" class="btn-view">More Info</button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -547,5 +635,92 @@ $summary = $reportData['summary'] ?? [];
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModalOverlay" class="modal-overlay" onclick="if(event.target === this) closeCustomerDetails()">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modalTitle" style="margin: 0; font-size: 24px;">Customer Details</h2>
+                    <p id="modalSubtitle" style="color: var(--text-muted); font-size: 14px; margin-top: 4px;"></p>
+                </div>
+                <button class="modal-close" onclick="closeCustomerDetails()">×</button>
+            </div>
+            <div class="modal-body">
+                <table class="table" id="detailsTable">
+                    <thead>
+                        <tr>
+                            <th>Inv Date</th>
+                            <th>Inv Number</th>
+                            <th class="text-right">Amount</th>
+                            <th class="text-center">Status</th>
+                            <th>Paid Date</th>
+                            <th class="text-right">Days to Pay</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detailsBody">
+                        <!-- Content loaded via AJAX -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function viewCustomerDetails(customerName) {
+            const overlay = document.getElementById('detailsModalOverlay');
+            const title = document.getElementById('modalTitle');
+            const subtitle = document.getElementById('modalSubtitle');
+            const body = document.getElementById('detailsBody');
+            
+            title.innerText = customerName;
+            subtitle.innerText = 'Transaction History & Settlement Audit';
+            body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 50px;">Loading historical data...</td></tr>';
+            
+            overlay.style.display = 'flex';
+            
+            fetch(`reports.php?ajax_customer_history=${encodeURIComponent(customerName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 50px;">No historical invoices found.</td></tr>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.forEach(row => {
+                        const isPaid = row.paid_date !== null;
+                        const statusColor = isPaid ? '#10b981' : '#f59e0b';
+                        const daysColor = row.days_to_pay <= 30 ? '#10b981' : (row.days_to_pay <= 60 ? '#f59e0b' : '#ef4444');
+                        
+                        html += `
+                            <tr>
+                                <td>${row.invoice_date}</td>
+                                <td style="font-weight: 600;">${row.invoice_number}</td>
+                                <td class="text-right" style="font-weight: 700;">${new Intl.NumberFormat().format(row.amount)}</td>
+                                <td class="text-center">
+                                    <span style="display: inline-block; padding: 2px 10px; border-radius: 20px; background: ${statusColor}20; color: ${statusColor}; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                                        ${row.status}
+                                    </span>
+                                </td>
+                                <td>${row.paid_date || '-'}</td>
+                                <td class="text-right" style="font-weight: 800; color: ${isPaid ? daysColor : 'var(--text-muted)'}">
+                                    ${isPaid ? row.days_to_pay + ' Days' : '-'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    body.innerHTML = html;
+                })
+                .catch(err => {
+                    body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 50px; color: var(--error);">Error loading data. Please try again.</td></tr>';
+                    console.error(err);
+                });
+        }
+
+        function closeCustomerDetails() {
+            document.getElementById('detailsModalOverlay').style.display = 'none';
+        }
+    </script>
 </body>
 </html>
