@@ -317,6 +317,13 @@ class Database {
     }
 
     /**
+     * Check if in transaction
+     */
+    public function inTransaction() {
+        return $this->db->inTransaction();
+    }
+
+    /**
      * Get setting value by key
      */
     public function getSetting($key, $default = '') {

@@ -407,8 +407,9 @@ class SimpleXLSX
             }
             $entry_xml = trim($entry_xml);
 
-            if (LIBXML_VERSION < 20900 && function_exists('libxml_disable_entity_loader')) {
-                $_old = libxml_disable_entity_loader();
+            if (PHP_VERSION_ID < 80000 && LIBXML_VERSION < 20900 && function_exists('libxml_disable_entity_loader')) {
+                $disableEntityLoader = 'libxml_disable_entity_loader';
+                $_old = $disableEntityLoader();
             }
 
             $_old_uie = libxml_use_internal_errors(true);
@@ -417,8 +418,9 @@ class SimpleXLSX
 
             libxml_use_internal_errors($_old_uie);
 
-            if (LIBXML_VERSION < 20900 && function_exists('libxml_disable_entity_loader')) {
-                libxml_disable_entity_loader($_old);
+            if (PHP_VERSION_ID < 80000 && LIBXML_VERSION < 20900 && function_exists('libxml_disable_entity_loader')) {
+                $disableEntityLoader = 'libxml_disable_entity_loader';
+                $disableEntityLoader($_old);
             }
 
             if ($entry_xmlobj) {
@@ -454,7 +456,7 @@ class SimpleXLSX
                         $entry['data'] = gzinflate($entry['data']);
                         break;
                     case 12: // BZIP2
-                        if (extension_loaded('bz2')) {
+                        if (function_exists('bzdecompress')) {
                             $entry['data'] = bzdecompress($entry['data']);
                         } else {
                             $entry['error'] = 7;
