@@ -160,6 +160,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if ($action === 'save_bulk_mappings') {
+        try {
+            $mappings = $_POST['mappings'] ?? [];
+            $count = 0;
+            foreach ($mappings as $encodedItem => $category) {
+                $category = trim($category);
+                if (!empty($category)) {
+                    $item = base64_decode($encodedItem);
+                    $db->saveProductMapping($item, $category);
+                    $count++;
+                }
+            }
+            if ($count > 0) {
+                $message = "$count product mappings saved successfully. Historical records updated.";
+                $messageType = 'success';
+                $db->logActivity($user['id'], 'BULK_PRODUCT_MAPPED', "Mapped $count items");
+            } else {
+                $message = "No new categories were entered.";
+                $messageType = 'info';
+            }
+        } catch (Exception $e) {
+            $message = 'Bulk Error: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+
     if ($action === 'delete_product_mapping') {
         try {
             $mappingId = $_POST['mapping_id'] ?? 0;
@@ -762,40 +788,42 @@ $existingMappings = $db->getAllMappings();
                     <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
                         <div>
                             <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--primary);">Items Missing Category</h3>
-                            <div style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px;">
-                                <table class="tax-table" style="margin-top: 0;">
-                                    <thead style="position: sticky; top: 0; z-index: 10; background: white;">
-                                        <tr>
-                                            <th>Uncategorized Item Description</th>
-                                            <th style="text-align: right;">Volume</th>
-                                            <th style="width: 250px;">Assign Category</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if (empty($uncategorizedItems)): ?>
-                                        <tr>
-                                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">Great! All your items are categorized.</td>
-                                        </tr>
-                                        <?php else: ?>
-                                            <?php foreach ($uncategorizedItems as $item): ?>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="save_bulk_mappings">
+                                <div style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px;">
+                                    <table class="tax-table" style="margin-top: 0;">
+                                        <thead style="position: sticky; top: 0; z-index: 10; background: white;">
                                             <tr>
-                                                <td style="font-size: 12px; font-weight: 600;"><?php echo htmlspecialchars($item['item_description']); ?></td>
-                                                <td style="text-align: right; color: var(--text-muted);"><?php echo $item['occurrence_count']; ?></td>
-                                                <td colspan="2">
-                                                    <form method="POST" style="display: flex; gap: 8px;">
-                                                        <input type="hidden" name="action" value="save_product_mapping">
-                                                        <input type="hidden" name="item_description" value="<?php echo htmlspecialchars($item['item_description']); ?>">
-                                                        <input type="text" name="product_category" class="form-control" placeholder="e.g. HDD:Internal" required style="padding: 6px 10px; font-size: 12px;">
-                                                        <button type="submit" class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;">Apply</button>
-                                                    </form>
-                                                </td>
+                                                <th>Uncategorized Item Description</th>
+                                                <th style="text-align: right;">Volume</th>
+                                                <th style="width: 250px;">Assign Category</th>
                                             </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            <?php if (empty($uncategorizedItems)): ?>
+                                            <tr>
+                                                <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">Great! All your items are categorized.</td>
+                                            </tr>
+                                            <?php else: ?>
+                                                <?php foreach ($uncategorizedItems as $item): ?>
+                                                <tr>
+                                                    <td style="font-size: 12px; font-weight: 600;"><?php echo htmlspecialchars($item['item_description']); ?></td>
+                                                    <td style="text-align: right; color: var(--text-muted);"><?php echo $item['occurrence_count']; ?></td>
+                                                    <td>
+                                                        <input type="text" name="mappings[<?php echo base64_encode($item['item_description']); ?>]" class="form-control" placeholder="e.g. HDD:Internal" style="padding: 6px 10px; font-size: 12px;">
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php if (!empty($uncategorizedItems)): ?>
+                                <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+                                    <button type="submit" class="btn btn-primary">Save All Mappings</button>
+                                </div>
+                                <?php endif; ?>
+                            </form>
                         </div>
 
                         <div>
@@ -843,9 +871,39 @@ $existingMappings = $db->getAllMappings();
     function showTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
+        
+        const targetTab = document.getElementById(tabId);
+        if (targetTab) {
+            targetTab.classList.add('active');
+            // Find and activate the correct button
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if (btn.getAttribute('onclick').includes("'" + tabId + "'")) {
+                    btn.classList.add('active');
+                }
+            });
+            window.location.hash = tabId;
+        }
     }
+
+    // Auto-select tab on load based on hash or last action
+    window.addEventListener('DOMContentLoaded', () => {
+        const hash = window.location.hash.replace('#', '');
+        <?php 
+        $lastAction = $_POST['action'] ?? '';
+        $jumpTo = '';
+        if (strpos($lastAction, 'sales_rep') !== false) $jumpTo = 'team';
+        if (strpos($lastAction, 'product_mapping') !== false || $lastAction === 'save_bulk_mappings') $jumpTo = 'rationalize';
+        if ($lastAction === 'update_limit' || strpos($lastAction, 'tax_rule') !== false) $jumpTo = 'tax';
+        if ($lastAction === 'reset_database' || $lastAction === 'force_sync') $jumpTo = 'advanced';
+        ?>
+        
+        const jumpTo = "<?php echo $jumpTo; ?>";
+        if (jumpTo) {
+            showTab(jumpTo);
+        } else if (hash) {
+            showTab(hash);
+        }
+    });
     </script>
 </body>
 </html>
