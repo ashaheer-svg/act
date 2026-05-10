@@ -673,7 +673,7 @@ class Database {
             SELECT DISTINCT s.item_description, COUNT(*) as occurrence_count
             FROM sales s
             LEFT JOIN product_mappings pm ON s.item_description = pm.item_description
-            WHERE (s.product_category IS NULL OR s.product_category = '')
+            WHERE (s.product_category IS NULL OR s.product_category = '' OR s.product_category = s.item_description)
               AND pm.item_description IS NULL
             GROUP BY s.item_description
             ORDER BY occurrence_count DESC
@@ -692,8 +692,7 @@ class Database {
         return $this->execute("
             UPDATE sales 
             SET product_category = ? 
-            WHERE item_description = ? 
-              AND (product_category IS NULL OR product_category = '')
+            WHERE item_description = ?
         ", [$category, $item]);
     }
 
