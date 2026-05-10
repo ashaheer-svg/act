@@ -176,7 +176,7 @@ if ($customerScore['risk_level'] === 'Critical') $riskColor = '#ef4444';
                         <?php foreach($products as $p): ?>
                         <tr>
                             <td><?php echo htmlspecialchars($p['item_description']); ?></td>
-                            <td><span style="font-size: 10px; color: var(--text-muted); font-weight: 700; background: #e2e8f0; padding: 2px 8px; border-radius: 4px;"><?php echo htmlspecialchars($p['product_category']); ?></span></td>
+                            <td><span style="font-size: 10px; color: var(--text-muted); font-weight: 700; background: #e2e8f0; padding: 2px 8px; border-radius: 4px;"><?php echo htmlspecialchars($p['main_category'] ?? 'General'); ?></span></td>
                             <td class="text-right"><?php echo $p['frequency']; ?></td>
                             <td class="text-right" style="font-weight: 800;"><?php echo number_format($p['total_value'], 2); ?></td>
                         </tr>
