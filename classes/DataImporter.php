@@ -61,53 +61,74 @@ class DataImporter {
         $currentCustomer = '';
         $lastInvoice = null;
         
+        // Default indices in case header detection fails
+        $idx = [
+            'type' => 4,
+            'date' => 6,
+            'num' => 8,
+            'amount' => 28
+        ];
+
         try {
             $this->db->beginTransaction();
             $this->db->clearPayments();
 
             if (($handle = fopen($filePath, "r")) !== FALSE) {
+                $rowNum = 0;
                 while (($data = fgetcsv($handle, 2000, ",")) !== FALSE) {
+                    $rowNum++;
+
+                    // Try to detect indices from header row (usually contains 'Type' and 'Amount')
+                    if ($rowNum === 1 || in_array('Type', $data)) {
+                        foreach ($data as $i => $val) {
+                            $val = trim($val);
+                            if ($val === 'Type') $idx['type'] = $i;
+                            if ($val === 'Date') $idx['date'] = $i;
+                            if ($val === 'Num') $idx['num'] = $i;
+                            if ($val === 'Amount') $idx['amount'] = $i;
+                        }
+                        if ($rowNum === 1) continue;
+                    }
+
                     $customerHeader = trim($data[1] ?? '');
-                    $type = trim($data[4] ?? '');
+                    $type = trim($data[$idx['type']] ?? '');
                     
-                    // Identify Customer Header Row
+                    // Identify Customer Header Row (Name in col 1, Type empty)
                     if (!empty($customerHeader) && empty($type) && strpos($customerHeader, 'Total ') === false) {
                         $currentCustomer = $customerHeader;
-                        $lastInvoice = null; // Reset for new customer
+                        $lastInvoice = null;
                         continue;
                     }
 
                     if (empty($currentCustomer)) continue;
 
-                    $dateStr = $data[6] ?? '';
-                    $num = trim($data[8] ?? '');
-                    $amountStr = $data[24] ?? '0';
-                    $amount = abs(floatval(str_replace(['"', ','], '', $amountStr)));
+                    $dateStr = trim($data[$idx['date']] ?? '');
+                    $num = trim($data[$idx['num']] ?? '');
+                    $amountStr = trim($data[$idx['amount']] ?? '0');
+                    
+                    // Robust numerical cleaning
+                    $amount = abs(floatval(str_replace(['"', ',', ' '], '', $amountStr)));
 
-                    if ($type === 'Invoice') {
-                        // Store invoice info to match with next payment
+                    if (strcasecmp($type, 'Invoice') === 0) {
                         $lastInvoice = [
                             'num' => $num,
                             'date' => $dateStr,
                             'amount' => $amount
                         ];
-                    } else if (($type === 'Payment' || $type === 'Credit Memo') && $amount > 0) {
-                        // Record payment
+                    } else if ((strcasecmp($type, 'Payment') === 0 || strcasecmp($type, 'Credit Memo') === 0) && $amount > 0) {
                         $this->db->addPayment($currentCustomer, $dateStr, $num, $amount);
                         $imported++;
 
-                        // Logic: If this payment follows an invoice and amounts match, calculate days to pay
-                        if ($lastInvoice && $lastInvoice['amount'] == $amount) {
+                        if ($lastInvoice && abs($lastInvoice['amount'] - $amount) < 0.01) {
                             $invDate = strtotime($this->formatDate($lastInvoice['date']));
                             $payDate = strtotime($this->formatDate($dateStr));
                             
                             if ($invDate && $payDate) {
                                 $diff = round(($payDate - $invDate) / (60 * 60 * 24));
-                                if ($diff < 0) $diff = 0; // Pre-payments or same day
+                                if ($diff < 0) $diff = 0;
 
-                                // Update sales record
                                 $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
-                                        WHERE invoice_number = ? AND customer_name = ? AND total_amount = ?";
+                                        WHERE invoice_number = ? AND customer_name = ? AND ABS(total_amount - ?) < 0.01";
                                 $this->db->execute($sql, [
                                     $this->formatDate($dateStr),
                                     $diff,
@@ -118,7 +139,7 @@ class DataImporter {
                                 $settled++;
                             }
                         }
-                        $lastInvoice = null; // Reset after payment
+                        $lastInvoice = null;
                     }
                 }
                 fclose($handle);
@@ -129,12 +150,12 @@ class DataImporter {
 
             return [
                 'success' => true,
-                'message' => "Ledger import complete: $imported payments recorded, $settled invoices settled with payment speed data.",
+                'message' => "Ledger import complete: $imported payments recorded, $settled invoices settled.",
                 'imported' => $imported,
                 'settled' => $settled
             ];
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if ($this->db->inTransaction()) $this->db->rollBack();
             return [
                 'success' => false,
                 'message' => 'Ledger import error: ' . $e->getMessage()
