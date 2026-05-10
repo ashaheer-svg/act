@@ -644,7 +644,10 @@ $summary = $reportData['summary'] ?? [];
                     <h2 id="modalTitle" style="margin: 0; font-size: 24px;">Customer Details</h2>
                     <p id="modalSubtitle" style="color: var(--text-muted); font-size: 14px; margin-top: 4px;"></p>
                 </div>
-                <button class="modal-close" onclick="closeCustomerDetails()">×</button>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <a id="modalReportLink" href="#" class="btn-view" style="background: var(--text-main); text-decoration: none; padding: 10px 20px;">Full Analytical Dossier</a>
+                    <button class="modal-close" onclick="closeCustomerDetails()">×</button>
+                </div>
             </div>
             <div class="modal-body">
                 <table class="table" id="detailsTable">
@@ -672,9 +675,11 @@ $summary = $reportData['summary'] ?? [];
             const title = document.getElementById('modalTitle');
             const subtitle = document.getElementById('modalSubtitle');
             const body = document.getElementById('detailsBody');
+            const reportLink = document.getElementById('modalReportLink');
             
             title.innerText = customerName;
             subtitle.innerText = 'Transaction History & Settlement Audit';
+            reportLink.href = `customer_report.php?name=${encodeURIComponent(customerName)}`;
             body.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 50px;">Loading historical data...</td></tr>';
             
             overlay.style.display = 'flex';

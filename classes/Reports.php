@@ -469,30 +469,50 @@ class Reports {
      * Get Customer Credit Scores based on payment history
      */
     public function getCustomerCreditScores() {
+        $today = date('Y-m-d');
+        
+        // Get base customer stats
         $data = $this->db->fetchAll("
             SELECT 
                 customer_name,
                 COUNT(*) as total_invoices,
-                COUNT(days_to_pay) as paid_count,
-                AVG(days_to_pay) as avg_days,
-                MAX(days_to_pay) as max_days,
-                SUM(total_amount) as total_volume
+                SUM(CASE WHEN paid_date IS NOT NULL THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN paid_date IS NULL THEN 1 ELSE 0 END) as unpaid_count,
+                SUM(total_amount) as total_volume,
+                SUM(CASE WHEN paid_date IS NULL THEN total_amount ELSE 0 END) as outstanding_amount
             FROM sales
             WHERE invoice_type = 'Invoice'
             GROUP BY customer_name
-            HAVING paid_count > 0
-            ORDER BY avg_days ASC
+            ORDER BY total_volume DESC
         ");
 
         foreach ($data as &$row) {
-            $adp = $row['avg_days'];
+            // Fetch all invoice delays for this customer, calculating aging for unpaid ones
+            $invoices = $this->db->fetchAll("
+                SELECT 
+                    (CASE 
+                        WHEN paid_date IS NOT NULL THEN days_to_pay 
+                        ELSE CAST((julianday(?) - julianday(invoice_date)) AS INT)
+                    END) as effective_days
+                FROM sales
+                WHERE customer_name = ? AND invoice_type = 'Invoice'
+            ", [$today, $row['customer_name']]);
+
+            $totalDays = 0;
+            $maxDays = 0;
+            foreach ($invoices as $inv) {
+                $days = max(0, $inv['effective_days']);
+                $totalDays += $days;
+                if ($days > $maxDays) $maxDays = $days;
+            }
+
+            $adp = count($invoices) > 0 ? $totalDays / count($invoices) : 0;
+            $row['avg_days'] = $adp;
+            $row['max_days'] = $maxDays;
             
             // Scoring Logic:
             // 30 days or less = 100 (Perfect)
-            // 31-60 days = Scale down to 55
-            // 61-90 days = Scale down to 25
-            // > 90 days = 0-25
-            
+            // Penalize based on ADP
             if ($adp <= 30) {
                 $score = 100;
             } else if ($adp <= 60) {
@@ -503,8 +523,12 @@ class Reports {
                 $score = max(0, 25 - (($adp - 90) * 0.5));
             }
             
-            $row['credit_score'] = round($score);
-            $row['risk_level'] = $this->getRiskLevel($score);
+            // Extra penalties for dangerous behaviors
+            if ($maxDays > 120) $score *= 0.5; // Significant penalty for very old debt
+            if ($row['unpaid_count'] > 10) $score -= 10;
+            
+            $row['credit_score'] = max(0, min(100, round($score)));
+            $row['risk_level'] = $this->getRiskLevel($row['credit_score']);
         }
         
         return $data;
@@ -516,6 +540,50 @@ class Reports {
         if ($score >= 50) return 'Fair';
         if ($score >= 30) return 'At Risk';
         return 'Critical';
+    }
+
+    public function getCustomerSummary($customerName) {
+        $today = date('Y-m-d');
+        return $this->db->fetch("
+            SELECT 
+                customer_name,
+                COUNT(*) as total_invoices,
+                SUM(total_amount) as total_volume,
+                SUM(CASE WHEN paid_date IS NOT NULL THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN paid_date IS NULL THEN 1 ELSE 0 END) as unpaid_count,
+                SUM(CASE WHEN paid_date IS NULL THEN total_amount ELSE 0 END) as outstanding_amount,
+                AVG(CASE WHEN paid_date IS NOT NULL THEN days_to_pay ELSE (julianday(?) - julianday(invoice_date)) END) as avg_days
+            FROM sales
+            WHERE customer_name = ? AND invoice_type = 'Invoice'
+        ", [$today, $customerName]);
+    }
+
+    public function getCustomerMonthlyTrend($customerName) {
+        return $this->db->fetchAll("
+            SELECT 
+                strftime('%Y-%m', invoice_date) as month,
+                SUM(total_amount) as total
+            FROM sales
+            WHERE customer_name = ? AND invoice_type = 'Invoice'
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 24
+        ", [$customerName]);
+    }
+
+    public function getCustomerTopProducts($customerName) {
+        return $this->db->fetchAll("
+            SELECT 
+                product_category,
+                item_description,
+                COUNT(*) as frequency,
+                SUM(total_amount) as total_value
+            FROM sales
+            WHERE customer_name = ? AND invoice_type = 'Invoice'
+            GROUP BY item_description
+            ORDER BY total_value DESC
+            LIMIT 15
+        ", [$customerName]);
     }
 
     public function getCustomerHistory($customerName) {
