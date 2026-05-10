@@ -78,20 +78,93 @@ $summary = $reportData['summary'] ?? [];
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --secondary: #fb923c;
-            --bg: #f1f5f9;
-            --sidebar-bg: #ffffff;
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --radius-lg: 20px;
-            --radius-md: 12px;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+        .user-profile {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            transition: all 0.2s;
         }
+
+        /* --- User Dropdown --- */
+        .user-dropdown {
+            position: relative;
+            cursor: pointer;
+        }
+        .user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px;
+            padding-right: 12px;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .user-trigger:hover { background: #f8fafc; }
+        .user-info-brief {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .user-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+        .user-role { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 220px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+            padding: 8px;
+            display: none;
+            z-index: 1000;
+            transform-origin: top right;
+            animation: dropdownFade 0.2s ease;
+        }
+        .dropdown-menu.active { display: block; }
+        
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .dropdown-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+        .dropdown-header strong { display: block; font-size: 14px; color: var(--text-main); }
+        .dropdown-header span { font-size: 11px; color: var(--text-muted); }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+        }
+        .dropdown-item:hover { background: #f8fafc; color: var(--primary); }
+        .dropdown-item.logout-link:hover { background: #fef2f2; color: var(--error); }
+        .dropdown-divider { height: 1px; background: var(--border); margin: 8px 0; }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -406,24 +479,37 @@ $summary = $reportData['summary'] ?? [];
         <div class="top-nav">
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item active">Reporting</a>
-            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
-            <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
-            <a href="customers.php" class="top-nav-item">Customers</a>
-            <a href="upload.php" class="top-nav-item">Upload</a>
-            <?php endif; ?>
-            <?php if ($auth->isAdmin()): ?>
-            <a href="users.php" class="top-nav-item">Users</a>
             <a href="settings.php" class="top-nav-item">Settings</a>
-            <?php endif; ?>
         </div>
 
         <div class="header-actions">
-            <div class="user-profile">
-                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+            <div class="user-dropdown">
+                <div class="user-trigger" onclick="toggleUserDropdown()">
+                    <div class="user-profile">
+                        <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+                    </div>
+                    <div class="user-info-brief">
+                        <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
+                        <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-left: 4px;">▼</div>
+                </div>
+                
+                <div class="dropdown-menu" id="userDropdown">
+                    <div class="dropdown-header">
+                        <strong><?php echo htmlspecialchars($user['username']); ?></strong>
+                        <span><?php echo ucfirst($user['role']); ?> Management Account</span>
+                    </div>
+                    <a href="settings.php#security" class="dropdown-item">🔒 Change Password</a>
+                    <?php if ($auth->isAdmin()): ?>
+                    <a href="users.php" class="dropdown-item">👥 Manage Users</a>
+                    <?php endif; ?>
+                    <div class="dropdown-divider"></div>
+                    <form method="POST" action="logout.php" style="margin: 0;">
+                        <button type="submit" class="dropdown-item logout-link">🚪 Logout</button>
+                    </form>
+                </div>
             </div>
-            <form method="POST" action="logout.php" style="margin: 0;">
-                <button type="submit" style="background: none; border: none; font-size: 18px; cursor: pointer;">🚪</button>
-            </form>
         </div>
     </div>
 
@@ -836,6 +922,20 @@ $summary = $reportData['summary'] ?? [];
 
         function closeCustomerDetails() {
             document.getElementById('detailsModalOverlay').style.display = 'none';
+        }
+    </script>
+    <script>
+        function toggleUserDropdown() {
+            document.getElementById('userDropdown').classList.toggle('active');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.user-dropdown')) {
+                const dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    dropdowns[i].classList.remove('active');
+                }
+            }
         }
     </script>
 </body>

@@ -6,7 +6,7 @@ require_once 'classes/Validator.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireAccounts(); // Admin or Accounts
+$auth->requireLogin();
 
 $user = $auth->getCurrentUser();
 $message = '';
@@ -18,6 +18,24 @@ $db->initializeSettings();
 // Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    if ($action === 'change_password') {
+        $current = $_POST['current_password'] ?? '';
+        $new = $_POST['new_password'] ?? '';
+        $confirm = $_POST['confirm_password'] ?? '';
+
+        if ($new !== $confirm) {
+            $message = 'New passwords do not match';
+            $messageType = 'error';
+        } else if (strlen($new) < 6) {
+            $message = 'Password must be at least 6 characters';
+            $messageType = 'error';
+        } else {
+            $result = $auth->changePassword($user['id'], $current, $new);
+            $message = $result['message'];
+            $messageType = $result['success'] ? 'success' : 'error';
+        }
+    }
 
     if ($action === 'update_settings') {
         try {
@@ -312,16 +330,90 @@ $existingMappings = $db->getAllMappings();
         .user-profile {
             width: 40px;
             height: 40px;
-            border-radius: 50%;
-            background: #e2e8f0;
+            border-radius: 12px;
+            background: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            color: var(--text-muted);
-            border: 2px solid white;
-            box-shadow: var(--shadow);
+            color: white;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+            transition: all 0.2s;
         }
+
+        /* --- User Dropdown --- */
+        .user-dropdown {
+            position: relative;
+            cursor: pointer;
+        }
+        .user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px;
+            padding-right: 12px;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .user-trigger:hover { background: #f8fafc; }
+        .user-info-brief {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .user-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+        .user-role { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 220px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            border: 1px solid var(--border);
+            padding: 8px;
+            display: none;
+            z-index: 1000;
+            transform-origin: top right;
+            animation: dropdownFade 0.2s ease;
+        }
+        .dropdown-menu.active { display: block; }
+        
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .dropdown-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+        .dropdown-header strong { display: block; font-size: 14px; color: var(--text-main); }
+        .dropdown-header span { font-size: 11px; color: var(--text-muted); }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 10px;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+        }
+        .dropdown-item:hover { background: #f8fafc; color: var(--primary); }
+        .dropdown-item.logout-link:hover { background: #fef2f2; color: var(--error); }
+        .dropdown-divider { height: 1px; background: var(--border); margin: 8px 0; }
 
         /* --- Layout --- */
         .container {
@@ -486,26 +578,37 @@ $existingMappings = $db->getAllMappings();
         <div class="top-nav">
             <a href="index.php" class="top-nav-item">Dashboard</a>
             <a href="reports.php" class="top-nav-item">Reporting</a>
-            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
-            <a href="profit_entry.php" class="top-nav-item">Profit Entry</a>
-            <a href="customers.php" class="top-nav-item">Customers</a>
-            <a href="upload.php" class="top-nav-item">Upload</a>
             <a href="settings.php" class="top-nav-item active">Settings</a>
-            <?php endif; ?>
-            <?php if ($auth->isAdmin()): ?>
-            <a href="users.php" class="top-nav-item">Users</a>
-            <?php endif; ?>
         </div>
 
         <div class="header-actions">
-            <div class="user-profile">
-                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+            <div class="user-dropdown">
+                <div class="user-trigger" onclick="toggleUserDropdown()">
+                    <div class="user-profile">
+                        <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+                    </div>
+                    <div class="user-info-brief">
+                        <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
+                        <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-left: 4px;">▼</div>
+                </div>
+                
+                <div class="dropdown-menu" id="userDropdown">
+                    <div class="dropdown-header">
+                        <strong><?php echo htmlspecialchars($user['username']); ?></strong>
+                        <span><?php echo ucfirst($user['role']); ?> Management Account</span>
+                    </div>
+                    <a href="settings.php#security" class="dropdown-item">🔒 Change Password</a>
+                    <?php if ($auth->isAdmin()): ?>
+                    <a href="users.php" class="dropdown-item">👥 Manage Users</a>
+                    <?php endif; ?>
+                    <div class="dropdown-divider"></div>
+                    <form method="POST" action="logout.php" style="margin: 0;">
+                        <button type="submit" class="dropdown-item logout-link">🚪 Logout</button>
+                    </form>
+                </div>
             </div>
-            <form method="POST" action="logout.php" style="margin: 0;">
-                <button type="submit" class="logout-btn" title="Logout">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3H6a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h4M16 17l5-5-5-5M21 12H9"></path></svg>
-                </button>
-            </form>
         </div>
     </div>
 
@@ -513,12 +616,23 @@ $existingMappings = $db->getAllMappings();
         <div class="main-content" style="width: 100%;">
             <div class="settings-nav">
                 <div class="settings-nav-links">
+                    <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
                     <button class="tab-btn active" onclick="showTab('general')">⚙️ General</button>
                     <button class="tab-btn" onclick="showTab('team')">👥 Sales Team</button>
                     <button class="tab-btn" onclick="showTab('rationalize')">🏷️ Product Mapping</button>
                     <?php if ($auth->isAdmin()): ?>
                     <button class="tab-btn" onclick="showTab('tax')">🏦 Tax & History</button>
                     <?php endif; ?>
+                    <div style="width: 1px; height: 24px; background: var(--border); margin: 0 10px;"></div>
+                    <a href="profit_entry.php" class="tab-btn">💰 Profit Entry</a>
+                    <a href="customers.php" class="tab-btn">🏢 Customers</a>
+                    <a href="upload.php" class="tab-btn">📁 Data Upload</a>
+                    <?php if ($auth->isAdmin()): ?>
+                    <a href="users.php" class="tab-btn">👤 User Mgmt</a>
+                    <?php endif; ?>
+                    <div style="width: 1px; height: 24px; background: var(--border); margin: 0 10px;"></div>
+                    <?php endif; ?>
+                    <button class="tab-btn" onclick="showTab('security')">🔒 Security</button>
                 </div>
                 <?php if ($auth->isAdmin()): ?>
                 <button class="tab-btn" onclick="showTab('advanced')" style="color: var(--error);">⚠️ Advanced</button>
@@ -531,6 +645,7 @@ $existingMappings = $db->getAllMappings();
             </div>
             <?php endif; ?>
 
+            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
             <div id="general" class="tab-content active">
                 <div class="card">
                     <h2>General Configuration</h2>
@@ -577,19 +692,17 @@ $existingMappings = $db->getAllMappings();
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php if (empty($salesReps)): ?>
-                                    <tr>
-                                        <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings defined yet.</td>
-                                    </tr>
+                                    <?php if (empty($reps)): ?>
+                                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings found.</td></tr>
                                     <?php else: ?>
-                                        <?php foreach ($salesReps as $rep): ?>
+                                        <?php foreach ($reps as $r): ?>
                                         <tr>
-                                            <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;"><?php echo htmlspecialchars($rep['rep_code']); ?></code></td>
-                                            <td><strong><?php echo htmlspecialchars($rep['rep_name']); ?></strong></td>
+                                            <td><code><?php echo htmlspecialchars($r['rep_code']); ?></code></td>
+                                            <td><strong><?php echo htmlspecialchars($r['rep_name']); ?></strong></td>
                                             <td style="text-align: right;">
                                                 <form method="POST" onsubmit="return confirm('Delete this mapping?');">
                                                     <input type="hidden" name="action" value="delete_sales_rep">
-                                                    <input type="hidden" name="rep_code" value="<?php echo htmlspecialchars($rep['rep_code']); ?>">
+                                                    <input type="hidden" name="rep_id" value="<?php echo $r['id']; ?>">
                                                     <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
                                                 </form>
                                             </td>
@@ -601,7 +714,7 @@ $existingMappings = $db->getAllMappings();
                         </div>
 
                         <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
-                            <h3 style="font-size: 16px; margin-bottom: 20px;">Add/Update Mapping</h3>
+                            <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Mapping</h3>
                             <form method="POST">
                                 <input type="hidden" name="action" value="add_sales_rep">
                                 
@@ -776,6 +889,7 @@ $existingMappings = $db->getAllMappings();
                 </div>
             </div>
             <?php endif; ?>
+
             <div id="rationalize" class="tab-content">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
@@ -864,6 +978,38 @@ $existingMappings = $db->getAllMappings();
                     </div>
                 </div>
             </div>
+
+            <!-- Security Tab -->
+            <div id="security" class="tab-content">
+                <div class="card" style="max-width: 600px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 25px;">
+                        <div style="width: 40px; height: 40px; background: #fee2e2; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 20px;">🔒</div>
+                        <div>
+                            <h2 style="margin: 0;">Account Security</h2>
+                            <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Update your password and manage session security.</p>
+                        </div>
+                    </div>
+
+                    <form method="POST">
+                        <input type="hidden" name="action" value="change_password">
+                        <div class="form-group">
+                            <label>Current Password</label>
+                            <input type="password" name="current_password" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" name="new_password" class="form-control" required placeholder="Min 6 characters">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                        <div style="margin-top: 30px;">
+                            <button type="submit" class="btn btn-primary">Update Password</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -877,7 +1023,8 @@ $existingMappings = $db->getAllMappings();
             targetTab.classList.add('active');
             // Find and activate the correct button
             document.querySelectorAll('.tab-btn').forEach(btn => {
-                if (btn.getAttribute('onclick').includes("'" + tabId + "'")) {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick && onclick.includes("'" + tabId + "'")) {
                     btn.classList.add('active');
                 }
             });
@@ -904,6 +1051,20 @@ $existingMappings = $db->getAllMappings();
             showTab(hash);
         }
     });
+    </script>
+    <script>
+        function toggleUserDropdown() {
+            document.getElementById('userDropdown').classList.toggle('active');
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.user-dropdown')) {
+                const dropdowns = document.getElementsByClassName("dropdown-menu");
+                for (let i = 0; i < dropdowns.length; i++) {
+                    dropdowns[i].classList.remove('active');
+                }
+            }
+        }
     </script>
 </body>
 </html>
