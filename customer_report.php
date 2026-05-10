@@ -19,14 +19,10 @@ $history = $reports->getCustomerHistory($customerName);
 $trend = array_reverse($reports->getCustomerMonthlyTrend($customerName));
 $products = $reports->getCustomerTopProducts($customerName);
 
-// Re-calculate score using the refined logic (same as index/reports table)
-$scores = $reports->getCustomerCreditScores();
-$customerScore = null;
-foreach ($scores as $s) {
-    if ($s['customer_name'] === $customerName) {
-        $customerScore = $s;
-        break;
-    }
+// Use the new efficient targeted scoring method
+$customerScore = $reports->getCustomerCreditScore($customerName);
+if (!$customerScore) {
+    die("Customer data not found.");
 }
 
 $currency = $db->getSetting('currency_symbol', '$');

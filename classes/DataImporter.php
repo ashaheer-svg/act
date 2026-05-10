@@ -59,7 +59,7 @@ class DataImporter {
         $imported = 0;
         $settled = 0;
         $currentCustomer = '';
-        $lastInvoice = null;
+        $pendingInvoices = []; // Buffer for current customer's invoices
         
         // Default indices in case header detection fails
         $idx = [
@@ -110,46 +110,65 @@ class DataImporter {
                     $amount = abs(floatval(str_replace(['"', ',', ' '], '', $amountStr)));
 
                     if (strcasecmp($type, 'Invoice') === 0) {
-                        // In grouped report, we track the invoice as it appears
-                        $lastInvoice = [
+                        $type = 'Invoice'; // Standardize
+                        // Store in pending buffer for this customer
+                        if (!isset($pendingInvoices[$currentCustomer])) {
+                            $pendingInvoices[$currentCustomer] = [];
+                        }
+                        $pendingInvoices[$currentCustomer][] = [
                             'num' => $num,
                             'date' => $dateStr,
                             'amount' => $amount
                         ];
-                    } else if ((strcasecmp($type, 'Payment') === 0 || strcasecmp($type, 'Credit Memo') === 0) && $amount > 0) {
-                        $this->db->addPayment($currentCustomer, $dateStr, $num, $amount);
-                        $imported++;
+                    } else if (strcasecmp($type, 'Payment') === 0 || strcasecmp($type, 'Credit Memo') === 0) {
+                        $type = strcasecmp($type, 'Payment') === 0 ? 'Payment' : 'Credit Memo'; // Standardize
+                        if ($amount > 0) {
+                            $this->db->addPayment($currentCustomer, $dateStr, $num, $amount);
+                            $imported++;
 
-                        // Logic: Find the total amount for this invoice number in our sales table
-                        // If it matches the payment, we mark all items as paid
-                        if ($lastInvoice) {
-                            $invNum = $lastInvoice['num'];
-                            $invTotal = $this->db->fetchColumn(
-                                "SELECT SUM(total_amount) FROM sales WHERE invoice_number = ? AND customer_name = ?",
-                                [$invNum, $currentCustomer]
-                            );
-
-                            if ($invTotal && abs($invTotal - $amount) < 1.0) { // Using 1.0 for rounding safety in large totals
-                                $invDate = strtotime($this->formatDate($lastInvoice['date']));
-                                $payDate = strtotime($this->formatDate($dateStr));
-                                
-                                if ($invDate && $payDate) {
-                                    $diff = round(($payDate - $invDate) / (60 * 60 * 24));
-                                    if ($diff < 0) $diff = 0;
-
-                                    $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
-                                            WHERE invoice_number = ? AND customer_name = ?";
-                                    $this->db->execute($sql, [
-                                        $this->formatDate($dateStr),
-                                        $diff,
-                                        $invNum,
-                                        $currentCustomer
-                                    ]);
+                        // Try to match against pending invoices for this customer
+                        if (!empty($pendingInvoices[$currentCustomer])) {
+                            $matched = false;
+                            
+                            // 1. Try match by Invoice Number (common for Credit Memos)
+                            foreach ($pendingInvoices[$currentCustomer] as $idx_p => $pInv) {
+                                if (!empty($num) && !empty($pInv['num']) && strcasecmp($pInv['num'], $num) === 0) {
+                                    $this->settleInvoice($pInv, $dateStr, $currentCustomer);
+                                    unset($pendingInvoices[$currentCustomer][$idx_p]);
                                     $settled++;
+                                    $matched = true;
+                                    break;
+                                }
+                            }
+
+                            // 2. Try exact 1:1 match by Amount
+                            if (!$matched) {
+                                foreach ($pendingInvoices[$currentCustomer] as $idx_p => $pInv) {
+                                    if (abs($pInv['amount'] - $amount) < 1.0) {
+                                        $this->settleInvoice($pInv, $dateStr, $currentCustomer);
+                                        unset($pendingInvoices[$currentCustomer][$idx_p]);
+                                        $settled++;
+                                        $matched = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // 3. Try matching against the SUM of all pending
+                            if (!$matched) {
+                                $sumPending = 0;
+                                foreach ($pendingInvoices[$currentCustomer] as $pInv) $sumPending += $pInv['amount'];
+                                
+                                if (abs($sumPending - $amount) < 2.0) {
+                                    foreach ($pendingInvoices[$currentCustomer] as $pInv) {
+                                        $this->settleInvoice($pInv, $dateStr, $currentCustomer);
+                                        $settled++;
+                                    }
+                                    $pendingInvoices[$currentCustomer] = [];
+                                    $matched = true;
                                 }
                             }
                         }
-                        $lastInvoice = null;
                     }
                 }
                 fclose($handle);
@@ -171,6 +190,27 @@ class DataImporter {
                 'message' => 'Ledger import error: ' . $e->getMessage()
             ];
         }
+    }
+
+    private function settleInvoice($inv, $payDateStr, $customer) {
+        $invDate = strtotime($this->formatDate($inv['date']));
+        $payDate = strtotime($this->formatDate($payDateStr));
+        
+        if ($invDate && $payDate) {
+            $diff = round(($payDate - $invDate) / (60 * 60 * 24));
+            if ($diff < 0) $diff = 0;
+
+            $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
+                    WHERE invoice_number = ? AND customer_name = ?";
+            $this->db->execute($sql, [
+                $this->formatDate($payDateStr),
+                $diff,
+                $inv['num'],
+                $customer
+            ]);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -406,7 +446,7 @@ class DataImporter {
 
             return [
                 'success' => true,
-                'message' => "Import complete: $imported records imported, $skipped skipped",
+                'message' => "Import complete: $imported records added. " . ($skipped > 0 ? "$skipped duplicates were identified and safely skipped." : "No duplicates found."),
                 'imported' => $imported,
                 'skipped' => $skipped,
                 'details' => $details,

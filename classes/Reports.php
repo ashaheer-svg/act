@@ -153,7 +153,9 @@ class Reports {
                     COUNT(*) as total_volume,
                     SUM(base_value) as total_revenue,
                     SUM(gross_profit) as total_profit,
-                    (SELECT product_category FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY product_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
+                    (SELECT 
+                        CASE WHEN INSTR(s2.product_category, ':') > 0 THEN SUBSTR(s2.product_category, 1, INSTR(s2.product_category, ':') - 1) ELSE s2.product_category END 
+                     FROM sales s2 WHERE s2.customer_name = sales.customer_name GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1) as top_category,
                     $monthSql
                 FROM sales
                 LEFT JOIN customer_profiles p ON sales.customer_name = p.customer_name
@@ -168,7 +170,12 @@ class Reports {
      * Get unique product categories (brands)
      */
     public function getUniqueBrands() {
-        return $this->db->fetchAll("SELECT DISTINCT product_category FROM sales ORDER BY product_category ASC");
+        return $this->db->fetchAll("
+            SELECT DISTINCT 
+                CASE WHEN INSTR(product_category, ':') > 0 THEN SUBSTR(product_category, 1, INSTR(product_category, ':') - 1) ELSE product_category END as product_category 
+            FROM sales 
+            ORDER BY product_category ASC
+        ");
     }
 
     /**
@@ -178,12 +185,12 @@ class Reports {
         return $this->db->fetchAll("
             SELECT 
                 customer_name,
-                product_category,
+                CASE WHEN INSTR(product_category, ':') > 0 THEN SUBSTR(product_category, 1, INSTR(product_category, ':') - 1) ELSE product_category END as product_category,
                 SUM(total_amount) as category_revenue,
                 COUNT(*) as purchase_count
             FROM sales
             WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
-            GROUP BY customer_name, product_category
+            GROUP BY customer_name, 2
             ORDER BY customer_name ASC, category_revenue DESC
         ", [$year]);
     }
@@ -313,25 +320,25 @@ class Reports {
     public function getSalesByCategory($dateFrom = null, $dateTo = null) {
         $where = "WHERE invoice_type = 'Invoice'";
         $params = [];
-
+ 
         if ($dateFrom && $dateTo) {
             $where .= " AND invoice_date BETWEEN ? AND ?";
             $params = [$dateFrom, $dateTo];
         }
-
+ 
         $categories = $this->db->fetchAll(
             "SELECT
-                product_category,
+                CASE WHEN INSTR(product_category, ':') > 0 THEN SUBSTR(product_category, 1, INSTR(product_category, ':') - 1) ELSE product_category END as category,
                 COUNT(*) as transaction_count,
                 SUM(base_value) as revenue_base,
                 SUM(vat_component) as vat_total,
                 SUM(total_amount) as total_revenue,
                 ROUND(SUM(total_amount) * 100.0 / NULLIF((SELECT SUM(total_amount) FROM sales $where), 0), 2) as percentage
             FROM sales $where
-            GROUP BY product_category
+            GROUP BY 1
             ORDER BY total_revenue DESC", $params
         );
-
+ 
         return $categories;
     }
 
@@ -436,9 +443,16 @@ class Reports {
      * Get all product categories
      */
     public function getAllCategories() {
-        return $this->db->fetchAll(
-            "SELECT DISTINCT product_category FROM sales WHERE product_category IS NOT NULL ORDER BY product_category ASC"
-        );
+        return $this->db->fetchAll("
+            SELECT DISTINCT 
+                CASE 
+                    WHEN INSTR(product_category, ':') > 0 THEN UPPER(TRIM(SUBSTR(product_category, 1, INSTR(product_category, ':') - 1)))
+                    ELSE UPPER(TRIM(product_category))
+                END as category_name
+            FROM sales 
+            WHERE product_category IS NOT NULL AND product_category != ''
+            ORDER BY category_name ASC
+        ");
     }
 
     /**
@@ -468,6 +482,67 @@ class Reports {
     /**
      * Get Customer Credit Scores based on payment history
      */
+    public function getCustomerCreditScore($customerName) {
+        $today = date('Y-m-d');
+        
+        // Get base customer stats for one customer
+        $row = $this->db->fetch("
+            SELECT 
+                customer_name,
+                COUNT(*) as total_invoices,
+                SUM(CASE WHEN paid_date IS NOT NULL THEN 1 ELSE 0 END) as paid_count,
+                SUM(CASE WHEN paid_date IS NULL THEN 1 ELSE 0 END) as unpaid_count,
+                SUM(total_amount) as total_volume,
+                SUM(CASE WHEN paid_date IS NULL THEN total_amount ELSE 0 END) as outstanding_amount
+            FROM sales
+            WHERE customer_name = ? AND invoice_type = 'Invoice'
+            GROUP BY customer_name
+        ", [$customerName]);
+
+        if (!$row) return null;
+
+        // Fetch all invoice delays for this customer
+        $invoices = $this->db->fetchAll("
+            SELECT 
+                (CASE 
+                    WHEN paid_date IS NOT NULL THEN days_to_pay 
+                    ELSE CAST((julianday(?) - julianday(invoice_date)) AS INT)
+                END) as effective_days
+            FROM sales
+            WHERE customer_name = ? AND invoice_type = 'Invoice'
+        ", [$today, $customerName]);
+
+        $totalDays = 0;
+        $maxDays = 0;
+        foreach ($invoices as $inv) {
+            $days = max(0, $inv['effective_days']);
+            $totalDays += $days;
+            if ($days > $maxDays) $maxDays = $days;
+        }
+
+        $adp = count($invoices) > 0 ? $totalDays / count($invoices) : 0;
+        $row['avg_days'] = $adp;
+        $row['max_days'] = $maxDays;
+        
+        if ($adp <= 30) {
+            $score = 100;
+        } else if ($adp <= 60) {
+            $score = 100 - (($adp - 30) * 1.5);
+        } else if ($adp <= 90) {
+            $score = 55 - (($adp - 60) * 1);
+        } else {
+            $score = max(0, 25 - (($adp - 90) * 0.5));
+        }
+        
+        if ($maxDays > 120) $score *= 0.5;
+        if ($row['unpaid_count'] > 10) $score -= 10;
+        
+        $row['credit_score'] = max(0, min(100, round($score)));
+        $row['risk_level'] = $this->getRiskLevel($row['credit_score']);
+        
+        return $row;
+    }
+
     public function getCustomerCreditScores() {
         $today = date('Y-m-d');
         
@@ -574,7 +649,10 @@ class Reports {
     public function getCustomerTopProducts($customerName) {
         return $this->db->fetchAll("
             SELECT 
-                product_category,
+                CASE 
+                    WHEN INSTR(product_category, ':') > 0 THEN UPPER(TRIM(SUBSTR(product_category, 1, INSTR(product_category, ':') - 1)))
+                    ELSE UPPER(TRIM(product_category))
+                END as main_category,
                 item_description,
                 COUNT(*) as frequency,
                 SUM(total_amount) as total_value
@@ -600,6 +678,60 @@ class Reports {
             GROUP BY invoice_number
             ORDER BY invoice_date DESC
         ", [$customerName]);
+    }
+
+    public function getAgingReport($bracket = 'all', $status = 'all', $sortBy = 'invoice_number') {
+        $today = date('Y-m-d');
+        $where = "WHERE invoice_type = 'Invoice'";
+        
+        if ($status === 'unpaid') {
+            $where .= " AND paid_date IS NULL";
+        } else if ($status === 'paid') {
+            $where .= " AND paid_date IS NOT NULL";
+        }
+
+        $sql = "
+            SELECT 
+                invoice_number,
+                customer_name,
+                invoice_date,
+                paid_date,
+                total_amount,
+                (CASE 
+                    WHEN paid_date IS NOT NULL THEN days_to_pay 
+                    ELSE CAST((julianday(?) - julianday(invoice_date)) AS INT)
+                END) as aging_days
+            FROM sales
+            $where
+        ";
+
+        $data = $this->db->fetchAll($sql, [$today]);
+
+        // Filter by bracket in PHP for flexibility
+        if ($bracket !== 'all') {
+            $data = array_filter($data, function($row) use ($bracket) {
+                $days = $row['aging_days'];
+                if ($bracket == '30') return $days <= 30;
+                if ($bracket == '60') return $days > 30 && $days <= 60;
+                if ($bracket == '90') return $days > 60 && $days <= 90;
+                if ($bracket == '180') return $days > 90 && $days <= 180;
+                if ($bracket == '365') return $days > 180 && $days <= 365;
+                if ($bracket == 'old') return $days > 365;
+                return true;
+            });
+        }
+
+        // Apply sorting
+        usort($data, function($a, $b) use ($sortBy) {
+            if ($sortBy === 'customer_name') {
+                $cmp = strcasecmp($a['customer_name'], $b['customer_name']);
+                return $cmp !== 0 ? $cmp : strcasecmp($a['invoice_number'], $b['invoice_number']);
+            }
+            if ($sortBy === 'aging') return $b['aging_days'] <=> $a['aging_days'];
+            return strcasecmp($a['invoice_number'], $b['invoice_number']);
+        });
+
+        return $data;
     }
 }
 ?>
