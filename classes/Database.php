@@ -183,6 +183,16 @@ class Database {
                 )
             ");
 
+            // Product Mappings table (Golden rules for missing categories)
+            $this->execute("
+                CREATE TABLE IF NOT EXISTS product_mappings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_description TEXT UNIQUE,
+                    product_category TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
             return true;
         } catch (PDOException $e) {
             throw new Exception('Failed to create tables: ' . $e->getMessage());
@@ -647,6 +657,44 @@ class Database {
             if ($this->inTransaction()) $this->rollBack();
             throw new Exception('Reset Error: ' . $e->getMessage());
         }
+    /**
+     * Rationalization: Get items missing categories
+     */
+    public function getUncategorizedItems() {
+        return $this->fetchAll("
+            SELECT DISTINCT s.item_description, COUNT(*) as occurrence_count
+            FROM sales s
+            LEFT JOIN product_mappings pm ON s.item_description = pm.item_description
+            WHERE (s.product_category IS NULL OR s.product_category = '')
+              AND pm.item_description IS NULL
+            GROUP BY s.item_description
+            ORDER BY occurrence_count DESC
+            LIMIT 50
+        ");
+    }
+
+    public function saveProductMapping($item, $category) {
+        $category = trim($category);
+        if (empty($category)) return false;
+
+        // 1. Save rule
+        $this->execute("INSERT OR REPLACE INTO product_mappings (item_description, product_category) VALUES (?, ?)", [$item, $category]);
+
+        // 2. Propagate to ALL historical records
+        return $this->execute("
+            UPDATE sales 
+            SET product_category = ? 
+            WHERE item_description = ? 
+              AND (product_category IS NULL OR product_category = '')
+        ", [$category, $item]);
+    }
+
+    public function getAllMappings() {
+        return $this->fetchAll("SELECT * FROM product_mappings ORDER BY item_description ASC");
+    }
+
+    public function deleteProductMapping($id) {
+        return $this->execute("DELETE FROM product_mappings WHERE id = ?", [$id]);
     }
 }
 ?>

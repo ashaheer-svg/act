@@ -407,6 +407,19 @@ class DataImporter {
                 $currentVatRate = $this->db->getTaxRateForDate($invoiceDate);
                 $calcResult = $this->calculateVAT($amount, $taxCode, $currentVatRate);
 
+                // Rationalization: Resolve category using mappings if source is empty
+                $category = $record['Product Category'] ?? '';
+                $itemDesc = $record['Item'] ?? '';
+                
+                if (empty($category) || $category === $itemDesc) {
+                    $mapping = $this->db->fetch("SELECT product_category FROM product_mappings WHERE item_description = ?", [$itemDesc]);
+                    if ($mapping) {
+                        $category = $mapping['product_category'];
+                    } else if (empty($category)) {
+                        $category = $itemDesc; // Fallback to item name if no mapping
+                    }
+                }
+
                 // Insert record
                 $stmt = $this->db->execute(
                     "INSERT INTO sales (
@@ -420,7 +433,7 @@ class DataImporter {
                         $invoiceDate,
                         $record['Num'] ?? '',
                         $record['Name'] ?? '',
-                        $record['Item'] ?? '',
+                        $itemDesc,
                         $taxCode,
                         floatval(str_replace(',', '', $record['Qty'] ?? 1)),
                         $amount,
@@ -428,7 +441,7 @@ class DataImporter {
                         $calcResult['vat'],
                         $currentVatRate,
                         $calcResult['total'],
-                        $record['Product Category'] ?? ($record['Item'] ?? ''),
+                        $category,
                         $this->findRepCode($record)
                     ]
                 );

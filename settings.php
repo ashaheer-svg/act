@@ -142,6 +142,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         }
     }
+
+    if ($action === 'save_product_mapping') {
+        try {
+            $item = $_POST['item_description'] ?? '';
+            $category = $_POST['product_category'] ?? '';
+            if (empty($item) || empty($category)) {
+                throw new Exception('Item and Category are required');
+            }
+            $db->saveProductMapping($item, $category);
+            $message = "Product '$item' rationalized successfully. Historical records updated.";
+            $messageType = 'success';
+            $db->logActivity($user['id'], 'PRODUCT_MAPPED', "Mapped $item to $category");
+        } catch (Exception $e) {
+            $message = 'Error: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+
+    if ($action === 'delete_product_mapping') {
+        try {
+            $mappingId = $_POST['mapping_id'] ?? 0;
+            $db->deleteProductMapping($mappingId);
+            $message = 'Product mapping rule deleted';
+            $messageType = 'success';
+            $db->logActivity($user['id'], 'PRODUCT_MAPPING_DELETED', "Deleted mapping ID: $mappingId");
+        } catch (Exception $e) {
+            $message = 'Error: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
 // Get current settings
@@ -151,6 +181,10 @@ $companyName = $db->getSetting('company_name', '');
 $dbSize = $db->getDatabaseSize();
 $taxRules = $db->getTaxRules();
 $salesReps = $db->getSalesReps();
+
+// Product Rationalization Data
+$uncategorizedItems = $db->getUncategorizedItems();
+$existingMappings = $db->getAllMappings();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -455,6 +489,7 @@ $salesReps = $db->getSalesReps();
                 <div class="settings-nav-links">
                     <button class="tab-btn active" onclick="showTab('general')">⚙️ General</button>
                     <button class="tab-btn" onclick="showTab('team')">👥 Sales Team</button>
+                    <button class="tab-btn" onclick="showTab('rationalize')">🏷️ Product Mapping</button>
                     <?php if ($auth->isAdmin()): ?>
                     <button class="tab-btn" onclick="showTab('tax')">🏦 Tax & History</button>
                     <?php endif; ?>
@@ -715,6 +750,92 @@ $salesReps = $db->getSalesReps();
                 </div>
             </div>
             <?php endif; ?>
+            <div id="rationalize" class="tab-content">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                        <div>
+                            <h2>Product Category Rationalization</h2>
+                            <p style="color: var(--text-muted); font-size: 14px;">Map uncategorized items to proper categories. Rules will apply to historical and future data.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
+                        <div>
+                            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--primary);">Items Missing Category</h3>
+                            <div style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px;">
+                                <table class="tax-table" style="margin-top: 0;">
+                                    <thead style="position: sticky; top: 0; z-index: 10; background: white;">
+                                        <tr>
+                                            <th>Uncategorized Item Description</th>
+                                            <th style="text-align: right;">Volume</th>
+                                            <th style="width: 250px;">Assign Category</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($uncategorizedItems)): ?>
+                                        <tr>
+                                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">Great! All your items are categorized.</td>
+                                        </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($uncategorizedItems as $item): ?>
+                                            <tr>
+                                                <td style="font-size: 12px; font-weight: 600;"><?php echo htmlspecialchars($item['item_description']); ?></td>
+                                                <td style="text-align: right; color: var(--text-muted);"><?php echo $item['occurrence_count']; ?></td>
+                                                <td colspan="2">
+                                                    <form method="POST" style="display: flex; gap: 8px;">
+                                                        <input type="hidden" name="action" value="save_product_mapping">
+                                                        <input type="hidden" name="item_description" value="<?php echo htmlspecialchars($item['item_description']); ?>">
+                                                        <input type="text" name="product_category" class="form-control" placeholder="e.g. HDD:Internal" required style="padding: 6px 10px; font-size: 12px;">
+                                                        <button type="submit" class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;">Apply</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--secondary);">Existing Mapping Rules</h3>
+                            <div style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: #fcfcfc;">
+                                <table class="tax-table" style="margin-top: 0;">
+                                    <thead style="position: sticky; top: 0; z-index: 10; background: white;">
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Category</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($existingMappings)): ?>
+                                        <tr>
+                                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No mapping rules defined yet.</td>
+                                        </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($existingMappings as $rule): ?>
+                                            <tr>
+                                                <td style="font-size: 11px;"><?php echo htmlspecialchars($rule['item_description']); ?></td>
+                                                <td style="font-size: 11px; font-weight: 700; color: var(--primary);"><?php echo htmlspecialchars($rule['product_category']); ?></td>
+                                                <td style="text-align: right;">
+                                                    <form method="POST" onsubmit="return confirm('Delete this rule?');">
+                                                        <input type="hidden" name="action" value="delete_product_mapping">
+                                                        <input type="hidden" name="mapping_id" value="<?php echo $rule['id']; ?>">
+                                                        <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 14px;">🗑️</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
