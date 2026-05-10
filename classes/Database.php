@@ -620,5 +620,33 @@ class Database {
     public function deleteSalesRep($code) {
         return $this->execute("DELETE FROM sales_rep_mapping WHERE rep_code = ?", [$code]);
     }
+
+    /**
+     * RESET: Clear all payment and settlement data
+     * Affects: 
+     * - payments table: All records deleted
+     * - sales table: paid_date and days_to_pay reset to NULL
+     * - import_logs: ledger/payment related logs cleared
+     */
+    public function resetPaymentData() {
+        try {
+            $this->beginTransaction();
+            
+            // 1. Clear payments table
+            $this->execute("DELETE FROM payments");
+            
+            // 2. Reset settlement columns in sales
+            $this->execute("UPDATE sales SET paid_date = NULL, days_to_pay = NULL");
+            
+            // 3. Clear logs related to ledger imports
+            $this->execute("DELETE FROM import_logs WHERE filename LIKE '%payment%' OR filename LIKE '%ledger%'");
+            
+            $this->commit();
+            return true;
+        } catch (Exception $e) {
+            if ($this->inTransaction()) $this->rollBack();
+            throw new Exception('Reset Error: ' . $e->getMessage());
+        }
+    }
 }
 ?>

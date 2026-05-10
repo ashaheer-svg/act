@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'reset_database') {
         try {
-            $db->resetSalesData();
-            $message = 'Database reset successfully. All sales records and logs have been cleared.';
+            $db->resetPaymentData();
+            $message = 'Payment and settlement data has been reset. All payments and collection speed metrics have been cleared. Sales records remain intact.';
             $messageType = 'success';
-            $db->logActivity($user['id'], 'DATABASE_RESET', 'Full database reset performed');
+            $db->logActivity($user['id'], 'PAYMENT_RESET', 'Payment data reset performed');
         } catch (Exception $e) {
             $message = 'Reset Error: ' . $e->getMessage();
             $messageType = 'error';
@@ -675,11 +675,15 @@ $salesReps = $db->getSalesReps();
 
             <div id="advanced" class="tab-content">
                 <div class="card" style="border: 2px dashed #fee2e2;">
-                    <h2 style="color: var(--error);">Danger Zone</h2>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">These actions are destructive and cannot be undone.</p>
-                    <form method="POST" onsubmit="return confirm('WARNING: This will delete ALL sales records and import logs. Are you absolutely sure?');">
+                    <h2 style="color: var(--error);">Testing & Maintenance</h2>
+                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+                        <strong>Reset Payment Data:</strong> This will clear all records in the <code>payments</code> table and reset the <code>paid_date</code> and <code>days_to_pay</code> metrics in your sales records. 
+                        <br><br>
+                        <span style="color: var(--error); font-weight: 700;">Note:</span> Your core sales invoices and customer profiles will NOT be affected.
+                    </p>
+                    <form method="POST" onsubmit="return confirm('RESET CONFIRMATION: This will clear ALL payment history and settlement metrics. Sales invoices will remain. Are you sure?');">
                         <input type="hidden" name="action" value="reset_database">
-                        <button type="submit" class="btn btn-danger">Full Database Reset</button>
+                        <button type="submit" class="btn btn-danger" style="background: #ef4444; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; color: white; cursor: pointer;">Reset Payment & Settlement Data</button>
                     </form>
 
                     <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
