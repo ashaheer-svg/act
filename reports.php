@@ -757,12 +757,11 @@ $summary = $reportData['summary'] ?? [];
                 <table class="table" id="detailsTable">
                     <thead>
                         <tr>
-                            <th>Inv Date</th>
-                            <th>Inv Number</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Document / Reference</th>
                             <th class="text-right">Amount</th>
                             <th class="text-center">Status</th>
-                            <th>Paid Date</th>
-                            <th class="text-right">Days to Pay</th>
                         </tr>
                     </thead>
                     <tbody id="detailsBody">
@@ -798,23 +797,31 @@ $summary = $reportData['summary'] ?? [];
                     
                     let html = '';
                     data.forEach(row => {
-                        const isPaid = row.paid_date !== null;
-                        const statusColor = isPaid ? '#10b981' : '#f59e0b';
-                        const daysColor = row.days_to_pay <= 30 ? '#10b981' : (row.days_to_pay <= 60 ? '#f59e0b' : '#ef4444');
+                        const isPayment = row.entry_type === 'Payment';
+                        const statusColor = (row.status === 'Settled' || row.status === 'Applied') ? '#10b981' : '#f59e0b';
+                        const rowStyle = isPayment ? 'background: #fafbfc; color: var(--text-muted);' : '';
+                        const typeLabel = isPayment ? 'Payment' : 'Invoice';
+                        const docNum = isPayment ? (row.reference ? row.reference : row.doc_num || 'Reference') : row.doc_num;
+                        const amountPrefix = isPayment ? '−' : '';
                         
                         html += `
-                            <tr>
+                            <tr style="${rowStyle}">
                                 <td>${row.invoice_date}</td>
-                                <td style="font-weight: 600;">${row.invoice_number}</td>
-                                <td class="text-right" style="font-weight: 700;">${new Intl.NumberFormat().format(row.amount)}</td>
-                                <td class="text-center">
-                                    <span style="display: inline-block; padding: 2px 10px; border-radius: 20px; background: ${statusColor}20; color: ${statusColor}; font-size: 10px; font-weight: 800; text-transform: uppercase;">
-                                        ${row.status}
+                                <td>
+                                    <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: ${isPayment ? 'var(--primary)' : 'var(--text-main)'};">
+                                        ${typeLabel}
                                     </span>
                                 </td>
-                                <td>${row.paid_date || '-'}</td>
-                                <td class="text-right" style="font-weight: 800; color: ${isPaid ? daysColor : 'var(--text-muted)'}">
-                                    ${isPaid ? row.days_to_pay + ' Days' : '-'}
+                                <td style="font-weight: ${isPayment ? '400' : '600'}; padding-left: ${isPayment ? '25px' : '10px'};">
+                                    ${isPayment ? '<span style="color: var(--primary); margin-right: 5px;">↳</span>' : ''}${docNum}
+                                </td>
+                                <td class="text-right" style="font-weight: 700; color: ${isPayment ? '#059669' : 'var(--primary)'};">
+                                    ${amountPrefix}${new Intl.NumberFormat().format(row.amount)}
+                                </td>
+                                <td class="text-center">
+                                    <span style="display: inline-block; padding: 2px 10px; border-radius: 20px; background: ${statusColor}20; color: ${statusColor}; font-size: 9px; font-weight: 800; text-transform: uppercase;">
+                                        ${row.status}
+                                    </span>
                                 </td>
                             </tr>
                         `;

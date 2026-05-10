@@ -56,7 +56,7 @@ if ($auth->isLoggedIn()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <title>Sales BI Dashboard - Login</title>
+    <title>Activity - Login</title>
     <style>
         * {
             margin: 0;
@@ -174,8 +174,8 @@ if ($auth->isLoggedIn()) {
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>📊 Sales BI</h1>
-            <p>Business Intelligence Dashboard</p>
+            <h1>📊 Activity</h1>
+            <p>Sales Intelligence Dashboard</p>
         </div>
 
         <?php if ($error): ?>

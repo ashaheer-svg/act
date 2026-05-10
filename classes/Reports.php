@@ -666,18 +666,36 @@ class Reports {
 
     public function getCustomerHistory($customerName) {
         return $this->db->fetchAll("
-            SELECT 
-                invoice_number,
-                invoice_date,
-                SUM(total_amount) as amount,
-                paid_date,
-                days_to_pay,
-                (CASE WHEN paid_date IS NOT NULL THEN 'Paid' ELSE 'Pending' END) as status
-            FROM sales
-            WHERE customer_name = ? AND invoice_type = 'Invoice'
-            GROUP BY invoice_number
-            ORDER BY invoice_date DESC
-        ", [$customerName]);
+            SELECT * FROM (
+                SELECT 
+                    'Invoice' as entry_type,
+                    invoice_number,
+                    invoice_date,
+                    SUM(total_amount) as amount,
+                    '' as reference,
+                    (CASE WHEN paid_date IS NOT NULL THEN 'Settled' ELSE 'Outstanding' END) as status,
+                    paid_date,
+                    days_to_pay
+                FROM sales
+                WHERE customer_name = ? AND invoice_type = 'Invoice'
+                GROUP BY invoice_number
+
+                UNION ALL
+
+                SELECT 
+                    'Payment' as entry_type,
+                    invoice_num as invoice_number,
+                    payment_date as invoice_date,
+                    amount,
+                    reference_num as reference,
+                    'Applied' as status,
+                    NULL as paid_date,
+                    NULL as days_to_pay
+                FROM payments
+                WHERE customer_name = ?
+            )
+            ORDER BY invoice_number DESC, entry_type ASC, invoice_date DESC
+        ", [$customerName, $customerName]);
     }
 
     public function getAgingReport($bracket = 'all', $status = 'all', $sortBy = 'invoice_number') {
