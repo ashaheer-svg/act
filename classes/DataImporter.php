@@ -171,8 +171,9 @@ class DataImporter {
                         }
                     }
                 }
-                fclose($handle);
             }
+            fclose($handle);
+        }
 
             $this->logImport($fileName, $imported, 0);
             $this->db->commit();

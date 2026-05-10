@@ -18,6 +18,7 @@ use SimpleXMLElement;
 
 class SimpleXLSX
 {
+    public static $lastError = '';
     public static $CF = [ // Cell formats
         0 => 'General',
         1 => '0',
@@ -528,8 +529,14 @@ class SimpleXLSX
         if ($xlsx->success()) {
             return $xlsx;
         }
+        self::$lastError = $xlsx->error();
 
         return false;
+    }
+
+    public static function parseError()
+    {
+        return self::$lastError;
     }
 
     public function success()
