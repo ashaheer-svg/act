@@ -654,9 +654,10 @@ class Database {
             $this->commit();
             return true;
         } catch (Exception $e) {
-            if ($this->inTransaction()) $this->rollBack();
+            if ($this->db->inTransaction()) $this->rollBack();
             throw new Exception('Reset Error: ' . $e->getMessage());
         }
+    }
     /**
      * Rationalization: Get items missing categories
      */
