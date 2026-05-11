@@ -328,294 +328,103 @@ $existingMappings = $db->getAllMappings();
             gap: 20px;
         }
 
-        .user-profile {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            background: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: white;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
-            transition: all 0.2s;
-        }
-
-        /* --- User Dropdown --- */
-        .user-dropdown {
-            position: relative;
-            cursor: pointer;
-        }
-        .user-trigger {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px;
-            padding-right: 12px;
-            border-radius: 12px;
-            transition: all 0.2s;
-        }
-        .user-trigger:hover { background: #f8fafc; }
-        .user-info-brief {
-            display: flex;
-            flex-direction: column;
-            line-height: 1.2;
-        }
-        .user-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
-        .user-role { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        
-        .dropdown-menu {
-            position: absolute;
-            top: calc(100% + 10px);
-            right: 0;
-            width: 220px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
-            border: 1px solid var(--border);
-            padding: 8px;
-            display: none;
-            z-index: 1000;
-            transform-origin: top right;
-            animation: dropdownFade 0.2s ease;
-        }
-        .dropdown-menu.active { display: block; }
-        
-        @keyframes dropdownFade {
-            from { opacity: 0; transform: translateY(-10px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .dropdown-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 8px;
-        }
-        .dropdown-header strong { display: block; font-size: 14px; color: var(--text-main); }
-        .dropdown-header span { font-size: 11px; color: var(--text-muted); }
-
-        .dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            text-decoration: none;
-            color: var(--text-main);
-            font-size: 13px;
-            font-weight: 500;
-            border-radius: 10px;
-            transition: all 0.2s;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            cursor: pointer;
-        }
-        .dropdown-item:hover { background: #f8fafc; color: var(--primary); }
-        .dropdown-item.logout-link:hover { background: #fef2f2; color: var(--error); }
-        .dropdown-divider { height: 1px; background: var(--border); margin: 8px 0; }
-
-        /* --- Layout --- */
-        .container {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 30px;
-            padding: 30px 40px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-
-        /* --- Sidebar --- */
-        .sidebar {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 30px;
-            box-shadow: var(--shadow);
-            height: fit-content;
-            position: sticky;
-            top: 110px;
-        }
-
-        .sidebar h3 { font-size: 18px; font-weight: 700; margin-bottom: 25px; }
-
-        .stat-small {
-            margin-top: 20px;
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 15px;
-        }
-
-        .stat-small label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px;}
-        .stat-small value { font-size: 18px; font-weight: 800; color: var(--primary); display: block;}
-
-        /* --- Main Content --- */
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        .tax-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .tax-table th { text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px;}
-        .tax-table td { padding: 12px 0; font-size: 14px; border-bottom: 1px solid #f8fafc; }
-        .tax-badge { background: #e0e7ff; color: var(--primary); padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px;}
-
-        .card {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 30px;
-            box-shadow: var(--shadow);
-        }
-
-        .card h2 { font-size: 22px; font-weight: 800; margin-bottom: 25px; letter-spacing: -0.5px; }
-
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-main); }
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: var(--radius-md);
-            border: 1px solid var(--border);
-            font-size: 14px;
-            font-family: inherit;
-        }
-        .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-
-        .btn {
-            padding: 12px 24px;
-            border-radius: var(--radius-md);
-            border: none;
-            font-weight: 700;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-hover); }
-        .btn-danger { background: var(--error); color: white; }
-        .btn-danger:hover { opacity: 0.9; }
-
-        .message {
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 25px;
-            font-weight: 500;
-            font-size: 14px;
-        }
-        .message.success { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
-        .message.error { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
-
-        /* --- Tabs (Matching Reports UI) --- */
-        .settings-nav {
-            background: white;
-            border-radius: var(--radius-lg);
-            padding: 15px 25px;
-            box-shadow: var(--shadow);
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-        }
-        .settings-nav-links {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .tab-btn {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 15px;
-            border-radius: 10px;
-            border: none;
-            background: none;
-            color: var(--text-muted);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .tab-btn:hover { background: #f8fafc; color: var(--text-main); }
-        .tab-btn.active { background: #f0f4ff; color: var(--primary); font-weight: 700; }
-
-        .tab-content { display: none; animation: fadeIn 0.3s; }
-        .tab-content.active { display: block; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .logout-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            background: #fff1f2;
-            color: #e11d48;
-            border: 1px solid #fecdd3;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-left: 10px;
-        }
-        .logout-btn:hover { background: #ffe4e6; transform: translateY(-1px); }
-    </style>
+    <link rel="stylesheet" href="layout.css">
 </head>
 <body>
-    <div class="header">
-        <div class="logo-container">
-            <div class="logo-icon"><i class="icon-bar-chart-2"></i></div>
-            Activity
-        </div>
-        
-        <div class="top-nav">
-            <a href="index.php" class="top-nav-item">Dashboard</a>
-            <a href="reports.php" class="top-nav-item">Reporting</a>
-            <a href="settings.php" class="top-nav-item active">Settings</a>
-        </div>
-
-        <div class="header-actions">
-            <div class="user-dropdown">
-                <div class="user-trigger" onclick="toggleUserDropdown()">
-                    <div class="user-profile">
-                        <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
-                    </div>
-                    <div class="user-info-brief">
-                        <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
-                        <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
-                    </div>
-                    <i class="icon-chevron-down" style="font-size: 12px; color: var(--text-muted); margin-left: 4px;"></i>
-                </div>
-                
-                <div class="dropdown-menu" id="userDropdown">
-                    <div class="dropdown-header">
-                        <strong><?php echo htmlspecialchars($user['username']); ?></strong>
-                        <span><?php echo ucfirst($user['role']); ?> Management Account</span>
-                    </div>
-                    <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
-                    <?php if ($auth->isAdmin()): ?>
-                    <a href="users.php" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
-                    <?php endif; ?>
-                    <div class="dropdown-divider"></div>
-                    <form method="POST" action="logout.php" style="margin: 0;">
-                        <button type="submit" class="dropdown-item logout-link"><i class="icon-log-out"></i> Logout</button>
-                    </form>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="mainSidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <div class="logo-icon"><i class="icon-bar-chart-2"></i></div>
+                    <span>SYNC | ANALYTICS</span>
                 </div>
             </div>
-        </div>
-    </div>
+            <nav class="sidebar-nav">
+                <a href="index.php" class="nav-item">
+                    <i class="icon-layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="reports.php" class="nav-item">
+                    <i class="icon-bar-chart-2"></i>
+                    <span>Reporting</span>
+                </a>
+                <a href="settings.php#general" class="nav-item" id="sidebar-general">
+                    <i class="icon-settings"></i>
+                    <span>Settings</span>
+                </a>
+                <a href="settings.php#security" class="nav-item" id="sidebar-security">
+                    <i class="icon-shield"></i>
+                    <span>Security</span>
+                </a>
+                <a href="settings.php#team" class="nav-item" id="sidebar-team">
+                    <i class="icon-users"></i>
+                    <span>Team</span>
+                </a>
+                <a href="settings.php#rationalize" class="nav-item" id="sidebar-rationalize">
+                    <i class="icon-git-branch"></i>
+                    <span>Product Mapping</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <form method="POST" action="logout.php" style="margin: 0;">
+                    <button type="submit" class="nav-item" style="background: none; border: none; width: 100%; cursor: pointer;">
+                        <i class="icon-log-out"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
 
-    <div class="container" style="display: block; max-width: 1800px;">
-        <div class="main-content" style="width: 100%;">
-            <div class="settings-nav">
+        <!-- Main Wrapper -->
+        <main class="main-wrapper">
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="collapse-btn" onclick="toggleSidebar()">
+                        <i class="icon-menu"></i>
+                    </button>
+                    <div class="search-container">
+                        <i class="icon-search"></i>
+                        <input type="text" class="search-input" placeholder="Search settings...">
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="icon-btn">
+                        <i class="icon-bell"></i>
+                        <div class="notification-dot"></div>
+                    </button>
+                    <div class="user-dropdown">
+                        <div class="user-trigger" onclick="toggleUserDropdown()">
+                            <div class="user-profile" style="background: var(--sidebar-bg); border: 2px solid var(--border-color);">
+                                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
+                            </div>
+                            <div class="user-info-brief">
+                                <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
+                                <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
+                            </div>
+                            <i class="icon-chevron-down" style="font-size: 12px; color: var(--text-muted); margin-left: 4px;"></i>
+                        </div>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <div class="dropdown-header">
+                                <strong><?php echo htmlspecialchars($user['username']); ?></strong>
+                                <span><?php echo ucfirst($user['role']); ?> Management Account</span>
+                            </div>
+                            <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
+                            <?php if ($auth->isAdmin()): ?>
+                            <a href="users.php" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
+                            <?php endif; ?>
+                            <div class="dropdown-divider"></div>
+                            <form method="POST" action="logout.php" style="margin: 0;">
+                                <button type="submit" class="dropdown-item logout-link"><i class="icon-log-out"></i> Logout</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-body">
+                <div class="settings-nav" style="margin-bottom: 25px; border-radius: 12px; background: white; padding: 15px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+
                 <div class="settings-nav-links">
                     <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
                     <button class="tab-btn active" onclick="showTab('general')"><i class="icon-settings"></i> General</button>
@@ -1019,6 +828,7 @@ $existingMappings = $db->getAllMappings();
     function showTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar .nav-item').forEach(el => el.classList.remove('active'));
         
         const targetTab = document.getElementById(tabId);
         if (targetTab) {
@@ -1030,8 +840,27 @@ $existingMappings = $db->getAllMappings();
                     btn.classList.add('active');
                 }
             });
+
+            // Activate sidebar item if it exists
+            const sidebarItem = document.getElementById('sidebar-' + tabId);
+            if (sidebarItem) {
+                sidebarItem.classList.add('active');
+            } else if (tabId === 'general') {
+                document.getElementById('sidebar-general').classList.add('active');
+            }
+
             window.location.hash = tabId;
         }
+    }
+
+    function toggleSidebar() {
+        document.getElementById('mainSidebar').classList.toggle('collapsed');
+        localStorage.setItem('sidebarCollapsed', document.getElementById('mainSidebar').classList.contains('collapsed'));
+    }
+
+    // Restore sidebar state
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        document.getElementById('mainSidebar').classList.add('collapsed');
     }
 
     // Auto-select tab on load based on hash or last action
@@ -1051,22 +880,26 @@ $existingMappings = $db->getAllMappings();
             showTab(jumpTo);
         } else if (hash) {
             showTab(hash);
+        } else {
+            showTab('general');
         }
     });
-    </script>
-    <script>
-        function toggleUserDropdown() {
-            document.getElementById('userDropdown').classList.toggle('active');
-        }
 
-        window.onclick = function(event) {
-            if (!event.target.closest('.user-dropdown')) {
-                const dropdowns = document.getElementsByClassName("dropdown-menu");
-                for (let i = 0; i < dropdowns.length; i++) {
-                    dropdowns[i].classList.remove('active');
-                }
+    function toggleUserDropdown() {
+        document.getElementById('userDropdown').classList.toggle('active');
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.user-dropdown')) {
+            const dropdowns = document.getElementsByClassName("dropdown-menu");
+            for (let i = 0; i < dropdowns.length; i++) {
+                dropdowns[i].classList.remove('active');
             }
         }
+    }
     </script>
+            </div><!-- .content-body -->
+        </main><!-- .main-wrapper -->
+    </div><!-- .app-container -->
 </body>
 </html>
