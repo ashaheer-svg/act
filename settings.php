@@ -979,7 +979,8 @@ $existingMappings = $db->getAllMappings();
                     </div>
                 </div>
             </div>
-
+            <?php endif; ?>
+            
             <!-- Security Tab -->
             <div id="security" class="tab-content">
                 <div class="card" style="max-width: 600px;">
