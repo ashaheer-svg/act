@@ -77,6 +77,7 @@ $summary = $reportData['summary'] ?? [];
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="docs/lucide-font/lucide.css">
     <style>
         .user-profile {
             width: 40px;
@@ -472,7 +473,7 @@ $summary = $reportData['summary'] ?? [];
 <body>
     <div class="header">
         <div class="logo-container">
-            <div class="logo-icon">A</div>
+            <div class="logo-icon"><i class="icon-bar-chart-2"></i></div>
             Activity
         </div>
         
@@ -492,7 +493,7 @@ $summary = $reportData['summary'] ?? [];
                         <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
                         <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
                     </div>
-                    <div style="font-size: 10px; color: var(--text-muted); margin-left: 4px;">▼</div>
+                    <i class="icon-chevron-down" style="font-size: 12px; color: var(--text-muted); margin-left: 4px;"></i>
                 </div>
                 
                 <div class="dropdown-menu" id="userDropdown">
@@ -500,13 +501,13 @@ $summary = $reportData['summary'] ?? [];
                         <strong><?php echo htmlspecialchars($user['username']); ?></strong>
                         <span><?php echo ucfirst($user['role']); ?> Management Account</span>
                     </div>
-                    <a href="settings.php#security" class="dropdown-item">🔒 Change Password</a>
+                    <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
                     <?php if ($auth->isAdmin()): ?>
-                    <a href="users.php" class="dropdown-item">👥 Manage Users</a>
+                    <a href="users.php" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
                     <?php endif; ?>
                     <div class="dropdown-divider"></div>
                     <form method="POST" action="logout.php" style="margin: 0;">
-                        <button type="submit" class="dropdown-item logout-link">🚪 Logout</button>
+                        <button type="submit" class="dropdown-item logout-link"><i class="icon-log-out"></i> Logout</button>
                     </form>
                 </div>
             </div>
@@ -517,12 +518,12 @@ $summary = $reportData['summary'] ?? [];
         <div class="report-nav">
             <div class="report-nav-links">
                 <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-right: 10px;">Reports:</span>
-                <a href="reports.php?type=monthly" class="report-link <?php echo $type === 'monthly' ? 'active' : ''; ?>"><span>📅</span> Monthly</a>
-                <a href="reports.php?type=quarterly" class="report-link <?php echo $type === 'quarterly' ? 'active' : ''; ?>"><span>📈</span> Quarterly</a>
-                <a href="reports.php?type=yearly" class="report-link <?php echo $type === 'yearly' ? 'active' : ''; ?>"><span>📊</span> Yearly</a>
-                <a href="reports.php?type=matrix" class="report-link <?php echo $type === 'matrix' ? 'active' : ''; ?>"><span>🏢</span> Matrix</a>
-                <a href="reports.php?type=credit" class="report-link <?php echo $type === 'credit' ? 'active' : ''; ?>"><span>🛡️</span> Credit Score</a>
-                <a href="reports.php?type=aging" class="report-link <?php echo $type === 'aging' ? 'active' : ''; ?>"><span>⏳</span> Aging Report</a>
+                <a href="reports.php?type=monthly" class="report-link <?php echo $type === 'monthly' ? 'active' : ''; ?>"><i class="icon-calendar"></i> Monthly</a>
+                <a href="reports.php?type=quarterly" class="report-link <?php echo $type === 'quarterly' ? 'active' : ''; ?>"><i class="icon-trending-up"></i> Quarterly</a>
+                <a href="reports.php?type=yearly" class="report-link <?php echo $type === 'yearly' ? 'active' : ''; ?>"><i class="icon-bar-chart-3"></i> Yearly</a>
+                <a href="reports.php?type=matrix" class="report-link <?php echo $type === 'matrix' ? 'active' : ''; ?>"><i class="icon-building-2"></i> Matrix</a>
+                <a href="reports.php?type=credit" class="report-link <?php echo $type === 'credit' ? 'active' : ''; ?>"><i class="icon-shield-check"></i> Credit Score</a>
+                <a href="reports.php?type=aging" class="report-link <?php echo $type === 'aging' ? 'active' : ''; ?>"><i class="icon-clock"></i> Aging Report</a>
             </div>
             
             <div style="display: flex; align-items: center; gap: 15px;">

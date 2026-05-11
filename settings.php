@@ -239,6 +239,7 @@ $existingMappings = $db->getAllMappings();
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="docs/lucide-font/lucide.css">
     <style>
         :root {
             --primary: #6366f1;
@@ -571,7 +572,7 @@ $existingMappings = $db->getAllMappings();
 <body>
     <div class="header">
         <div class="logo-container">
-            <div class="logo-icon">A</div>
+            <div class="logo-icon"><i class="icon-bar-chart-2"></i></div>
             Activity
         </div>
         
@@ -591,7 +592,7 @@ $existingMappings = $db->getAllMappings();
                         <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
                         <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
                     </div>
-                    <div style="font-size: 10px; color: var(--text-muted); margin-left: 4px;">▼</div>
+                    <i class="icon-chevron-down" style="font-size: 12px; color: var(--text-muted); margin-left: 4px;"></i>
                 </div>
                 
                 <div class="dropdown-menu" id="userDropdown">
@@ -599,13 +600,13 @@ $existingMappings = $db->getAllMappings();
                         <strong><?php echo htmlspecialchars($user['username']); ?></strong>
                         <span><?php echo ucfirst($user['role']); ?> Management Account</span>
                     </div>
-                    <a href="settings.php#security" class="dropdown-item">🔒 Change Password</a>
+                    <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
                     <?php if ($auth->isAdmin()): ?>
-                    <a href="users.php" class="dropdown-item">👥 Manage Users</a>
+                    <a href="users.php" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
                     <?php endif; ?>
                     <div class="dropdown-divider"></div>
                     <form method="POST" action="logout.php" style="margin: 0;">
-                        <button type="submit" class="dropdown-item logout-link">🚪 Logout</button>
+                        <button type="submit" class="dropdown-item logout-link"><i class="icon-log-out"></i> Logout</button>
                     </form>
                 </div>
             </div>
@@ -617,25 +618,25 @@ $existingMappings = $db->getAllMappings();
             <div class="settings-nav">
                 <div class="settings-nav-links">
                     <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
-                    <button class="tab-btn active" onclick="showTab('general')">⚙️ General</button>
-                    <button class="tab-btn" onclick="showTab('team')">👥 Sales Team</button>
-                    <button class="tab-btn" onclick="showTab('rationalize')">🏷️ Product Mapping</button>
+                    <button class="tab-btn active" onclick="showTab('general')"><i class="icon-settings"></i> General</button>
+                    <button class="tab-btn" onclick="showTab('team')"><i class="icon-users"></i> Sales Team</button>
+                    <button class="tab-btn" onclick="showTab('rationalize')"><i class="icon-tag"></i> Product Mapping</button>
                     <?php if ($auth->isAdmin()): ?>
-                    <button class="tab-btn" onclick="showTab('tax')">🏦 Tax & History</button>
+                    <button class="tab-btn" onclick="showTab('tax')"><i class="icon-landmark"></i> Tax & History</button>
                     <?php endif; ?>
                     <div style="width: 1px; height: 24px; background: var(--border); margin: 0 10px;"></div>
-                    <a href="profit_entry.php" class="tab-btn">💰 Profit Entry</a>
-                    <a href="customers.php" class="tab-btn">🏢 Customers</a>
-                    <a href="upload.php" class="tab-btn">📁 Data Upload</a>
+                    <a href="profit_entry.php" class="tab-btn"><i class="icon-dollar-sign"></i> Profit Entry</a>
+                    <a href="customers.php" class="tab-btn"><i class="icon-building-2"></i> Customers</a>
+                    <a href="upload.php" class="tab-btn"><i class="icon-folder-up"></i> Data Upload</a>
                     <?php if ($auth->isAdmin()): ?>
-                    <a href="users.php" class="tab-btn">👤 User Mgmt</a>
+                    <a href="users.php" class="tab-btn"><i class="icon-user"></i> User Mgmt</a>
                     <?php endif; ?>
                     <div style="width: 1px; height: 24px; background: var(--border); margin: 0 10px;"></div>
                     <?php endif; ?>
-                    <button class="tab-btn" onclick="showTab('security')">🔒 Security</button>
+                    <button class="tab-btn" onclick="showTab('security')"><i class="icon-shield-check"></i> Security</button>
                 </div>
                 <?php if ($auth->isAdmin()): ?>
-                <button class="tab-btn" onclick="showTab('advanced')" style="color: var(--error);">⚠️ Advanced</button>
+                <button class="tab-btn" onclick="showTab('advanced')" style="color: var(--error);"><i class="icon-triangle-alert"></i> Advanced</button>
                 <?php endif; ?>
             </div>
 

@@ -57,6 +57,7 @@ if ($auth->isLoggedIn()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
     <title>Activity - Login</title>
+    <link rel="stylesheet" href="docs/lucide-font/lucide.css">
     <style>
         * {
             margin: 0;
@@ -174,7 +175,9 @@ if ($auth->isLoggedIn()) {
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>📊 Activity</h1>
+            <h1 style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+                <i class="icon-bar-chart-2" style="color: #667eea;"></i> Activity
+            </h1>
             <p>Sales Intelligence Dashboard</p>
         </div>
 
