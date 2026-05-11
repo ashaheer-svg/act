@@ -321,11 +321,22 @@ $existingMappings = $db->getAllMappings();
             border-bottom-color: var(--primary);
         }
 
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
+        .card { background: white; border-radius: var(--radius-lg); padding: 30px; border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-control { width: 100%; padding: 12px 16px; border-radius: var(--radius-md); border: 1px solid var(--border); background: white; font-size: 14px; outline: none; transition: all 0.2s; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 24px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; font-family: inherit; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn { padding: 10px 20px; border-radius: var(--radius-md); background: transparent; border: 1px solid transparent; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .tab-btn:hover { background: #f8fafc; color: var(--text-main); }
+        .tab-btn.active { background: white; color: var(--primary); border-color: var(--border); box-shadow: var(--shadow); }
+        .tax-table { width: 100%; border-collapse: collapse; }
+        .tax-table th { text-align: left; padding: 15px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; }
+        .tax-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     </style>
     <link rel="stylesheet" href="layout.css?v=1.0.1">
 </head>
