@@ -342,122 +342,14 @@ $existingMappings = $db->getAllMappings();
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="mainSidebar">
-            <div class="sidebar-header">
-                <div class="logo-container">
-                    <div class="logo-icon"><i class="icon-bar-chart-2"></i></div>
-                    <span>SYNC | ANALYTICS</span>
-                </div>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="index.php" class="nav-item">
-                    <i class="icon-layout-dashboard"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="reports.php" class="nav-item">
-                    <i class="icon-bar-chart-2"></i>
-                    <span>Reporting</span>
-                </a>
-                <a href="settings.php#general" class="nav-item" id="sidebar-general">
-                    <i class="icon-settings"></i>
-                    <span>Settings</span>
-                </a>
-                <a href="settings.php#security" class="nav-item" id="sidebar-security">
-                    <i class="icon-shield"></i>
-                    <span>Security</span>
-                </a>
-                <a href="settings.php#team" class="nav-item" id="sidebar-team">
-                    <i class="icon-users"></i>
-                    <span>Team</span>
-                </a>
-                <a href="settings.php#rationalize" class="nav-item" id="sidebar-rationalize">
-                    <i class="icon-git-branch"></i>
-                    <span>Product Mapping</span>
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <form method="POST" action="logout.php" style="margin: 0;">
-                    <button type="submit" class="nav-item" style="background: none; border: none; width: 100%; cursor: pointer;">
-                        <i class="icon-log-out"></i>
-                        <span>Logout</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
+        <?php require_once 'includes/sidebar.php'; ?>
 
         <!-- Main Wrapper -->
         <main class="main-wrapper">
-            <header class="top-header">
-                <div class="header-left">
-                    <button class="collapse-btn" onclick="toggleSidebar()">
-                        <i class="icon-menu"></i>
-                    </button>
-                    <div class="search-container">
-                        <i class="icon-search"></i>
-                        <input type="text" class="search-input" placeholder="Search settings...">
-                    </div>
-                </div>
-                <div class="header-right">
-                    <button class="icon-btn">
-                        <i class="icon-bell"></i>
-                        <div class="notification-dot"></div>
-                    </button>
-                    <div class="user-dropdown">
-                        <div class="user-trigger" onclick="toggleUserDropdown()">
-                            <div class="user-profile" style="background: var(--sidebar-bg); border: 2px solid var(--border-color);">
-                                <?php echo strtoupper(substr($user['username'], 0, 1)); ?>
-                            </div>
-                            <div class="user-info-brief">
-                                <span class="user-name"><?php echo htmlspecialchars($user['username']); ?></span>
-                                <span class="user-role"><?php echo ucfirst($user['role']); ?></span>
-                            </div>
-                            <i class="icon-chevron-down" style="font-size: 12px; color: var(--text-muted); margin-left: 4px;"></i>
-                        </div>
-                        <div class="dropdown-menu" id="userDropdown">
-                            <div class="dropdown-header">
-                                <strong><?php echo htmlspecialchars($user['username']); ?></strong>
-                                <span><?php echo ucfirst($user['role']); ?> Management Account</span>
-                            </div>
-                            <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
-                            <?php if ($auth->isAdmin()): ?>
-                            <a href="users.php" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
-                            <?php endif; ?>
-                            <div class="dropdown-divider"></div>
-                            <form method="POST" action="logout.php" style="margin: 0;">
-                                <button type="submit" class="dropdown-item logout-link"><i class="icon-log-out"></i> Logout</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <?php $searchPlaceholder = 'Search settings...'; require_once 'includes/header.php'; ?>
 
             <div class="content-body">
-                <div class="settings-nav" style="margin-bottom: 25px; border-radius: 12px; background: white; padding: 15px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
 
-                <div class="settings-nav-links">
-                    <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
-                    <button class="tab-btn active" onclick="showTab('general')"><i class="icon-settings"></i> General</button>
-                    <button class="tab-btn" onclick="showTab('team')"><i class="icon-users"></i> Sales Team</button>
-                    <button class="tab-btn" onclick="showTab('rationalize')"><i class="icon-tag"></i> Product Mapping</button>
-                    <?php if ($auth->isAdmin()): ?>
-                    <button class="tab-btn" onclick="showTab('tax')"><i class="icon-landmark"></i> Tax & History</button>
-                    <?php endif; ?>
-                    <div style="width: 1px; height: 24px; background: var(--border); margin: 0 10px;"></div>
-                    <a href="profit_entry.php" class="tab-btn"><i class="icon-dollar-sign"></i> Profit Entry</a>
-                    <a href="customers.php" class="tab-btn"><i class="icon-building-2"></i> Customers</a>
-                    <a href="upload.php" class="tab-btn"><i class="icon-folder-up"></i> Data Upload</a>
-                    <?php if ($auth->isAdmin()): ?>
-                    <a href="users.php" class="tab-btn"><i class="icon-user"></i> User Mgmt</a>
-                    <?php endif; ?>
-                    <div style="width: 1px; height: 24px; background: var(--border); margin: 0 10px;"></div>
-                    <?php endif; ?>
-                    <button class="tab-btn" onclick="showTab('security')"><i class="icon-shield-check"></i> Security</button>
-                </div>
-                <?php if ($auth->isAdmin()): ?>
-                <button class="tab-btn" onclick="showTab('advanced')" style="color: var(--error);"><i class="icon-triangle-alert"></i> Advanced</button>
-                <?php endif; ?>
-            </div>
 
             <?php if ($message): ?>
             <div class="message <?php echo $messageType; ?>">
@@ -834,43 +726,28 @@ $existingMappings = $db->getAllMappings();
         </div>
     </div>
 
+    <?php require_once 'includes/layout_js.php'; ?>
     <script>
     function showTab(tabId) {
+        if (!tabId) tabId = 'general';
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.sidebar .nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar .sub-nav-item').forEach(el => el.classList.remove('active'));
         
         const targetTab = document.getElementById(tabId);
         if (targetTab) {
             targetTab.classList.add('active');
-            // Find and activate the correct button
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                const onclick = btn.getAttribute('onclick');
-                if (onclick && onclick.includes("'" + tabId + "'")) {
-                    btn.classList.add('active');
-                }
-            });
-
-            // Activate sidebar item if it exists
-            const sidebarItem = document.getElementById('sidebar-' + tabId);
+            
+            // Activate sidebar item
+            const sidebarItem = document.querySelector('.sidebar a[href="settings.php#' + tabId + '"]');
             if (sidebarItem) {
                 sidebarItem.classList.add('active');
-            } else if (tabId === 'general') {
-                document.getElementById('sidebar-general').classList.add('active');
             }
-
-            window.location.hash = tabId;
+            
+            // We only update hash if it's different, to prevent jumping
+            if (window.location.hash.replace('#', '') !== tabId) {
+                window.history.replaceState(null, null, '#' + tabId);
+            }
         }
-    }
-
-    function toggleSidebar() {
-        document.getElementById('mainSidebar').classList.toggle('collapsed');
-        localStorage.setItem('sidebarCollapsed', document.getElementById('mainSidebar').classList.contains('collapsed'));
-    }
-
-    // Restore sidebar state
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        document.getElementById('mainSidebar').classList.add('collapsed');
     }
 
     // Auto-select tab on load based on hash or last action
@@ -895,18 +772,11 @@ $existingMappings = $db->getAllMappings();
         }
     });
 
-    function toggleUserDropdown() {
-        document.getElementById('userDropdown').classList.toggle('active');
-    }
-
-    window.onclick = function(event) {
-        if (!event.target.closest('.user-dropdown')) {
-            const dropdowns = document.getElementsByClassName("dropdown-menu");
-            for (let i = 0; i < dropdowns.length; i++) {
-                dropdowns[i].classList.remove('active');
-            }
-        }
-    }
+    // Listen to hash changes (e.g. from clicking sidebar links)
+    window.addEventListener('hashchange', () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash) showTab(hash);
+    });
     </script>
             </div><!-- .content-body -->
         </main><!-- .main-wrapper -->

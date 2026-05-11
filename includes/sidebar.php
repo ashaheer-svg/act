@@ -86,6 +86,12 @@ function subNavClass(string $key, string $activeSubPage): string {
                     <i class="icon-git-branch"></i>
                     <span>Product Mapping</span>
                 </a>
+                <?php if (isset($auth) && $auth->isAdmin()): ?>
+                <a href="settings.php#tax" class="<?= subNavClass('tax', $activeSubPage) ?>">
+                    <i class="icon-landmark"></i>
+                    <span>Tax & History</span>
+                </a>
+                <?php endif; ?>
                 <a href="customers.php" class="<?= subNavClass('customers', $activeSubPage) ?>">
                     <i class="icon-building-2"></i>
                     <span>Customers</span>
@@ -98,10 +104,16 @@ function subNavClass(string $key, string $activeSubPage): string {
                     <i class="icon-folder-up"></i>
                     <span>Data Upload</span>
                 </a>
+                <?php if (isset($auth) && $auth->isAdmin()): ?>
+                <a href="settings.php#advanced" class="<?= subNavClass('advanced', $activeSubPage) ?>">
+                    <i class="icon-triangle-alert"></i>
+                    <span>Advanced</span>
+                </a>
                 <a href="users.php" class="<?= subNavClass('users', $activeSubPage) ?>">
                     <i class="icon-user"></i>
                     <span>User Management</span>
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     </nav>

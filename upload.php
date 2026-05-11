@@ -53,23 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php $searchPlaceholder = 'Search data...'; require_once 'includes/header.php'; ?>
 
             <div class="content-body">
-                <div class="settings-nav" style="margin-bottom: 25px; border-radius: 12px; background: white; padding: 15px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                    <div class="settings-nav-links">
-                        <a href="settings.php#general" class="tab-btn"><i class="icon-settings"></i> General</a>
-                        <a href="settings.php#team" class="tab-btn"><i class="icon-users"></i> Sales Team</a>
-                        <a href="settings.php#rationalize" class="tab-btn"><i class="icon-tag"></i> Product Mapping</a>
-                        <?php if ($auth->isAdmin()): ?>
-                        <a href="settings.php#tax" class="tab-btn"><i class="icon-landmark"></i> Tax & History</a>
-                        <?php endif; ?>
-                        <div style="width: 1px; height: 24px; background: var(--border-color); margin: 0 10px;"></div>
-                        <a href="profit_entry.php" class="tab-btn"><i class="icon-dollar-sign"></i> Profit Entry</a>
-                        <a href="customers.php" class="tab-btn"><i class="icon-building-2"></i> Customers</a>
-                        <a href="upload.php" class="tab-btn active"><i class="icon-folder-up"></i> Data Upload</a>
-                        <?php if ($auth->isAdmin()): ?>
-                        <a href="users.php" class="tab-btn"><i class="icon-user"></i> User Mgmt</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
 
     <div class="container" style="padding-top: 0;">
         <div class="sidebar">

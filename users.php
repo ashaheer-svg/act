@@ -75,14 +75,6 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
             <?php $searchPlaceholder = 'Search users...'; require_once 'includes/header.php'; ?>
 
             <div class="content-body">
-                <div class="settings-nav" style="margin-bottom: 25px; border-radius: 12px; background: white; padding: 15px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                    <div class="settings-nav-links">
-                        <a href="settings.php#general" class="tab-btn"><i class="icon-settings"></i> General</a>
-                        <a href="settings.php#security" class="tab-btn"><i class="icon-lock"></i> Security</a>
-                        <a href="users.php" class="tab-btn active"><i class="icon-users"></i> Manage Users</a>
-                        <a href="settings.php#rationalize" class="tab-btn"><i class="icon-git-branch"></i> Product Mapping</a>
-                    </div>
-                </div>
 
                 <div class="container" style="display: grid; grid-template-columns: 320px 1fr; gap: 30px; padding: 0; max-width: none; margin: 0;">
         <div class="sidebar">
