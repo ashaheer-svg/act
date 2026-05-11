@@ -338,7 +338,7 @@ $existingMappings = $db->getAllMappings();
         .tax-table th { text-align: left; padding: 15px; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid #f1f5f9; }
         .tax-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
     </style>
-    <link rel="stylesheet" href="layout.css?v=1.0.1">
+    <link rel="stylesheet" href="layout.css?v=1.0.2">
 </head>
 <body>
     <div class="app-container">

@@ -149,6 +149,104 @@ body {
     border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+/* --- Sidebar Nav Groups (Accordion Submenu) --- */
+.nav-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* The parent toggle button */
+.nav-group-toggle {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    /* Inherits nav-item styles for visual consistency */
+}
+
+/* The rotating arrow icon */
+.nav-group-arrow {
+    margin-left: auto;
+    font-size: 14px !important;
+    width: auto !important;
+    transition: transform 0.25s ease;
+    opacity: 0.6;
+}
+
+.nav-group.open > .nav-group-toggle .nav-group-arrow {
+    transform: rotate(90deg);
+}
+
+/* When settings group is open, parent button gets a subtle highlight */
+.nav-group.open > .nav-group-toggle {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Submenu container — animate height with max-height trick */
+.sub-nav {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding-left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nav-group.open > .sub-nav {
+    max-height: 500px; /* large enough for all items */
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+/* Sub-nav items */
+.sub-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border-radius: var(--radius-md);
+    color: var(--sidebar-text);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border-left: 2px solid transparent;
+}
+
+.sub-nav-item i {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.sub-nav-item:hover {
+    background-color: var(--sidebar-hover);
+    color: white;
+    border-left-color: rgba(59, 130, 246, 0.5);
+}
+
+.sub-nav-item.active {
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    border-left-color: var(--sidebar-active);
+    font-weight: 600;
+}
+
+/* Collapsed sidebar: hide sub-nav and arrow, center icons */
+.sidebar.collapsed .nav-group-arrow { display: none; }
+.sidebar.collapsed .sub-nav { display: none; }
+.sidebar.collapsed .nav-group-toggle span { display: none; }
+.sidebar.collapsed .nav-group-toggle {
+    justify-content: center;
+    padding: 12px;
+}
+
 /* --- Main Wrapper --- */
 .main-wrapper {
     flex: 1;
