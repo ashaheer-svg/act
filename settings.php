@@ -246,7 +246,6 @@ $existingMappings = $db->getAllMappings();
             --primary-hover: #4f46e5;
             --secondary: #fb923c;
             --bg: #f1f5f9;
-            --sidebar-bg: #ffffff;
             --card-bg: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
@@ -327,7 +326,7 @@ $existingMappings = $db->getAllMappings();
             align-items: center;
             gap: 20px;
         }
-
+    </style>
     <link rel="stylesheet" href="layout.css">
 </head>
 <body>
