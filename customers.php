@@ -5,7 +5,7 @@ require_once 'classes/Auth.php';
 
 $db = new Database(DATABASE_PATH);
 $db->initialize(); 
-$db->syncCustomerProfiles(); // Ensure we have data
+$db->syncCustomerProfiles(); 
 
 $auth = new Auth($db);
 $auth->requireAccounts(); 
@@ -68,145 +68,73 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-    <link rel="stylesheet" href="layout.css?v=1.0.7">
+    <link rel="stylesheet" href="layout.css?v=1.0.9">
     <style>
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
+        .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .badge-partner { background: #e0f2fe; color: #0369a1; }
         .badge-end { background: #f3f4f6; color: #4b5563; }
         .badge-verified { background: #dcfce7; color: #15803d; }
         .badge-unverified { background: #fef2f2; color: #b91c1c; }
-
-        .checkbox-cell { width: 45px; text-align: center; }
-        .checkbox-cell input { width: 20px; height: 20px; cursor: pointer; }
-
-        .bulk-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #f8fafc;
-            padding: 12px 20px;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            margin-bottom: 20px;
-            opacity: 0.5;
-            pointer-events: none;
-            transition: all 0.3s;
-        }
-        .bulk-controls.active {
-            opacity: 1;
-            pointer-events: auto;
-            border-color: var(--primary);
-            background: #f0f9ff;
-        }
-
-        .pager-container {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            padding: 20px 0;
-        }
-        .pager-btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            background: white;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 13px;
-        }
-        .pager-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-        .pager-btn.disabled {
-            opacity: 0.3;
-            pointer-events: none;
-        }
+        .checkbox-cell { width: 50px; text-align: center; vertical-align: middle; }
+        .checkbox-cell input { width: 22px; height: 22px; cursor: pointer; }
+        .action-panel { background: #ffffff; border: 2px solid var(--primary); border-radius: 16px; padding: 25px; margin-bottom: 30px; box-shadow: var(--shadow-lg); }
+        .pager-container { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 15px; background: #f1f5f9; }
+        .pager-link { padding: 8px 15px; border-radius: 8px; background: white; border: 1px solid #cbd5e1; color: #1e293b; text-decoration: none; font-weight: 700; font-size: 13px; }
+        .pager-link.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .pager-link.disabled { opacity: 0.4; pointer-events: none; }
     </style>
 </head>
 <body>
     <div class="app-container">
         <?php require_once 'includes/sidebar.php'; ?>
-
         <main class="main-wrapper">
             <?php require_once 'includes/header.php'; ?>
-
             <div class="content-body">
-                <div class="page-header">
-                    <div>
-                        <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -1px;">Customer Management</h1>
-                        <p style="color: var(--text-muted);">Total of <strong><?php echo $totalCustomers; ?></strong> unique customers found.</p>
-                    </div>
+                <div class="page-header" style="margin-bottom: 20px;">
+                    <h1 style="font-size: 30px; font-weight: 900;">Customer Management</h1>
+                    <p style="color: var(--text-muted);">Total Customers: <strong><?php echo $totalCustomers; ?></strong> | Page <?php echo $currentPage; ?> of <?php echo $totalPages; ?></p>
                 </div>
 
                 <?php if ($message): ?><div class="message success"><?php echo $message; ?></div><?php endif; ?>
-                <?php if ($error): ?><div class="message error"><?php echo $error; ?></div><?php endif; ?>
 
-                <form method="POST" id="mainForm">
+                <form method="POST" id="bulkForm">
                     <input type="hidden" name="action" value="bulk_update">
                     
-                    <!-- Search & Bulk Controls -->
-                    <div class="card" style="margin-bottom: 20px;">
-                        <div style="display: flex; flex-direction: column; gap: 20px;">
-                            <!-- Top: Search -->
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div style="position: relative; width: 400px;">
-                                    <i class="icon-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                                    <input type="text" name="search" class="form-control" style="padding-left: 45px; height: 48px;" 
-                                           placeholder="Search by customer name..." value="<?php echo htmlspecialchars($search); ?>"
-                                           onchange="this.form.method='GET'; this.form.submit();">
-                                </div>
-                                <div style="font-weight: 700; color: var(--primary);">
-                                    Page <?php echo $currentPage; ?> of <?php echo $totalPages; ?>
-                                </div>
+                    <!-- Bulk Tool -->
+                    <div class="action-panel">
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 800;">Bulk Update Action</h3>
+                                <div id="countDisplay" style="margin-top: 5px; font-weight: 700; color: var(--primary);">0 items selected</div>
                             </div>
-
-                            <!-- Bottom: Bulk Action Bar -->
-                            <div class="bulk-controls" id="bulkBar">
-                                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
-                                    <span style="font-size: 14px; font-weight: 800; color: var(--primary);" id="selCount">0 selected</span>
-                                    <i class="icon-arrow-right" style="color: var(--text-muted);"></i>
-                                    <select name="bulk_type" class="form-control" style="width: 200px; height: 38px;">
-                                        <option value="">Choose action...</option>
-                                        <option value="Partner">Mark as Partner</option>
-                                        <option value="End Customer">Mark as End Customer</option>
-                                    </select>
-                                    <button type="submit" class="btn btn-primary" style="height: 38px;">Apply to Selected</button>
-                                </div>
-                                <button type="button" onclick="clearAll()" class="btn btn-outline" style="height: 38px;">Clear All</button>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <select name="bulk_type" class="form-control" style="width: 200px; height: 40px; font-weight: 600;">
+                                    <option value="Partner">Set as Partner</option>
+                                    <option value="End Customer">Set as End Customer</option>
+                                </select>
+                                <button type="submit" id="submitBtn" class="btn btn-primary" style="height: 40px; padding: 0 20px;" disabled>Apply to All Selected</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Table & Pagination -->
-                    <div class="card">
-                        <table class="table" id="custTable">
-                            <thead>
+                    <!-- Table Card -->
+                    <div class="card" style="padding: 0; overflow: hidden;">
+                        <table class="table" style="margin: 0;">
+                            <thead style="background: #f8fafc;">
                                 <tr>
-                                    <th class="checkbox-cell"><input type="checkbox" id="masterCheck" onclick="doToggleAll(this)"></th>
+                                    <th class="checkbox-cell"><input type="checkbox" id="masterBox"></th>
                                     <th>Customer Name</th>
-                                    <th>Classification</th>
-                                    <th style="text-align: right;">Invoices</th>
+                                    <th>Type</th>
                                     <th style="text-align: right;">Revenue</th>
-                                    <th style="text-align: center;">Status</th>
-                                    <th style="text-align: right;">Action</th>
+                                    <th style="text-align: center;">Verified</th>
+                                    <th style="text-align: right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($customers as $c): ?>
                                 <tr>
                                     <td class="checkbox-cell">
-                                        <input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" onchange="doUpdateSelection()">
+                                        <input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" class="row-check">
                                     </td>
                                     <td style="font-weight: 700;"><?php echo htmlspecialchars($c['customer_name']); ?></td>
                                     <td>
@@ -214,21 +142,20 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
                                             <?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?>
                                         </span>
                                     </td>
-                                    <td style="text-align: right;"><?php echo $c['lifetime_invoices']; ?></td>
                                     <td style="text-align: right; font-weight: 700; color: var(--primary);">
                                         <?php echo $currency . number_format($c['lifetime_revenue'] ?? 0, 0); ?>
                                     </td>
                                     <td style="text-align: center;">
                                         <?php if (isset($c['is_verified']) && $c['is_verified']): ?>
-                                            <span class="badge badge-verified">Verified</span>
+                                            <i class="icon-check-circle" style="color: var(--success);"></i>
                                         <?php else: ?>
-                                            <span class="badge badge-unverified">Unverified</span>
+                                            <i class="icon-help-circle" style="color: var(--text-muted);"></i>
                                         <?php endif; ?>
                                     </td>
                                     <td style="text-align: right;">
-                                        <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" 
-                                                onclick="setSingle('<?php echo addslashes($c['customer_name']); ?>', '<?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>')">
-                                            Switch to <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>
+                                        <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" 
+                                                onclick="doFlip('<?php echo addslashes($c['customer_name']); ?>', '<?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>')">
+                                            Switch
                                         </button>
                                     </td>
                                 </tr>
@@ -236,26 +163,25 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
                             </tbody>
                         </table>
 
-                        <!-- Big Navigation Buttons -->
+                        <!-- Pager -->
+                        <?php if ($totalPages > 1): ?>
                         <div class="pager-container">
-                            <a href="<?php echo $basePageUrl; ?>1" class="pager-btn <?php echo $currentPage == 1 ? 'disabled' : ''; ?>">First</a>
-                            <a href="<?php echo $basePageUrl . ($currentPage - 1); ?>" class="pager-btn <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">Previous</a>
+                            <a href="<?php echo $basePageUrl; ?>1" class="pager-link <?php echo $currentPage == 1 ? 'disabled' : ''; ?>">First</a>
+                            <a href="<?php echo $basePageUrl . ($currentPage - 1); ?>" class="pager-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">Previous</a>
                             
-                            <div style="display: flex; gap: 5px; margin: 0 10px;">
-                                <?php for($i=1; $i<=$totalPages; $i++): ?>
-                                    <?php if ($totalPages < 10 || ($i > $currentPage - 3 && $i < $currentPage + 3)): ?>
-                                        <a href="<?php echo $basePageUrl . $i; ?>" class="pager-btn <?php echo $i == $currentPage ? 'active' : ''; ?>"><?php echo $i; ?></a>
-                                    <?php endif; ?>
-                                <?php endfor; ?>
-                            </div>
+                            <?php for($i=1; $i<=$totalPages; $i++): ?>
+                                <?php if ($totalPages < 10 || ($i > $currentPage - 3 && $i < $currentPage + 3)): ?>
+                                    <a href="<?php echo $basePageUrl . $i; ?>" class="pager-link <?php echo $i == $currentPage ? 'active' : ''; ?>"><?php echo $i; ?></a>
+                                <?php endif; ?>
+                            <?php endfor; ?>
 
-                            <a href="<?php echo $basePageUrl . ($currentPage + 1); ?>" class="pager-btn <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">Next</a>
-                            <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pager-btn <?php echo $currentPage == $totalPages ? 'disabled' : ''; ?>">Last (<?php echo $totalPages; ?>)</a>
+                            <a href="<?php echo $basePageUrl . ($currentPage + 1); ?>" class="pager-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">Next</a>
+                            <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pager-link <?php echo $currentPage == $totalPages ? 'disabled' : ''; ?>">Last</a>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </form>
 
-                <!-- Hidden Single Action Form -->
                 <form id="singleForm" method="POST" style="display: none;">
                     <input type="hidden" name="action" value="update_type">
                     <input type="hidden" name="customer_name" id="singleName">
@@ -267,35 +193,30 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
-        function doToggleAll(source) {
-            const checkboxes = document.getElementsByName('customer_names[]');
-            checkboxes.forEach(c => c.checked = source.checked);
-            doUpdateSelection();
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            const master = document.getElementById('masterBox');
+            const checks = document.querySelectorAll('.row-check');
+            const submitBtn = document.getElementById('submitBtn');
+            const counter = document.getElementById('countDisplay');
 
-        function doUpdateSelection() {
-            const checkboxes = document.getElementsByName('customer_names[]');
-            let count = 0;
-            checkboxes.forEach(c => { if(c.checked) count++; });
-
-            const bar = document.getElementById('bulkBar');
-            const countLabel = document.getElementById('selCount');
-            
-            if (count > 0) {
-                bar.classList.add('active');
-                countLabel.innerText = count + ' selected';
-            } else {
-                bar.classList.remove('active');
-                countLabel.innerText = '0 selected';
+            function refresh() {
+                let count = 0;
+                checks.forEach(c => { if(c.checked) count++; });
+                counter.innerText = count + ' items selected';
+                submitBtn.disabled = (count === 0);
             }
-        }
 
-        function clearAll() {
-            document.getElementById('masterCheck').checked = false;
-            doToggleAll(document.getElementById('masterCheck'));
-        }
+            master.addEventListener('change', () => {
+                checks.forEach(c => c.checked = master.checked);
+                refresh();
+            });
 
-        function setSingle(name, type) {
+            checks.forEach(c => {
+                c.addEventListener('change', refresh);
+            });
+        });
+
+        function doFlip(name, type) {
             document.getElementById('singleName').value = name;
             document.getElementById('singleType').value = type;
             document.getElementById('singleForm').submit();
