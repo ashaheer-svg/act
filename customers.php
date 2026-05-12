@@ -5,6 +5,7 @@ require_once 'classes/Auth.php';
 
 $db = new Database(DATABASE_PATH);
 $db->initialize(); // Ensure schema is sync'd
+$db->syncCustomerProfiles(); // CRITICAL: Sync names BEFORE counting for pagination
 
 $auth = new Auth($db);
 $auth->requireAccounts(); 
@@ -18,7 +19,11 @@ $error = '';
 // Search and Pagination
 $search = $_GET['search'] ?? '';
 $itemsPerPage = 25;
-$currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+
+$totalCustomers = $db->countCustomers($search);
+$totalPages = ceil($totalCustomers / $itemsPerPage);
+
+$currentPage = isset($_GET['page']) ? max(1, min((int)$_GET['page'], max(1, $totalPages))) : 1;
 $offset = ($currentPage - 1) * $itemsPerPage;
 
 // Handle Bulk Update
@@ -47,8 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-$totalCustomers = $db->countCustomers($search);
-$totalPages = ceil($totalCustomers / $itemsPerPage);
+// Fetch the actual page of customers
 $customers = $db->getCustomerProfiles($itemsPerPage, $offset, $search);
 
 // Base URL for pagination links
@@ -66,7 +70,7 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-    <link rel="stylesheet" href="layout.css?v=1.0.5">
+    <link rel="stylesheet" href="layout.css?v=1.0.6">
     <style>
         .badge {
             display: inline-flex;
@@ -235,42 +239,44 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
                             </table>
                         </div>
 
-                        <!-- Pagination Footer -->
-                        <?php if ($totalPages > 1): ?>
-                        <div class="pagination">
-                            <a href="<?php echo $basePageUrl . max(1, $currentPage - 1); ?>" class="pagination-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>" title="Previous Page">
-                                <i class="icon-chevron-left"></i>
-                            </a>
-                            
-                            <?php 
-                            $startPage = max(1, $currentPage - 2);
-                            $endPage = min($totalPages, $currentPage + 2);
-                            
-                            if ($startPage > 1): ?>
-                                <a href="<?php echo $basePageUrl; ?>1" class="pagination-link">1</a>
-                                <?php if ($startPage > 2): ?><span style="color: var(--text-muted);">...</span><?php endif; ?>
-                            <?php endif; ?>
-
-                            <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                <a href="<?php echo $basePageUrl . $i; ?>" class="pagination-link <?php echo $i == $currentPage ? 'active' : ''; ?>">
-                                    <?php echo $i; ?>
+                        <!-- Pagination Footer (Always visible if multiple pages, else simple status) -->
+                        <div style="margin-top: 30px;">
+                            <?php if ($totalPages > 1): ?>
+                            <div class="pagination">
+                                <a href="<?php echo $basePageUrl . max(1, $currentPage - 1); ?>" class="pagination-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>" title="Previous Page">
+                                    <i class="icon-chevron-left"></i>
                                 </a>
-                            <?php endfor; ?>
+                                
+                                <?php 
+                                $startPage = max(1, $currentPage - 2);
+                                $endPage = min($totalPages, $currentPage + 2);
+                                
+                                if ($startPage > 1): ?>
+                                    <a href="<?php echo $basePageUrl; ?>1" class="pagination-link">1</a>
+                                    <?php if ($startPage > 2): ?><span style="color: var(--text-muted); padding: 0 5px;">...</span><?php endif; ?>
+                                <?php endif; ?>
 
-                            <?php if ($endPage < $totalPages): ?>
-                                <?php if ($endPage < $totalPages - 1): ?><span style="color: var(--text-muted);">...</span><?php endif; ?>
-                                <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pagination-link"><?php echo $totalPages; ?></a>
+                                <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                                    <a href="<?php echo $basePageUrl . $i; ?>" class="pagination-link <?php echo $i == $currentPage ? 'active' : ''; ?>">
+                                        <?php echo $i; ?>
+                                    </a>
+                                <?php endfor; ?>
+
+                                <?php if ($endPage < $totalPages): ?>
+                                    <?php if ($endPage < $totalPages - 1): ?><span style="color: var(--text-muted); padding: 0 5px;">...</span><?php endif; ?>
+                                    <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pagination-link"><?php echo $totalPages; ?></a>
+                                <?php endif; ?>
+
+                                <a href="<?php echo $basePageUrl . min($totalPages, $currentPage + 1); ?>" class="pagination-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Next Page">
+                                    <i class="icon-chevron-right"></i>
+                                </a>
+                            </div>
+                            <?php elseif ($totalCustomers > 0): ?>
+                            <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding-top: 10px; border-top: 1px solid var(--border-color);">
+                                <i class="icon-check" style="font-size: 12px; margin-right: 5px;"></i> End of list (<?php echo $totalCustomers; ?> customers)
+                            </div>
                             <?php endif; ?>
-
-                            <a href="<?php echo $basePageUrl . min($totalPages, $currentPage + 1); ?>" class="pagination-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Next Page">
-                                <i class="icon-chevron-right"></i>
-                            </a>
                         </div>
-                        <?php elseif ($totalCustomers > 0): ?>
-                        <div style="text-align: center; margin-top: 30px; color: var(--text-muted); font-size: 13px;">
-                            <?php echo $search ? 'Showing all search results' : 'Showing all records'; ?>
-                        </div>
-                        <?php endif; ?>
                     </div>
                 </form>
             </div><!-- .content-body -->
@@ -279,11 +285,6 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
-        // No client-side filtering needed with server-side search, but kept for instantaneous feedback on current page
-        function filterCustomers() {
-            // Optional: debounce server-side search or just keep as is
-        }
-
         function toggleAll(source) {
             const checkboxes = document.getElementsByName('customer_names[]');
             for (let i = 0; i < checkboxes.length; i++) {
