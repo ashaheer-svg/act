@@ -16,48 +16,53 @@ $currency = $db->getSetting('currency_symbol', '$');
 $message = '';
 $error = '';
 
-// Search and Pagination
+// Search, Sort and Pagination
 $search = $_GET['search'] ?? '';
+$sort = $_GET['sort'] ?? 'lifetime_revenue';
+$dir = $_GET['dir'] ?? 'DESC';
 $itemsPerPage = 25;
 
 $totalCustomers = $db->countCustomers($search);
 $totalPages = ceil($totalCustomers / $itemsPerPage);
 
-// Renamed from currentPage to pageNum to avoid conflict with sidebar.php
 $pageNum = isset($_GET['page']) ? max(1, min((int)$_GET['page'], max(1, $totalPages))) : 1;
 $offset = ($pageNum - 1) * $itemsPerPage;
 
-// Handle Bulk Update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'bulk_update') {
-    $names = $_POST['customer_names'] ?? [];
-    $type = $_POST['bulk_type'] ?? '';
-    
-    if (!empty($names) && !empty($type)) {
-        if ($db->bulkUpdateCustomerProfiles($names, $type)) {
-            $message = count($names) . " customers updated to $type and marked as verified.";
-        } else {
-            $error = "Failed to update customers.";
+// Handle Updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'bulk_update') {
+        $names = $_POST['customer_names'] ?? [];
+        $type = $_POST['bulk_type'] ?? '';
+        if (!empty($names) && !empty($type)) {
+            $db->bulkUpdateCustomerProfiles($names, $type);
+            $message = count($names) . " customers updated.";
         }
+    } elseif ($_POST['action'] === 'update_type') {
+        $db->updateCustomerType($_POST['customer_name'], $_POST['customer_type']);
+        $message = "Customer updated.";
     }
 }
 
-// Handle Single Update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_type') {
-    $name = $_POST['customer_name'] ?? '';
-    $type = $_POST['customer_type'] ?? 'End Customer';
-    
-    if ($db->updateCustomerType($name, $type)) {
-        $message = "Customer '$name' updated to $type and marked as verified.";
-    } else {
-        $error = "Failed to update customer.";
-    }
-}
+$customers = $db->getCustomerProfiles($itemsPerPage, $offset, $search, $sort, $dir);
 
-$customers = $db->getCustomerProfiles($itemsPerPage, $offset, $search);
-
+// Pagination & Sort URL Helpers
 $queryParams = $_GET;
-unset($queryParams['page']);
-$basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' : '&') . 'page=';
+function getSortUrl($col, $currentSort, $currentDir, $params) {
+    $params['sort'] = $col;
+    $params['dir'] = ($currentSort === $col && $currentDir === 'ASC') ? 'DESC' : 'ASC';
+    $params['page'] = 1; // Reset to page 1 on sort
+    return '?' . http_build_query($params);
+}
+
+function getPageUrl($p, $params) {
+    $params['page'] = $p;
+    return '?' . http_build_query($params);
+}
+
+function sortIcon($col, $currentSort, $currentDir) {
+    if ($currentSort !== $col) return '<i class="icon-chevrons-up-down" style="font-size: 10px; opacity: 0.3;"></i>';
+    return $currentDir === 'ASC' ? '<i class="icon-chevron-up" style="color: var(--primary);"></i>' : '<i class="icon-chevron-down" style="color: var(--primary);"></i>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -69,7 +74,7 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-    <link rel="stylesheet" href="layout.css?v=1.1.0">
+    <link rel="stylesheet" href="layout.css?v=1.1.1">
     <style>
         .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .badge-partner { background: #e0f2fe; color: #0369a1; }
@@ -83,6 +88,9 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
         .pager-link { padding: 8px 15px; border-radius: 8px; background: white; border: 1px solid #cbd5e1; color: #1e293b; text-decoration: none; font-weight: 700; font-size: 13px; }
         .pager-link.active { background: var(--primary); color: white; border-color: var(--primary); }
         .pager-link.disabled { opacity: 0.4; pointer-events: none; }
+        
+        .sort-header { cursor: pointer; color: inherit; text-decoration: none; display: flex; align-items: center; gap: 8px; justify-content: inherit; width: 100%; }
+        .sort-header:hover { color: var(--primary); }
     </style>
 </head>
 <body>
@@ -100,8 +108,6 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
 
                 <form method="POST" id="bulkForm">
                     <input type="hidden" name="action" value="bulk_update">
-                    
-                    <!-- Bulk Tool -->
                     <div class="action-panel">
                         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
                             <div>
@@ -118,66 +124,69 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
                         </div>
                     </div>
 
-                    <!-- Table Card -->
                     <div class="card" style="padding: 0; overflow: hidden;">
                         <table class="table" style="margin: 0;">
                             <thead style="background: #f8fafc;">
                                 <tr>
                                     <th class="checkbox-cell"><input type="checkbox" id="masterBox" onchange="toggleMaster(this)"></th>
-                                    <th>Customer Name</th>
-                                    <th>Type</th>
-                                    <th style="text-align: right;">Revenue</th>
-                                    <th style="text-align: center;">Verified</th>
+                                    <th>
+                                        <a href="<?= getSortUrl('customer_name', $sort, $dir, $queryParams) ?>" class="sort-header">
+                                            Customer Name <?= sortIcon('customer_name', $sort, $dir) ?>
+                                        </a>
+                                    </th>
+                                    <th>
+                                        <a href="<?= getSortUrl('customer_type', $sort, $dir, $queryParams) ?>" class="sort-header">
+                                            Type <?= sortIcon('customer_type', $sort, $dir) ?>
+                                        </a>
+                                    </th>
+                                    <th style="text-align: right;">
+                                        <a href="<?= getSortUrl('lifetime_invoices', $sort, $dir, $queryParams) ?>" class="sort-header" style="justify-content: flex-end;">
+                                            Invoices <?= sortIcon('lifetime_invoices', $sort, $dir) ?>
+                                        </a>
+                                    </th>
+                                    <th style="text-align: right;">
+                                        <a href="<?= getSortUrl('lifetime_revenue', $sort, $dir, $queryParams) ?>" class="sort-header" style="justify-content: flex-end;">
+                                            Revenue <?= sortIcon('lifetime_revenue', $sort, $dir) ?>
+                                        </a>
+                                    </th>
+                                    <th style="text-align: center;">
+                                        <a href="<?= getSortUrl('is_verified', $sort, $dir, $queryParams) ?>" class="sort-header" style="justify-content: center;">
+                                            Verified <?= sortIcon('is_verified', $sort, $dir) ?>
+                                        </a>
+                                    </th>
                                     <th style="text-align: right;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($customers as $c): ?>
                                 <tr>
-                                    <td class="checkbox-cell">
-                                        <input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" class="row-check" onchange="refreshSelection()">
-                                    </td>
+                                    <td class="checkbox-cell"><input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" class="row-check" onchange="refreshSelection()"></td>
                                     <td style="font-weight: 700;"><?php echo htmlspecialchars($c['customer_name']); ?></td>
-                                    <td>
-                                        <span class="badge <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'badge-partner' : 'badge-end'; ?>">
-                                            <?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?>
-                                        </span>
-                                    </td>
-                                    <td style="text-align: right; font-weight: 700; color: var(--primary);">
-                                        <?php echo $currency . number_format($c['lifetime_revenue'] ?? 0, 0); ?>
-                                    </td>
+                                    <td><span class="badge <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'badge-partner' : 'badge-end'; ?>"><?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?></span></td>
+                                    <td style="text-align: right;"><?php echo $c['lifetime_invoices']; ?></td>
+                                    <td style="text-align: right; font-weight: 700; color: var(--primary);"><?php echo $currency . number_format($c['lifetime_revenue'] ?? 0, 0); ?></td>
                                     <td style="text-align: center;">
-                                        <?php if (isset($c['is_verified']) && $c['is_verified']): ?>
-                                            <i class="icon-check-circle" style="color: var(--success);"></i>
-                                        <?php else: ?>
-                                            <i class="icon-help-circle" style="color: var(--text-muted);"></i>
-                                        <?php endif; ?>
+                                        <?php if (isset($c['is_verified']) && $c['is_verified']): ?><i class="icon-check-circle" style="color: var(--success);"></i><?php else: ?><i class="icon-help-circle" style="color: var(--text-muted);"></i><?php endif; ?>
                                     </td>
                                     <td style="text-align: right;">
-                                        <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" 
-                                                onclick="doFlip('<?php echo addslashes($c['customer_name']); ?>', '<?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>')">
-                                            Switch
-                                        </button>
+                                        <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;" onclick="doFlip('<?php echo addslashes($c['customer_name']); ?>', '<?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>')">Switch</button>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
 
-                        <!-- Pager -->
                         <?php if ($totalPages > 1): ?>
                         <div class="pager-container">
-                            <a href="<?php echo $basePageUrl; ?>1" class="pager-link <?php echo $pageNum == 1 ? 'disabled' : ''; ?>">First</a>
-                            <a href="<?php echo $basePageUrl . ($pageNum - 1); ?>" class="pager-link <?php echo $pageNum <= 1 ? 'disabled' : ''; ?>">Previous</a>
-                            
+                            <a href="<?= getPageUrl(1, $queryParams) ?>" class="pager-link <?php echo $pageNum == 1 ? 'disabled' : ''; ?>">First</a>
+                            <a href="<?= getPageUrl(max(1, $pageNum-1), $queryParams) ?>" class="pager-link <?php echo $pageNum <= 1 ? 'disabled' : ''; ?>">Previous</a>
                             <?php for($i=1; $i<=$totalPages; $i++): ?>
                                 <?php if ($totalPages < 10 || ($i > $pageNum - 3 && $i < $pageNum + 3)): ?>
-                                    <a href="<?php echo $basePageUrl . $i; ?>" class="pager-link <?php echo $i == $pageNum ? 'active' : ''; ?>"><?php echo $i; ?></a>
+                                    <a href="<?= getPageUrl($i, $queryParams) ?>" class="pager-link <?php echo $i == $pageNum ? 'active' : ''; ?>"><?php echo $i; ?></a>
                                 <?php endif; ?>
                             <?php endfor; ?>
-
-                            <a href="<?php echo $basePageUrl . ($pageNum + 1); ?>" class="pager-link <?php echo $pageNum >= $totalPages ? 'disabled' : ''; ?>">Next</a>
-                            <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pager-link <?php echo $pageNum == $totalPages ? 'disabled' : ''; ?>">Last</a>
+                            <a href="<?= getPageUrl(min($totalPages, $pageNum+1), $queryParams) ?>" class="pager-link <?php echo $pageNum >= $totalPages ? 'disabled' : ''; ?>">Next</a>
+                            <a href="<?= getPageUrl($totalPages, $queryParams) ?>" class="pager-link <?php echo $pageNum == $totalPages ? 'disabled' : ''; ?>">Last</a>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -197,26 +206,21 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
         function refreshSelection() {
             var checks = document.querySelectorAll('.row-check');
             var count = 0;
-            for (var i = 0; i < checks.length; i++) {
-                if (checks[i].checked) count++;
-            }
+            for (var i = 0; i < checks.length; i++) { if (checks[i].checked) count++; }
             document.getElementById('countDisplay').innerText = count + ' items selected';
             document.getElementById('submitBtn').disabled = (count === 0);
         }
-
         function toggleMaster(master) {
             var checks = document.querySelectorAll('.row-check');
-            for (var i = 0; i < checks.length; i++) {
-                checks[i].checked = master.checked;
-            }
+            for (var i = 0; i < checks.length; i++) { checks[i].checked = master.checked; }
             refreshSelection();
         }
-
         function doFlip(name, type) {
             document.getElementById('singleName').value = name;
             document.getElementById('singleType').value = type;
             document.getElementById('singleForm').submit();
         }
+        if (window.lucide) lucide.createIcons();
     </script>
 </body>
 </html>

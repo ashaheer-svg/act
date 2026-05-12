@@ -366,7 +366,7 @@ class Database {
     /**
      * CRM: Get all customer profiles with their types
      */
-    public function getCustomerProfiles($limit = null, $offset = 0, $search = '') {
+    public function getCustomerProfiles($limit = null, $offset = 0, $search = '', $sort = 'lifetime_revenue', $dir = 'DESC') {
         $this->syncCustomerProfiles(); // Ensure we have latest names
         
         $params = [];
@@ -376,6 +376,11 @@ class Database {
             $params[] = "%$search%";
         }
 
+        // Validate sort column to prevent SQL injection
+        $allowedSort = ['customer_name', 'customer_type', 'lifetime_invoices', 'lifetime_revenue', 'is_verified'];
+        if (!in_array($sort, $allowedSort)) $sort = 'lifetime_revenue';
+        $dir = strtoupper($dir) === 'ASC' ? 'ASC' : 'DESC';
+
         $sql = "
             SELECT p.*, 
                    COUNT(s.id) as lifetime_invoices,
@@ -384,7 +389,7 @@ class Database {
             LEFT JOIN sales s ON p.customer_name = s.customer_name
             $where
             GROUP BY p.customer_name
-            ORDER BY lifetime_revenue DESC
+            ORDER BY $sort $dir
         ";
 
         if ($limit !== null) {
