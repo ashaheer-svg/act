@@ -62,7 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <?php if ($message): ?>
                 <div class="message <?php echo $messageType; ?>" style="margin-bottom: 30px;">
-                    <div style="font-size: 24px;"><?php echo $messageType === 'success' ? '✅' : '❌'; ?></div>
+                    <div style="font-size: 24px;">
+                        <i class="<?php echo $messageType === 'success' ? 'icon-check-circle' : 'icon-alert-circle'; ?>"></i>
+                    </div>
                     <div style="flex: 1;">
                         <div style="font-weight: 800; margin-bottom: 4px;">Import Result</div>
                         <div><?php echo htmlspecialchars($message); ?></div>
@@ -83,42 +85,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- Sales Import Card -->
                     <div class="card" style="border-top: 4px solid var(--primary);">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
-                            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">📦</div>
+                            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="icon-file-text" style="font-size: 24px;"></i>
+                            </div>
                             <div>
                                 <h2 style="margin: 0;">Sales Report</h2>
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 2px 0 0 0;">Import itemized sales data with VAT details.</p>
                             </div>
                         </div>
                         <form method="POST" enctype="multipart/form-data">
-                            <div class="upload-area" onclick="document.getElementById('fileInput').click()" style="padding: 40px 20px;">
-                                <div style="font-size: 40px; margin-bottom: 15px;">📊</div>
+                            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                                <i class="icon-upload-cloud"></i>
                                 <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">Click to select Sales File</div>
-                                <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">Supports .xlsx, .xls, .csv</p>
+                                <div class="btn btn-outline" style="margin-top: 10px; font-size: 12px; pointer-events: none;">Browse Files</div>
                                 <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this, 'fileInfo')" style="display: none;">
                                 <div id="fileInfo" style="margin-top: 15px; font-weight: 700; color: var(--primary); font-size: 13px; display: none; background: #e0f2fe; padding: 5px 12px; border-radius: 6px;"></div>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px; height: 45px; font-weight: 700;">Start Sales Import</button>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px; height: 45px; font-weight: 700;">
+                                <i class="icon-send" style="font-size: 16px;"></i> Start Sales Import
+                            </button>
                         </form>
                     </div>
 
                     <!-- Ledger Import Card -->
                     <div class="card" style="border-top: 4px solid var(--secondary);">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
-                            <div style="width: 48px; height: 48px; background: var(--secondary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">💰</div>
+                            <div style="width: 48px; height: 48px; background: var(--secondary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
+                                <i class="icon-dollar-sign" style="font-size: 24px;"></i>
+                            </div>
                             <div>
                                 <h2 style="margin: 0;">QuickBooks Ledger</h2>
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 2px 0 0 0;">Import customer payments and collection tracking.</p>
                             </div>
                         </div>
                         <form method="POST" enctype="multipart/form-data">
-                            <div class="upload-area" onclick="document.getElementById('ledgerInput').click()" style="border-color: #fbd38d; padding: 40px 20px;">
-                                <div style="font-size: 40px; margin-bottom: 15px;">🏦</div>
+                            <div class="upload-area" onclick="document.getElementById('ledgerInput').click()" style="border-color: #fbd38d;">
+                                <i class="icon-upload-cloud" style="color: var(--secondary);"></i>
                                 <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">Click to select Ledger File</div>
-                                <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">Supports .csv (QuickBooks Export)</p>
+                                <div class="btn btn-outline" style="margin-top: 10px; font-size: 12px; pointer-events: none;">Browse Files</div>
                                 <input type="file" id="ledgerInput" name="ledger_file" accept=".csv" required onchange="updateFileInfo(this, 'ledgerInfo')" style="display: none;">
                                 <div id="ledgerInfo" style="margin-top: 15px; font-weight: 700; color: var(--secondary); font-size: 13px; display: none; background: #fff7ed; padding: 5px 12px; border-radius: 6px;"></div>
                             </div>
-                            <button type="submit" class="btn" style="width: 100%; background: var(--secondary); color: white; margin-top: 20px; height: 45px; font-weight: 700;">Import Payments</button>
+                            <button type="submit" class="btn" style="width: 100%; background: var(--secondary); color: white; margin-top: 20px; height: 45px; font-weight: 700;">
+                                <i class="icon-send" style="font-size: 16px;"></i> Import Payments
+                            </button>
                         </form>
                     </div>
                 </div>
@@ -129,7 +139,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div>
                         <?php if (!empty($result['details']['duplicate_sets'])): ?>
                         <div class="card duplicate-audit">
-                            <h2 style="color: var(--secondary);">🔍 Duplicate Audit Detail</h2>
+                            <h2 style="color: var(--secondary); display: flex; align-items: center; gap: 10px;">
+                                <i class="icon-search"></i> Duplicate Audit Detail
+                            </h2>
                             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Side-by-side comparison of duplicates found in the database.</p>
                             
                             <?php foreach($result['details']['duplicate_sets'] as $set): ?>
@@ -162,7 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <?php if (!empty($result['details']['skipped_rows'])): ?>
                         <div class="card">
-                            <h2 style="color: var(--text-main);">📋 Detailed Skip Audit</h2>
+                            <h2 style="display: flex; align-items: center; gap: 10px;">
+                                <i class="icon-list"></i> Detailed Skip Audit
+                            </h2>
                             <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Complete list of records skipped and the specific reason for each.</p>
                             
                             <table class="table">
@@ -196,8 +210,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="card">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h2>Recent Import Activity</h2>
-                                <button class="btn btn-outline" style="font-size: 12px; padding: 5px 12px;">View Full History</button>
+                                <h2 style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="icon-history"></i> Recent Import Activity
+                                </h2>
                             </div>
                             <?php if (!empty($importHistory)): ?>
                             <table class="table">
@@ -239,22 +254,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <li><strong>VAT:</strong> Auto-calculated based on date rules in settings.</li>
                                     <li><strong>Profit:</strong> Resets for the month when new data is uploaded.</li>
                                 </ul>
-
-                                <div style="background: #eff6ff; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary);">
-                                    <p style="font-size: 12px; color: #1e40af; margin: 0;">
-                                        <strong>Pro Tip:</strong> Ensure your headers match the QuickBooks standard export for the best results.
-                                    </p>
-                                </div>
                             </div>
                         </div>
 
                         <!-- System Status Card -->
                         <div class="card" style="margin-top: 20px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
-                            <h4 style="margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">System Health</h4>
+                            <h4 style="margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">
+                                <i class="icon-activity" style="font-size: 14px; margin-right: 5px;"></i> System Health
+                            </h4>
                             <div style="display: flex; flex-direction: column; gap: 12px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <span style="font-size: 13px;">Database Status</span>
-                                    <span class="badge badge-verified">Connected</span>
+                                    <span class="badge" style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;">Connected</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <span style="font-size: 13px;">Importer Version</span>

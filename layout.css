@@ -954,7 +954,6 @@ body {
     border: 1px solid #fecaca;
 }
 
-/* --- Utilities --- */
 code {
     background: var(--bg-main);
     padding: 2px 6px;
@@ -962,4 +961,35 @@ code {
     font-family: monospace;
     color: #e11d48;
     font-size: 13px;
+}
+
+/* --- Upload Specifics --- */
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fcfcfc;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.upload-area:hover {
+    border-color: var(--primary);
+    background: #f8fafc;
+    transform: scale(1.01);
+}
+
+.upload-area i {
+    font-size: 32px;
+    color: var(--text-muted);
+}
+
+.upload-area.active {
+    border-color: var(--primary);
+    background: #f0f9ff;
 }
