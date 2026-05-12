@@ -4,8 +4,8 @@ require_once 'classes/Database.php';
 require_once 'classes/Auth.php';
 
 $db = new Database(DATABASE_PATH);
-$db->initialize(); // Ensure schema is sync'd
-$db->syncCustomerProfiles(); // CRITICAL: Sync names BEFORE counting for pagination
+$db->initialize(); 
+$db->syncCustomerProfiles(); // Ensure we have data
 
 $auth = new Auth($db);
 $auth->requireAccounts(); 
@@ -52,10 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Fetch the actual page of customers
 $customers = $db->getCustomerProfiles($itemsPerPage, $offset, $search);
 
-// Base URL for pagination links
 $queryParams = $_GET;
 unset($queryParams['page']);
 $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' : '&') . 'page=';
@@ -70,7 +68,7 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-    <link rel="stylesheet" href="layout.css?v=1.0.6">
+    <link rel="stylesheet" href="layout.css?v=1.0.7">
     <style>
         .badge {
             display: inline-flex;
@@ -80,32 +78,59 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         .badge-partner { background: #e0f2fe; color: #0369a1; }
         .badge-end { background: #f3f4f6; color: #4b5563; }
         .badge-verified { background: #dcfce7; color: #15803d; }
         .badge-unverified { background: #fef2f2; color: #b91c1c; }
 
-        .sortable { cursor: pointer; position: relative; }
-        .sortable:hover { background-color: rgba(0,0,0,0.02); }
-        .sortable::after {
-            content: '↕';
-            font-size: 10px;
-            margin-left: 5px;
-            opacity: 0.3;
+        .checkbox-cell { width: 45px; text-align: center; }
+        .checkbox-cell input { width: 20px; height: 20px; cursor: pointer; }
+
+        .bulk-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            opacity: 0.5;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+        .bulk-controls.active {
+            opacity: 1;
+            pointer-events: auto;
+            border-color: var(--primary);
+            background: #f0f9ff;
         }
 
-        .checkbox-cell { width: 40px; text-align: center; }
-        .checkbox-cell input { width: 18px; height: 18px; cursor: pointer; }
-
-        .type-select {
-            padding: 6px 12px;
+        .pager-container {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            padding: 20px 0;
+        }
+        .pager-btn {
+            padding: 8px 16px;
             border-radius: 8px;
+            background: white;
             border: 1px solid var(--border-color);
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 700;
             font-size: 13px;
-            font-family: inherit;
-            cursor: pointer;
+        }
+        .pager-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .pager-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -113,253 +138,167 @@ $basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' 
     <div class="app-container">
         <?php require_once 'includes/sidebar.php'; ?>
 
-        <!-- Main Wrapper -->
         <main class="main-wrapper">
-            <?php $searchPlaceholder = 'Search customers...'; require_once 'includes/header.php'; ?>
+            <?php require_once 'includes/header.php'; ?>
 
             <div class="content-body">
-
                 <div class="page-header">
                     <div>
                         <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -1px;">Customer Management</h1>
-                        <p style="color: var(--text-muted);">Classify your customers as Partners or End Customers.</p>
+                        <p style="color: var(--text-muted);">Total of <strong><?php echo $totalCustomers; ?></strong> unique customers found.</p>
                     </div>
                 </div>
 
-                <?php if ($message): ?>
-                    <div class="message success"><i class="icon-check-circle"></i> <?php echo $message; ?></div>
-                <?php endif; ?>
-                <?php if ($error): ?>
-                    <div class="message error"><i class="icon-alert-circle"></i> <?php echo $error; ?></div>
-                <?php endif; ?>
+                <?php if ($message): ?><div class="message success"><?php echo $message; ?></div><?php endif; ?>
+                <?php if ($error): ?><div class="message error"><?php echo $error; ?></div><?php endif; ?>
 
-                <!-- Bulk Actions Bar -->
-                <form id="bulkForm" method="POST">
+                <form method="POST" id="mainForm">
                     <input type="hidden" name="action" value="bulk_update">
-                    <div id="bulkActions" class="bulk-actions-bar">
-                        <div style="display: flex; align-items: center; gap: 20px;">
-                            <span class="selection-badge" id="selectionCount">0 selected</span>
-                            <div style="height: 24px; width: 1px; background: rgba(255,255,255,0.2);"></div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <label style="font-size: 13px; font-weight: 600;">Update Type:</label>
-                                <select name="bulk_type" class="type-select" style="min-width: 160px; border: none; background: white;">
-                                    <option value="">Choose classification...</option>
-                                    <option value="Partner">Mark as Partner</option>
-                                    <option value="End Customer">Mark as End Customer</option>
-                                </select>
+                    
+                    <!-- Search & Bulk Controls -->
+                    <div class="card" style="margin-bottom: 20px;">
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <!-- Top: Search -->
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="position: relative; width: 400px;">
+                                    <i class="icon-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                    <input type="text" name="search" class="form-control" style="padding-left: 45px; height: 48px;" 
+                                           placeholder="Search by customer name..." value="<?php echo htmlspecialchars($search); ?>"
+                                           onchange="this.form.method='GET'; this.form.submit();">
+                                </div>
+                                <div style="font-weight: 700; color: var(--primary);">
+                                    Page <?php echo $currentPage; ?> of <?php echo $totalPages; ?>
+                                </div>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="background: white; color: var(--primary); border: none; box-shadow: none;">
-                                <i class="icon-save" style="font-size: 14px;"></i> Update Selection
-                            </button>
+
+                            <!-- Bottom: Bulk Action Bar -->
+                            <div class="bulk-controls" id="bulkBar">
+                                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                                    <span style="font-size: 14px; font-weight: 800; color: var(--primary);" id="selCount">0 selected</span>
+                                    <i class="icon-arrow-right" style="color: var(--text-muted);"></i>
+                                    <select name="bulk_type" class="form-control" style="width: 200px; height: 38px;">
+                                        <option value="">Choose action...</option>
+                                        <option value="Partner">Mark as Partner</option>
+                                        <option value="End Customer">Mark as End Customer</option>
+                                    </select>
+                                    <button type="submit" class="btn btn-primary" style="height: 38px;">Apply to Selected</button>
+                                </div>
+                                <button type="button" onclick="clearAll()" class="btn btn-outline" style="height: 38px;">Clear All</button>
+                            </div>
                         </div>
-                        <button type="button" onclick="clearSelection()" class="btn-outline" style="color: white; border-color: rgba(255,255,255,0.4); padding: 5px 12px; font-size: 12px; height: 32px;">
-                            Cancel
-                        </button>
                     </div>
 
+                    <!-- Table & Pagination -->
                     <div class="card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <form method="GET" style="display: flex; gap: 10px;" id="searchForm">
-                                    <div style="position: relative;">
-                                        <i class="icon-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px;"></i>
-                                        <input type="text" name="search" id="customerSearch" class="form-control" style="width: 320px; padding-left: 38px;" 
-                                               placeholder="Search across all records..." value="<?php echo htmlspecialchars($search); ?>">
-                                    </div>
-                                    <button type="submit" class="btn btn-outline">Search</button>
-                                    <?php if ($search): ?>
-                                        <a href="customers.php" class="btn btn-outline" style="color: var(--danger);"><i class="icon-x"></i></a>
-                                    <?php endif; ?>
-                                </form>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 15px; font-size: 13px; color: var(--text-muted);">
-                                <span style="background: var(--bg-main); padding: 4px 12px; border-radius: 20px;">
-                                    Page <strong><?php echo $currentPage; ?></strong> of <?php echo max(1, $totalPages); ?>
-                                </span>
-                                <span>Found: <strong><?php echo $totalCustomers; ?></strong> records</span>
-                            </div>
-                        </div>
-                        
-                        <div style="overflow-x: auto;">
-                            <table class="table" id="customerTable">
-                                <thead>
-                                    <tr>
-                                        <th class="checkbox-cell"><input type="checkbox" id="selectAll" onclick="toggleAll(this)"></th>
-                                        <th class="sortable" onclick="sortTable(1)">Customer Name</th>
-                                        <th class="sortable" onclick="sortTable(2)">Type</th>
-                                        <th class="sortable" onclick="sortTable(3)" style="text-align: right;">Invoices</th>
-                                        <th class="sortable" onclick="sortTable(4)" style="text-align: right;">Lifetime Rev</th>
-                                        <th class="sortable" onclick="sortTable(5)" style="text-align: center;">Status</th>
-                                        <th style="text-align: right; width: 180px;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($customers)): ?>
-                                    <tr><td colspan="7" style="text-align: center; padding: 60px; color: var(--text-muted);">
-                                        <i class="icon-info" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
-                                        No customers matching your criteria.
-                                    </td></tr>
-                                    <?php endif; ?>
-                                    
-                                    <?php foreach ($customers as $c): ?>
-                                    <tr>
-                                        <td class="checkbox-cell">
-                                            <input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" onchange="updateSelection()">
-                                        </td>
-                                        <td><strong><?php echo htmlspecialchars($c['customer_name']); ?></strong></td>
-                                        <td>
-                                            <span class="badge <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'badge-partner' : 'badge-end'; ?>">
-                                                <?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?>
-                                            </span>
-                                        </td>
-                                        <td style="text-align: right; font-weight: 600;"><?php echo $c['lifetime_invoices']; ?></td>
-                                        <td style="text-align: right; font-weight: 700; color: var(--primary);">
-                                            <?php echo htmlspecialchars($currency); ?><?php echo number_format($c['lifetime_revenue'] ?? 0, 0); ?>
-                                        </td>
-                                        <td style="text-align: center;">
-                                            <?php if (isset($c['is_verified']) && $c['is_verified']): ?>
-                                                <span class="badge badge-verified" title="Audited"><i class="icon-check" style="font-size: 10px; margin-right: 4px;"></i> Verified</span>
-                                            <?php else: ?>
-                                                <span class="badge badge-unverified">Unverified</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td style="text-align: right;">
-                                            <form method="POST" style="display: inline;">
-                                                <input type="hidden" name="action" value="update_type">
-                                                <input type="hidden" name="customer_name" value="<?php echo htmlspecialchars($c['customer_name']); ?>">
-                                                <select name="customer_type" class="type-select" onchange="this.form.submit()">
-                                                    <option value="End Customer" <?php echo ($c['customer_type'] ?? '') === 'End Customer' ? 'selected' : ''; ?>>End Customer</option>
-                                                    <option value="Partner" <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'selected' : ''; ?>>Partner</option>
-                                                </select>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                        <table class="table" id="custTable">
+                            <thead>
+                                <tr>
+                                    <th class="checkbox-cell"><input type="checkbox" id="masterCheck" onclick="doToggleAll(this)"></th>
+                                    <th>Customer Name</th>
+                                    <th>Classification</th>
+                                    <th style="text-align: right;">Invoices</th>
+                                    <th style="text-align: right;">Revenue</th>
+                                    <th style="text-align: center;">Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($customers as $c): ?>
+                                <tr>
+                                    <td class="checkbox-cell">
+                                        <input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" onchange="doUpdateSelection()">
+                                    </td>
+                                    <td style="font-weight: 700;"><?php echo htmlspecialchars($c['customer_name']); ?></td>
+                                    <td>
+                                        <span class="badge <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'badge-partner' : 'badge-end'; ?>">
+                                            <?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?>
+                                        </span>
+                                    </td>
+                                    <td style="text-align: right;"><?php echo $c['lifetime_invoices']; ?></td>
+                                    <td style="text-align: right; font-weight: 700; color: var(--primary);">
+                                        <?php echo $currency . number_format($c['lifetime_revenue'] ?? 0, 0); ?>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <?php if (isset($c['is_verified']) && $c['is_verified']): ?>
+                                            <span class="badge badge-verified">Verified</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-unverified">Unverified</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" 
+                                                onclick="setSingle('<?php echo addslashes($c['customer_name']); ?>', '<?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>')">
+                                            Switch to <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'End Customer' : 'Partner'; ?>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
 
-                        <!-- Pagination Footer (Always visible if multiple pages, else simple status) -->
-                        <div style="margin-top: 30px;">
-                            <?php if ($totalPages > 1): ?>
-                            <div class="pagination">
-                                <a href="<?php echo $basePageUrl . max(1, $currentPage - 1); ?>" class="pagination-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>" title="Previous Page">
-                                    <i class="icon-chevron-left"></i>
-                                </a>
-                                
-                                <?php 
-                                $startPage = max(1, $currentPage - 2);
-                                $endPage = min($totalPages, $currentPage + 2);
-                                
-                                if ($startPage > 1): ?>
-                                    <a href="<?php echo $basePageUrl; ?>1" class="pagination-link">1</a>
-                                    <?php if ($startPage > 2): ?><span style="color: var(--text-muted); padding: 0 5px;">...</span><?php endif; ?>
-                                <?php endif; ?>
-
-                                <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                    <a href="<?php echo $basePageUrl . $i; ?>" class="pagination-link <?php echo $i == $currentPage ? 'active' : ''; ?>">
-                                        <?php echo $i; ?>
-                                    </a>
+                        <!-- Big Navigation Buttons -->
+                        <div class="pager-container">
+                            <a href="<?php echo $basePageUrl; ?>1" class="pager-btn <?php echo $currentPage == 1 ? 'disabled' : ''; ?>">First</a>
+                            <a href="<?php echo $basePageUrl . ($currentPage - 1); ?>" class="pager-btn <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">Previous</a>
+                            
+                            <div style="display: flex; gap: 5px; margin: 0 10px;">
+                                <?php for($i=1; $i<=$totalPages; $i++): ?>
+                                    <?php if ($totalPages < 10 || ($i > $currentPage - 3 && $i < $currentPage + 3)): ?>
+                                        <a href="<?php echo $basePageUrl . $i; ?>" class="pager-btn <?php echo $i == $currentPage ? 'active' : ''; ?>"><?php echo $i; ?></a>
+                                    <?php endif; ?>
                                 <?php endfor; ?>
-
-                                <?php if ($endPage < $totalPages): ?>
-                                    <?php if ($endPage < $totalPages - 1): ?><span style="color: var(--text-muted); padding: 0 5px;">...</span><?php endif; ?>
-                                    <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pagination-link"><?php echo $totalPages; ?></a>
-                                <?php endif; ?>
-
-                                <a href="<?php echo $basePageUrl . min($totalPages, $currentPage + 1); ?>" class="pagination-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Next Page">
-                                    <i class="icon-chevron-right"></i>
-                                </a>
                             </div>
-                            <?php elseif ($totalCustomers > 0): ?>
-                            <div style="text-align: center; color: var(--text-muted); font-size: 13px; padding-top: 10px; border-top: 1px solid var(--border-color);">
-                                <i class="icon-check" style="font-size: 12px; margin-right: 5px;"></i> End of list (<?php echo $totalCustomers; ?> customers)
-                            </div>
-                            <?php endif; ?>
+
+                            <a href="<?php echo $basePageUrl . ($currentPage + 1); ?>" class="pager-btn <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">Next</a>
+                            <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pager-btn <?php echo $currentPage == $totalPages ? 'disabled' : ''; ?>">Last (<?php echo $totalPages; ?>)</a>
                         </div>
                     </div>
                 </form>
-            </div><!-- .content-body -->
-        </main><!-- .main-wrapper -->
-    </div><!-- .app-container -->
+
+                <!-- Hidden Single Action Form -->
+                <form id="singleForm" method="POST" style="display: none;">
+                    <input type="hidden" name="action" value="update_type">
+                    <input type="hidden" name="customer_name" id="singleName">
+                    <input type="hidden" name="customer_type" id="singleType">
+                </form>
+            </div>
+        </main>
+    </div>
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
-        function toggleAll(source) {
+        function doToggleAll(source) {
             const checkboxes = document.getElementsByName('customer_names[]');
-            for (let i = 0; i < checkboxes.length; i++) {
-                checkboxes[i].checked = source.checked;
-            }
-            updateSelection();
+            checkboxes.forEach(c => c.checked = source.checked);
+            doUpdateSelection();
         }
 
-        function updateSelection() {
+        function doUpdateSelection() {
             const checkboxes = document.getElementsByName('customer_names[]');
             let count = 0;
-            for (let i = 0; i < checkboxes.length; i++) {
-                if (checkboxes[i].checked) count++;
-            }
+            checkboxes.forEach(c => { if(c.checked) count++; });
 
-            const bar = document.getElementById('bulkActions');
-            const countLabel = document.getElementById('selectionCount');
+            const bar = document.getElementById('bulkBar');
+            const countLabel = document.getElementById('selCount');
             
             if (count > 0) {
-                bar.style.display = 'flex';
+                bar.classList.add('active');
                 countLabel.innerText = count + ' selected';
             } else {
-                bar.style.display = 'none';
+                bar.classList.remove('active');
+                countLabel.innerText = '0 selected';
             }
         }
 
-        function clearSelection() {
-            const checkboxes = document.getElementsByName('customer_names[]');
-            for (let i = 0; i < checkboxes.length; i++) {
-                checkboxes[i].checked = false;
-            }
-            const selectAll = document.getElementById('selectAll');
-            if (selectAll) selectAll.checked = false;
-            updateSelection();
+        function clearAll() {
+            document.getElementById('masterCheck').checked = false;
+            doToggleAll(document.getElementById('masterCheck'));
         }
 
-        function sortTable(n) {
-            const table = document.getElementById("customerTable");
-            let rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-            switching = true;
-            dir = "asc"; 
-            while (switching) {
-                switching = false;
-                rows = table.rows;
-                for (i = 1; i < (rows.length - 1); i++) {
-                    shouldSwitch = false;
-                    x = rows[i].getElementsByTagName("TD")[n];
-                    y = rows[i + 1].getElementsByTagName("TD")[n];
-                    if (!x || !y) continue;
-
-                    let valX = x.textContent.toLowerCase().replace(/[^a-z0-9.]/g, '');
-                    let valY = y.textContent.toLowerCase().replace(/[^a-z0-9.]/g, '');
-                    
-                    if (!isNaN(parseFloat(valX)) && !isNaN(parseFloat(valY))) {
-                        valX = parseFloat(valX);
-                        valY = parseFloat(valY);
-                    }
-
-                    if (dir == "asc") {
-                        if (valX > valY) { shouldSwitch = true; break; }
-                    } else if (dir == "desc") {
-                        if (valX < valY) { shouldSwitch = true; break; }
-                    }
-                }
-                if (shouldSwitch) {
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    switchcount ++;      
-                } else {
-                    if (switchcount == 0 && dir == "asc") {
-                        dir = "desc";
-                        switching = true;
-                    }
-                }
-            }
+        function setSingle(name, type) {
+            document.getElementById('singleName').value = name;
+            document.getElementById('singleType').value = type;
+            document.getElementById('singleForm').submit();
         }
     </script>
 </body>
