@@ -64,7 +64,7 @@ $customers = $db->getCustomerProfiles();
         <?php endif; ?>
 
         <div class="card">
-            <input type="text" id="customerSearch" class="search-box" placeholder="Search customers..." onkeyup="filterCustomers()">
+            <input type="text" id="customerSearch" class="form-control" style="margin-bottom: 20px;" placeholder="Search customers..." onkeyup="filterCustomers()">
             
             <table class="table" id="customerTable">
                 <thead>

@@ -870,6 +870,39 @@ body {
     background: var(--bg-main);
 }
 
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-danger-link {
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #ef4444;
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger-link:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
 /* --- Tax Table & Specialized Tables --- */
 .tax-table {
     width: 100%;

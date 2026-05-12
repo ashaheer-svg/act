@@ -569,7 +569,7 @@ $existingMappings = $db->getAllMappings();
                     </p>
                     <form method="POST" onsubmit="return confirm('RESET CONFIRMATION: This will clear ALL payment history and settlement metrics. Sales invoices will remain. Are you sure?');">
                         <input type="hidden" name="action" value="reset_database">
-                        <button type="submit" class="btn btn-danger" style="background: #ef4444; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; color: white; cursor: pointer;">Reset Payment & Settlement Data</button>
+                        <button type="submit" class="btn btn-danger">Reset Payment & Settlement Data</button>
                     </form>
 
                     <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">

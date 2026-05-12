@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="content-body">
 
-    <div class="container" style="padding-top: 0;">
+    <div class="container" style="display: grid; grid-template-columns: 320px 1fr; gap: 30px; padding: 0; max-width: none; margin: 0;">
         <div class="card" style="height: fit-content;">
             <h3>Guidelines</h3>
             <div class="info-box">

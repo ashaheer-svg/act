@@ -54,10 +54,10 @@ $sales = $db->getSalesForProfitEntry($year, $month);
             <p style="color: var(--text-muted);">Enter Gross Profit (GP) for each transaction line.</p>
         </div>
 
-        <div class="filter-bar">
+        <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
             <div style="display: flex; gap: 10px; align-items: center;">
                 <label style="font-size: 13px; font-weight: 700;">Year:</label>
-                <select onchange="location.href='?month=<?php echo $month; ?>&year='+this.value" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                <select onchange="location.href='?month=<?php echo $month; ?>&year='+this.value" class="filter-select">
                     <?php for($y=2023; $y<=2026; $y++): ?>
                     <option value="<?php echo $y; ?>" <?php echo $year == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
                     <?php endfor; ?>
@@ -65,14 +65,14 @@ $sales = $db->getSalesForProfitEntry($year, $month);
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <label style="font-size: 13px; font-weight: 700;">Month:</label>
-                <select onchange="location.href='?year=<?php echo $year; ?>&month='+this.value" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                <select onchange="location.href='?year=<?php echo $year; ?>&month='+this.value" class="filter-select">
                     <?php for($m=1; $m<=12; $m++): $mStr = str_pad($m, 2, '0', STR_PAD_LEFT); ?>
                     <option value="<?php echo $mStr; ?>" <?php echo $month == $mStr ? 'selected' : ''; ?>><?php echo date('F', mktime(0,0,0,$m,1)); ?></option>
                     <?php endfor; ?>
                 </select>
             </div>
             <div style="flex-grow: 1;"></div>
-            <input type="text" id="rowSearch" class="search-box" placeholder="Search customer or invoice..." onkeyup="filterTable()">
+            <input type="text" id="rowSearch" class="form-control" style="width: auto; min-width: 300px;" placeholder="Search customer or invoice..." onkeyup="filterTable()">
         </div>
 
         <div class="card">
