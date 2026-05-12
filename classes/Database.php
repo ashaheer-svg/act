@@ -133,6 +133,7 @@ class Database {
                 CREATE TABLE IF NOT EXISTS customer_profiles (
                     customer_name TEXT PRIMARY KEY,
                     customer_type TEXT DEFAULT 'End Customer',
+                    is_verified INTEGER DEFAULT 0,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             ");
@@ -391,8 +392,21 @@ class Database {
      */
     public function updateCustomerType($name, $type) {
         return $this->execute(
-            "UPDATE customer_profiles SET customer_type = ?, updated_at = CURRENT_TIMESTAMP WHERE customer_name = ?",
+            "UPDATE customer_profiles SET customer_type = ?, is_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE customer_name = ?",
             [$type, $name]
+        );
+    }
+
+    /**
+     * CRM: Bulk update customer profiles
+     */
+    public function bulkUpdateCustomerProfiles($names, $type) {
+        if (empty($names)) return false;
+        $placeholders = implode(',', array_fill(0, count($names), '?'));
+        $params = array_merge([$type], $names);
+        return $this->execute(
+            "UPDATE customer_profiles SET customer_type = ?, is_verified = 1, updated_at = CURRENT_TIMESTAMP WHERE customer_name IN ($placeholders)",
+            $params
         );
     }
 
@@ -554,6 +568,14 @@ class Database {
                     $this->db->exec($sql);
                     $results['messages'][] = "Added column '$col' to sales table.";
                 }
+            }
+
+            // Check for customer_profiles columns
+            $custCols = $this->db->query("PRAGMA table_info(customer_profiles)")->fetchAll();
+            $custColNames = array_column($custCols, 'name');
+            if (!in_array('is_verified', $custColNames)) {
+                $this->db->exec("ALTER TABLE customer_profiles ADD COLUMN is_verified INTEGER DEFAULT 0");
+                $results['messages'][] = "Added column 'is_verified' to customer_profiles table.";
             }
             
             // Check for customer_profiles table
