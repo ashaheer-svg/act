@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="content-body">
 
     <div class="container" style="padding-top: 0;">
-        <div class="sidebar">
+        <div class="card" style="height: fit-content;">
             <h3>Guidelines</h3>
             <div class="info-box">
                 <p><strong>Accepted Formats:</strong></p>

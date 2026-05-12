@@ -77,7 +77,7 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
             <div class="content-body">
 
                 <div class="container" style="display: grid; grid-template-columns: 320px 1fr; gap: 30px; padding: 0; max-width: none; margin: 0;">
-        <div class="sidebar">
+        <div class="card" style="height: fit-content;">
             <h3>Add New User</h3>
             <form method="POST" style="margin-top: 20px;">
                 <input type="hidden" name="action" value="create_user">
