@@ -53,170 +53,217 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php $searchPlaceholder = 'Search data...'; require_once 'includes/header.php'; ?>
 
             <div class="content-body">
-
-    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 30px;">
-        <div class="card" style="height: fit-content;">
-            <h3>Guidelines</h3>
-            <div class="info-box">
-                <p><strong>Accepted Formats:</strong></p>
-                <ul style="margin: 10px 0 0 15px;">
-                    <li>Excel (.xlsx, .xls)</li>
-                    <li>CSV (.csv)</li>
-                </ul>
-                <p style="margin-top: 15px;"><strong>System Logic:</strong></p>
-                <ul style="margin: 10px 0 0 15px;">
-                    <li>Duplicates are skipped</li>
-                    <li>VAT is auto-calculated</li>
-                </ul>
-            </div>
-        </div>
-
-        <div>
-            <?php if ($message): ?>
-            <div class="message <?php echo $messageType; ?>">
-                <div style="font-size: 24px;"><?php echo $messageType === 'success' ? '✅' : '❌'; ?></div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 800; margin-bottom: 4px;">Import Result</div>
-                    <div><?php echo htmlspecialchars($message); ?></div>
-                    
-                    <?php if (isset($result['details'])): ?>
-                    <div class="skip-details">
-                        <div class="skip-item"><label>Imported</label><value style="color: var(--success);"><?php echo $result['imported']; ?></value></div>
-                        <div class="skip-item"><label>Duplicates</label><value style="color: var(--secondary);"><?php echo $result['details']['duplicates']; ?></value></div>
-                        <div class="skip-item"><label>Headers/Other</label><value style="color: var(--text-muted);"><?php echo $result['details']['missing_fields']; ?></value></div>
+                <div class="page-header">
+                    <div>
+                        <h1 style="font-size: 28px; font-weight: 800; letter-spacing: -1px;">Data Import Center</h1>
+                        <p style="color: var(--text-muted);">Upload your sales reports and ledger files to sync the system.</p>
                     </div>
-                    <?php endif; ?>
                 </div>
-            </div>
-            <?php endif; ?>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
-                <!-- Sales Import Card -->
-                <div class="card">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                        <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">📦</div>
-                        <h2>Import Sales Data</h2>
-                    </div>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px; margin-top: -15px;">Standard itemized sales report with VAT details.</p>
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-                            <div style="font-size: 40px; margin-bottom: 10px;">📊</div>
-                            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">Drop sales file or click</div>
-                            <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this, 'fileInfo')">
-                            <div id="fileInfo" style="margin-top: 10px; font-weight: 700; color: var(--primary); font-size: 12px; display: none;"></div>
+                <?php if ($message): ?>
+                <div class="message <?php echo $messageType; ?>" style="margin-bottom: 30px;">
+                    <div style="font-size: 24px;"><?php echo $messageType === 'success' ? '✅' : '❌'; ?></div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; margin-bottom: 4px;">Import Result</div>
+                        <div><?php echo htmlspecialchars($message); ?></div>
+                        
+                        <?php if (isset($result['details'])): ?>
+                        <div class="skip-details">
+                            <div class="skip-item"><label>Imported</label><value style="color: var(--success);"><?php echo $result['imported']; ?></value></div>
+                            <div class="skip-item"><label>Duplicates</label><value style="color: var(--secondary);"><?php echo $result['details']['duplicates']; ?></value></div>
+                            <div class="skip-item"><label>Headers/Other</label><value style="color: var(--text-muted);"><?php echo $result['details']['missing_fields']; ?></value></div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Import Sales</button>
-                    </form>
-                </div>
-
-                <!-- Ledger Import Card -->
-                <div class="card">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                        <div style="width: 40px; height: 40px; background: var(--secondary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">💰</div>
-                        <h2>QuickBooks Ledger</h2>
-                    </div>
-                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px; margin-top: -15px;">Customer ledger CSV for payments & collection tracking.</p>
-                    <form method="POST" enctype="multipart/form-data">
-                        <div class="upload-area" onclick="document.getElementById('ledgerInput').click()" style="border-color: #fbd38d;">
-                            <div style="font-size: 40px; margin-bottom: 10px;">🏦</div>
-                            <div style="font-weight: 700; color: var(--text-main); font-size: 14px;">Drop ledger file or click</div>
-                            <input type="file" id="ledgerInput" name="ledger_file" accept=".csv" required onchange="updateFileInfo(this, 'ledgerInfo')">
-                            <div id="ledgerInfo" style="margin-top: 10px; font-weight: 700; color: var(--secondary); font-size: 12px; display: none;"></div>
-                        </div>
-                        <button type="submit" class="btn" style="background: var(--secondary); color: white; margin-top: 20px;">Import Payments</button>
-                    </form>
-                </div>
-            </div>
-                      <?php if (!empty($result['details']['duplicate_sets'])): ?>
-            <div class="card duplicate-audit">
-                <h2 style="color: var(--secondary);">🔍 Duplicate Audit Detail</h2>
-                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Side-by-side comparison of duplicates found in the database.</p>
-                
-                <?php foreach($result['details']['duplicate_sets'] as $set): ?>
-                <div class="audit-set">
-                    <div class="audit-row-num">
-                        <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);">FILE ROW</span>
-                        <span style="font-size: 24px; font-weight: 800;"><?php echo $set['row']; ?></span>
-                    </div>
-                    
-                    <div class="audit-card original">
-                        <label>Existing in Database</label>
-                        <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['original']['num']); ?></strong></div>
-                        <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['original']['name'], 0, 30)); ?></strong></div>
-                        <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['original']['item'], 0, 30)); ?></strong></div>
-                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['original']['amount']), 2); ?></strong></div>
-                        <div style="font-size: 10px; color: var(--success); margin-top: 5px;">Imported on <?php echo $set['original']['imported_at']; ?></div>
-                    </div>
-                    <div class="audit-card duplicate">
-                        <label>Incoming Duplicate</label>
-                        <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['duplicate']['num']); ?></strong></div>
-                        <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['duplicate']['name'], 0, 30)); ?></strong></div>
-                        <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['duplicate']['item'], 0, 30)); ?></strong></div>
-                        <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['duplicate']['amount']), 2); ?></strong></div>
-                        <div style="font-size: 10px; color: var(--secondary); margin-top: 5px;">Row skipped by system</div>
+                        <?php endif; ?>
                     </div>
                 </div>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($result['details']['skipped_rows'])): ?>
-            <div class="card">
-                <h2 style="color: var(--text-main);">📋 Detailed Skip Audit</h2>
-                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Complete list of records skipped and the specific reason for each.</p>
-                
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th style="width: 80px;">Row #</th>
-                            <th>Invoice #</th>
-                            <th>Customer</th>
-                            <th>Amount</th>
-                            <th>Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($result['details']['skipped_rows'] as $row): ?>
-                        <tr>
-                            <td style="font-weight: 800; color: var(--text-main);">#<?php echo $row['row']; ?></td>
-                            <td><?php echo htmlspecialchars($row['num']); ?></td>
-                            <td><?php echo htmlspecialchars(substr($row['name'], 0, 30)); ?></td>
-                            <td style="font-weight: 700; color: var(--primary);"><?php echo CURRENCY . number_format((float)str_replace(',', '', $row['amount']), 2); ?></td>
-                            <td>
-                                <span class="badge" style="background: <?php echo str_contains($row['reason'], 'Duplicate') ? '#fff7ed' : '#fef2f2'; ?>; color: <?php echo str_contains($row['reason'], 'Duplicate') ? '#c2410c' : '#b91c1c'; ?>; border: 1px solid currentColor;">
-                                    <?php echo htmlspecialchars($row['reason']); ?>
-                                </span>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php endif; ?>
-
-            <div class="card">
-                <h2>Import History</h2>
-                <?php if (!empty($importHistory)): ?>
-                <table class="table">
-                    <thead>
-                        <tr><th>Filename</th><th>Imported</th><th>Skipped</th><th>Date</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($importHistory as $log): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($log['filename']); ?></td>
-                            <td style="font-weight: 700; color: var(--success);"><?php echo $log['records_imported']; ?></td>
-                            <td style="color: var(--secondary);"><?php echo $log['records_skipped']; ?></td>
-                            <td style="color: var(--text-muted); font-size: 12px;"><?php echo date('Y-m-d H:i', strtotime($log['import_date'])); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <?php else: ?>
-                <p style="text-align: center; padding: 40px; color: var(--text-muted);">No import history found.</p>
                 <?php endif; ?>
-            </div>
-        </div>
+
+                <!-- Top Section: Primary Upload Actions -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px;">
+                    <!-- Sales Import Card -->
+                    <div class="card" style="border-top: 4px solid var(--primary);">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+                            <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">📦</div>
+                            <div>
+                                <h2 style="margin: 0;">Sales Report</h2>
+                                <p style="color: var(--text-muted); font-size: 13px; margin: 2px 0 0 0;">Import itemized sales data with VAT details.</p>
+                            </div>
+                        </div>
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="upload-area" onclick="document.getElementById('fileInput').click()" style="padding: 40px 20px;">
+                                <div style="font-size: 40px; margin-bottom: 15px;">📊</div>
+                                <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">Click to select Sales File</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">Supports .xlsx, .xls, .csv</p>
+                                <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this, 'fileInfo')" style="display: none;">
+                                <div id="fileInfo" style="margin-top: 15px; font-weight: 700; color: var(--primary); font-size: 13px; display: none; background: #e0f2fe; padding: 5px 12px; border-radius: 6px;"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px; height: 45px; font-weight: 700;">Start Sales Import</button>
+                        </form>
+                    </div>
+
+                    <!-- Ledger Import Card -->
+                    <div class="card" style="border-top: 4px solid var(--secondary);">
+                        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
+                            <div style="width: 48px; height: 48px; background: var(--secondary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">💰</div>
+                            <div>
+                                <h2 style="margin: 0;">QuickBooks Ledger</h2>
+                                <p style="color: var(--text-muted); font-size: 13px; margin: 2px 0 0 0;">Import customer payments and collection tracking.</p>
+                            </div>
+                        </div>
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="upload-area" onclick="document.getElementById('ledgerInput').click()" style="border-color: #fbd38d; padding: 40px 20px;">
+                                <div style="font-size: 40px; margin-bottom: 15px;">🏦</div>
+                                <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">Click to select Ledger File</div>
+                                <p style="color: var(--text-muted); font-size: 12px; margin-top: 5px;">Supports .csv (QuickBooks Export)</p>
+                                <input type="file" id="ledgerInput" name="ledger_file" accept=".csv" required onchange="updateFileInfo(this, 'ledgerInfo')" style="display: none;">
+                                <div id="ledgerInfo" style="margin-top: 15px; font-weight: 700; color: var(--secondary); font-size: 13px; display: none; background: #fff7ed; padding: 5px 12px; border-radius: 6px;"></div>
+                            </div>
+                            <button type="submit" class="btn" style="width: 100%; background: var(--secondary); color: white; margin-top: 20px; height: 45px; font-weight: 700;">Import Payments</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Bottom Section: Results & Guidelines -->
+                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 30px; align-items: start;">
+                    <!-- Main Results Column -->
+                    <div>
+                        <?php if (!empty($result['details']['duplicate_sets'])): ?>
+                        <div class="card duplicate-audit">
+                            <h2 style="color: var(--secondary);">🔍 Duplicate Audit Detail</h2>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Side-by-side comparison of duplicates found in the database.</p>
+                            
+                            <?php foreach($result['details']['duplicate_sets'] as $set): ?>
+                            <div class="audit-set">
+                                <div class="audit-row-num">
+                                    <span style="font-size: 10px; font-weight: 700; color: var(--text-muted);">FILE ROW</span>
+                                    <span style="font-size: 24px; font-weight: 800;"><?php echo $set['row']; ?></span>
+                                </div>
+                                
+                                <div class="audit-card original">
+                                    <label>Existing in Database</label>
+                                    <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['original']['num']); ?></strong></div>
+                                    <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['original']['name'], 0, 30)); ?></strong></div>
+                                    <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['original']['item'], 0, 30)); ?></strong></div>
+                                    <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['original']['amount']), 2); ?></strong></div>
+                                    <div style="font-size: 10px; color: var(--success); margin-top: 5px;">Imported on <?php echo $set['original']['imported_at']; ?></div>
+                                </div>
+                                <div class="audit-card duplicate">
+                                    <label>Incoming Duplicate</label>
+                                    <div class="audit-data">Inv #: <strong><?php echo htmlspecialchars($set['duplicate']['num']); ?></strong></div>
+                                    <div class="audit-data">Customer: <strong><?php echo htmlspecialchars(substr($set['duplicate']['name'], 0, 30)); ?></strong></div>
+                                    <div class="audit-data">Item: <strong><?php echo htmlspecialchars(substr($set['duplicate']['item'], 0, 30)); ?></strong></div>
+                                    <div class="audit-data">Amount: <strong><?php echo CURRENCY . number_format((float)str_replace(',', '', $set['duplicate']['amount']), 2); ?></strong></div>
+                                    <div style="font-size: 10px; color: var(--secondary); margin-top: 5px;">Row skipped by system</div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($result['details']['skipped_rows'])): ?>
+                        <div class="card">
+                            <h2 style="color: var(--text-main);">📋 Detailed Skip Audit</h2>
+                            <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">Complete list of records skipped and the specific reason for each.</p>
+                            
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 80px;">Row #</th>
+                                        <th>Invoice #</th>
+                                        <th>Customer</th>
+                                        <th>Amount</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach($result['details']['skipped_rows'] as $row): ?>
+                                    <tr>
+                                        <td style="font-weight: 800; color: var(--text-main);">#<?php echo $row['row']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['num']); ?></td>
+                                        <td><?php echo htmlspecialchars(substr($row['name'], 0, 30)); ?></td>
+                                        <td style="font-weight: 700; color: var(--primary);"><?php echo CURRENCY . number_format((float)str_replace(',', '', $row['amount']), 2); ?></td>
+                                        <td>
+                                            <span class="badge" style="background: <?php echo str_contains($row['reason'], 'Duplicate') ? '#fff7ed' : '#fef2f2'; ?>; color: <?php echo str_contains($row['reason'], 'Duplicate') ? '#c2410c' : '#b91c1c'; ?>; border: 1px solid currentColor;">
+                                                <?php echo htmlspecialchars($row['reason']); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2>Recent Import Activity</h2>
+                                <button class="btn btn-outline" style="font-size: 12px; padding: 5px 12px;">View Full History</button>
+                            </div>
+                            <?php if (!empty($importHistory)): ?>
+                            <table class="table">
+                                <thead>
+                                    <tr><th>Filename</th><th>Imported</th><th>Date</th></tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach(array_slice($importHistory, 0, 5) as $log): ?>
+                                    <tr>
+                                        <td><span style="font-weight: 600; color: var(--text-main);"><?php echo htmlspecialchars($log['filename']); ?></span></td>
+                                        <td style="font-weight: 700; color: var(--success);"><?php echo $log['records_imported']; ?> recs</td>
+                                        <td style="color: var(--text-muted); font-size: 12px;"><?php echo date('M d, H:i', strtotime($log['import_date'])); ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <?php else: ?>
+                            <p style="text-align: center; padding: 40px; color: var(--text-muted);">No import history found.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Guidelines Column -->
+                    <div>
+                        <div class="card" style="background: #f8fafc; border: 1px solid var(--border-color);">
+                            <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                                <i class="icon-info" style="font-size: 18px; color: var(--primary);"></i> Guidelines
+                            </h3>
+                            <div class="info-box" style="background: transparent; border: none; padding: 0;">
+                                <p style="font-size: 13px; line-height: 1.5;"><strong>Accepted Formats:</strong></p>
+                                <ul style="margin: 8px 0 20px 18px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                                    <li>Excel (.xlsx, .xls)</li>
+                                    <li>CSV (.csv) UTF-8</li>
+                                </ul>
+                                
+                                <p style="font-size: 13px; line-height: 1.5;"><strong>System Logic:</strong></p>
+                                <ul style="margin: 8px 0 20px 18px; font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+                                    <li><strong>Duplicates:</strong> Skipped automatically based on invoice + amount.</li>
+                                    <li><strong>VAT:</strong> Auto-calculated based on date rules in settings.</li>
+                                    <li><strong>Profit:</strong> Resets for the month when new data is uploaded.</li>
+                                </ul>
+
+                                <div style="background: #eff6ff; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary);">
+                                    <p style="font-size: 12px; color: #1e40af; margin: 0;">
+                                        <strong>Pro Tip:</strong> Ensure your headers match the QuickBooks standard export for the best results.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Status Card -->
+                        <div class="card" style="margin-top: 20px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
+                            <h4 style="margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">System Health</h4>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 13px;">Database Status</span>
+                                    <span class="badge badge-verified">Connected</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 13px;">Importer Version</span>
+                                    <span style="font-size: 12px; font-weight: 700; color: var(--text-main);">v2.4.0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div><!-- .content-body -->
         </main><!-- .main-wrapper -->
     </div><!-- .app-container -->
@@ -227,7 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const info = document.getElementById(infoId);
             if (input.files && input.files[0]) {
                 info.textContent = 'Selected: ' + input.files[0].name;
-                info.style.display = 'block';
+                info.style.display = 'inline-block';
             }
         }
     </script>
