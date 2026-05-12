@@ -4,10 +4,10 @@ require_once 'classes/Database.php';
 require_once 'classes/Auth.php';
 
 $db = new Database(DATABASE_PATH);
-$db->initialize(); // Fixes is_verified error
+$db->initialize(); // Ensure schema is sync'd
 
 $auth = new Auth($db);
-$auth->requireAccounts(); // Admin or Accounts
+$auth->requireAccounts(); 
 
 $user = $auth->getCurrentUser();
 $currency = $db->getSetting('currency_symbol', '$');
@@ -15,7 +15,8 @@ $currency = $db->getSetting('currency_symbol', '$');
 $message = '';
 $error = '';
 
-// Pagination settings
+// Search and Pagination
+$search = $_GET['search'] ?? '';
 $itemsPerPage = 25;
 $currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($currentPage - 1) * $itemsPerPage;
@@ -46,9 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-$totalCustomers = $db->countCustomers();
+$totalCustomers = $db->countCustomers($search);
 $totalPages = ceil($totalCustomers / $itemsPerPage);
-$customers = $db->getCustomerProfiles($itemsPerPage, $offset);
+$customers = $db->getCustomerProfiles($itemsPerPage, $offset, $search);
+
+// Base URL for pagination links
+$queryParams = $_GET;
+unset($queryParams['page']);
+$basePageUrl = '?' . http_build_query($queryParams) . (empty($queryParams) ? '' : '&') . 'page=';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -123,7 +129,7 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                     <div class="message error"><i class="icon-alert-circle"></i> <?php echo $error; ?></div>
                 <?php endif; ?>
 
-                <!-- Bulk Actions Bar (Shown when checkboxes are selected) -->
+                <!-- Bulk Actions Bar -->
                 <form id="bulkForm" method="POST">
                     <input type="hidden" name="action" value="bulk_update">
                     <div id="bulkActions" class="bulk-actions-bar">
@@ -150,16 +156,23 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                     <div class="card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
                             <div style="display: flex; align-items: center; gap: 15px;">
-                                <div style="position: relative;">
-                                    <i class="icon-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px;"></i>
-                                    <input type="text" id="customerSearch" class="form-control" style="width: 320px; padding-left: 38px;" placeholder="Search customer name..." onkeyup="filterCustomers()">
-                                </div>
+                                <form method="GET" style="display: flex; gap: 10px;" id="searchForm">
+                                    <div style="position: relative;">
+                                        <i class="icon-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px;"></i>
+                                        <input type="text" name="search" id="customerSearch" class="form-control" style="width: 320px; padding-left: 38px;" 
+                                               placeholder="Search across all records..." value="<?php echo htmlspecialchars($search); ?>">
+                                    </div>
+                                    <button type="submit" class="btn btn-outline">Search</button>
+                                    <?php if ($search): ?>
+                                        <a href="customers.php" class="btn btn-outline" style="color: var(--danger);"><i class="icon-x"></i></a>
+                                    <?php endif; ?>
+                                </form>
                             </div>
                             <div style="display: flex; align-items: center; gap: 15px; font-size: 13px; color: var(--text-muted);">
                                 <span style="background: var(--bg-main); padding: 4px 12px; border-radius: 20px;">
                                     Page <strong><?php echo $currentPage; ?></strong> of <?php echo max(1, $totalPages); ?>
                                 </span>
-                                <span>Total Records: <strong><?php echo $totalCustomers; ?></strong></span>
+                                <span>Found: <strong><?php echo $totalCustomers; ?></strong> records</span>
                             </div>
                         </div>
                         
@@ -173,12 +186,15 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                                         <th class="sortable" onclick="sortTable(3)" style="text-align: right;">Invoices</th>
                                         <th class="sortable" onclick="sortTable(4)" style="text-align: right;">Lifetime Rev</th>
                                         <th class="sortable" onclick="sortTable(5)" style="text-align: center;">Status</th>
-                                        <th style="text-align: right; width: 180px;">Quick Actions</th>
+                                        <th style="text-align: right; width: 180px;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($customers)): ?>
-                                    <tr><td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">No customers found.</td></tr>
+                                    <tr><td colspan="7" style="text-align: center; padding: 60px; color: var(--text-muted);">
+                                        <i class="icon-info" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                                        No customers matching your criteria.
+                                    </td></tr>
                                     <?php endif; ?>
                                     
                                     <?php foreach ($customers as $c): ?>
@@ -188,7 +204,7 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                                         </td>
                                         <td><strong><?php echo htmlspecialchars($c['customer_name']); ?></strong></td>
                                         <td>
-                                            <span class="badge <?php echo $c['customer_type'] === 'Partner' ? 'badge-partner' : 'badge-end'; ?>">
+                                            <span class="badge <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'badge-partner' : 'badge-end'; ?>">
                                                 <?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?>
                                             </span>
                                         </td>
@@ -222,7 +238,7 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                         <!-- Pagination Footer -->
                         <?php if ($totalPages > 1): ?>
                         <div class="pagination">
-                            <a href="?page=<?php echo max(1, $currentPage - 1); ?>" class="pagination-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>" title="Previous Page">
+                            <a href="<?php echo $basePageUrl . max(1, $currentPage - 1); ?>" class="pagination-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>" title="Previous Page">
                                 <i class="icon-chevron-left"></i>
                             </a>
                             
@@ -231,28 +247,28 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                             $endPage = min($totalPages, $currentPage + 2);
                             
                             if ($startPage > 1): ?>
-                                <a href="?page=1" class="pagination-link">1</a>
+                                <a href="<?php echo $basePageUrl; ?>1" class="pagination-link">1</a>
                                 <?php if ($startPage > 2): ?><span style="color: var(--text-muted);">...</span><?php endif; ?>
                             <?php endif; ?>
 
                             <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
-                                <a href="?page=<?php echo $i; ?>" class="pagination-link <?php echo $i == $currentPage ? 'active' : ''; ?>">
+                                <a href="<?php echo $basePageUrl . $i; ?>" class="pagination-link <?php echo $i == $currentPage ? 'active' : ''; ?>">
                                     <?php echo $i; ?>
                                 </a>
                             <?php endfor; ?>
 
                             <?php if ($endPage < $totalPages): ?>
                                 <?php if ($endPage < $totalPages - 1): ?><span style="color: var(--text-muted);">...</span><?php endif; ?>
-                                <a href="?page=<?php echo $totalPages; ?>" class="pagination-link"><?php echo $totalPages; ?></a>
+                                <a href="<?php echo $basePageUrl . $totalPages; ?>" class="pagination-link"><?php echo $totalPages; ?></a>
                             <?php endif; ?>
 
-                            <a href="?page=<?php echo min($totalPages, $currentPage + 1); ?>" class="pagination-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Next Page">
+                            <a href="<?php echo $basePageUrl . min($totalPages, $currentPage + 1); ?>" class="pagination-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>" title="Next Page">
                                 <i class="icon-chevron-right"></i>
                             </a>
                         </div>
                         <?php elseif ($totalCustomers > 0): ?>
                         <div style="text-align: center; margin-top: 30px; color: var(--text-muted); font-size: 13px;">
-                            Showing all records
+                            <?php echo $search ? 'Showing all search results' : 'Showing all records'; ?>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -263,27 +279,15 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
+        // No client-side filtering needed with server-side search, but kept for instantaneous feedback on current page
         function filterCustomers() {
-            const input = document.getElementById('customerSearch');
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById('customerTable');
-            const tr = table.getElementsByTagName('tr');
-            for (let i = 1; i < tr.length; i++) {
-                const td = tr[i].getElementsByTagName('td')[1];
-                if (td) {
-                    const txtValue = td.textContent || td.innerText;
-                    tr[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
-                }
-            }
+            // Optional: debounce server-side search or just keep as is
         }
 
         function toggleAll(source) {
             const checkboxes = document.getElementsByName('customer_names[]');
             for (let i = 0; i < checkboxes.length; i++) {
-                const row = checkboxes[i].closest('tr');
-                if (row && row.style.display !== 'none') {
-                    checkboxes[i].checked = source.checked;
-                }
+                checkboxes[i].checked = source.checked;
             }
             updateSelection();
         }
@@ -328,7 +332,6 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                     shouldSwitch = false;
                     x = rows[i].getElementsByTagName("TD")[n];
                     y = rows[i + 1].getElementsByTagName("TD")[n];
-                    
                     if (!x || !y) continue;
 
                     let valX = x.textContent.toLowerCase().replace(/[^a-z0-9.]/g, '');
@@ -356,11 +359,6 @@ $customers = $db->getCustomerProfiles($itemsPerPage, $offset);
                     }
                 }
             }
-        }
-
-        // Initialize Lucide icons if they are being processed via JS
-        if (window.lucide) {
-            lucide.createIcons();
         }
     </script>
 </body>

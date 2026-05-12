@@ -366,15 +366,23 @@ class Database {
     /**
      * CRM: Get all customer profiles with their types
      */
-    public function getCustomerProfiles($limit = null, $offset = 0) {
+    public function getCustomerProfiles($limit = null, $offset = 0, $search = '') {
         $this->syncCustomerProfiles(); // Ensure we have latest names
         
+        $params = [];
+        $where = "";
+        if (!empty($search)) {
+            $where = " WHERE p.customer_name LIKE ? ";
+            $params[] = "%$search%";
+        }
+
         $sql = "
             SELECT p.*, 
                    COUNT(s.id) as lifetime_invoices,
                    SUM(s.base_value) as lifetime_revenue
             FROM customer_profiles p
             LEFT JOIN sales s ON p.customer_name = s.customer_name
+            $where
             GROUP BY p.customer_name
             ORDER BY lifetime_revenue DESC
         ";
@@ -383,14 +391,20 @@ class Database {
             $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
         }
 
-        return $this->fetchAll($sql);
+        return $this->fetchAll($sql, $params);
     }
 
     /**
      * CRM: Get total customer count
      */
-    public function countCustomers() {
-        $row = $this->fetch("SELECT COUNT(*) as total FROM customer_profiles");
+    public function countCustomers($search = '') {
+        $params = [];
+        $where = "";
+        if (!empty($search)) {
+            $where = " WHERE customer_name LIKE ? ";
+            $params[] = "%$search%";
+        }
+        $row = $this->fetch("SELECT COUNT(*) as total FROM customer_profiles $where", $params);
         return $row ? (int)$row['total'] : 0;
     }
 
