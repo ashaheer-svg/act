@@ -1022,3 +1022,76 @@ code {
     border-color: var(--primary);
     background: #f0f9ff;
 }
+
+/* --- Pagination --- */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 30px;
+}
+
+.pagination-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.pagination-link:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: #f0f9ff;
+}
+
+.pagination-link.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.pagination-link.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    background: var(--bg-main);
+}
+
+/* --- Bulk Selection Bar --- */
+.bulk-actions-bar {
+    background: var(--primary);
+    color: white;
+    padding: 16px 24px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    display: none; /* Controlled by JS */
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-lg);
+    animation: slideInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: sticky;
+    top: calc(var(--header-height) + 10px);
+    z-index: 100;
+}
+
+@keyframes slideInDown {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.selection-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 12px;
+}
