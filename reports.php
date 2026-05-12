@@ -500,9 +500,10 @@ $summary = $reportData['summary'] ?? [];
             document.getElementById('detailsModalOverlay').style.display = 'none';
         }
     </script>
-    <?php require_once 'includes/layout_js.php'; ?>
             </div><!-- .content-body -->
         </main><!-- .main-wrapper -->
     </div><!-- .app-container -->
+
+    <?php require_once 'includes/layout_js.php'; ?>
 </body>
 </html>

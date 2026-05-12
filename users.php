@@ -147,10 +147,10 @@ $users = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER B
                 </table>
             </div>
         </div>
-    </div>
-    <?php require_once 'includes/layout_js.php'; ?>
             </div><!-- .content-body -->
         </main><!-- .main-wrapper -->
     </div><!-- .app-container -->
+
+    <?php require_once 'includes/layout_js.php'; ?>
 </body>
 </html>

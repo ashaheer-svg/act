@@ -217,7 +217,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
             </div>
         </div>
-    </div>
+            </div><!-- .content-body -->
+        </main><!-- .main-wrapper -->
+    </div><!-- .app-container -->
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
@@ -229,8 +231,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     </script>
-            </div><!-- .content-body -->
-        </main><!-- .main-wrapper -->
-    </div><!-- .app-container -->
 </body>
 </html>

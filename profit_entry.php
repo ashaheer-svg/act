@@ -153,11 +153,11 @@ $sales = $db->getSalesForProfitEntry($year, $month);
                 }
             }
         }
-
-        <?php require_once 'includes/layout_js.php'; ?>
-
+    </script>
             </div><!-- .content-body -->
         </main><!-- .main-wrapper -->
     </div><!-- .app-container -->
+
+    <?php require_once 'includes/layout_js.php'; ?>
 </body>
 </html>

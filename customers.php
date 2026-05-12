@@ -64,7 +64,9 @@ $customers = $db->getCustomerProfiles();
         <?php endif; ?>
 
         <div class="card">
-            <input type="text" id="customerSearch" class="form-control" style="margin-bottom: 20px;" placeholder="Search customers..." onkeyup="filterCustomers()">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <input type="text" id="customerSearch" class="form-control" style="width: 300px;" placeholder="Search customers..." onkeyup="filterCustomers()">
+            </div>
             
             <table class="table" id="customerTable">
                 <thead>
@@ -104,7 +106,9 @@ $customers = $db->getCustomerProfiles();
                 </tbody>
             </table>
         </div>
-    </div>
+            </div><!-- .content-body -->
+        </main><!-- .main-wrapper -->
+    </div><!-- .app-container -->
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
@@ -122,8 +126,5 @@ $customers = $db->getCustomerProfiles();
             }
         }
     </script>
-            </div><!-- .content-body -->
-        </main><!-- .main-wrapper -->
-    </div><!-- .app-container -->
 </body>
 </html>
