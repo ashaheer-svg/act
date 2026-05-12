@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-    <link rel="stylesheet" href="layout.css?v=1.0.2">
+    <link rel="stylesheet" href="layout.css?v=1.0.3">
 </head>
 <body>
     <div class="app-container">
@@ -81,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <!-- Top Section: Primary Upload Actions -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 40px; align-items: stretch;">
                     <!-- Sales Import Card -->
-                    <div class="card" style="border-top: 4px solid var(--primary);">
+                    <div class="card" style="border-top: 4px solid var(--primary); display: flex; flex-direction: column; height: 100%;">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
                             <div style="width: 48px; height: 48px; background: var(--primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
                                 <i class="icon-file-text" style="font-size: 24px;"></i>
@@ -93,22 +93,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 2px 0 0 0;">Import itemized sales data with VAT details.</p>
                             </div>
                         </div>
-                        <form method="POST" enctype="multipart/form-data">
-                            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                        <form method="POST" enctype="multipart/form-data" style="flex: 1; display: flex; flex-direction: column;">
+                            <div class="upload-area" onclick="document.getElementById('fileInput').click()" id="salesDropZone">
                                 <i class="icon-upload-cloud"></i>
                                 <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">Click to select Sales File</div>
-                                <div class="btn btn-outline" style="margin-top: 10px; font-size: 12px; pointer-events: none;">Browse Files</div>
+                                <div class="btn btn-outline" style="margin-top: 10px; font-size: 12px; pointer-events: none; padding: 6px 15px;">Browse Files</div>
                                 <input type="file" id="fileInput" name="sales_file" accept=".xlsx,.xls,.csv" required onchange="updateFileInfo(this, 'fileInfo')" style="display: none;">
                                 <div id="fileInfo" style="margin-top: 15px; font-weight: 700; color: var(--primary); font-size: 13px; display: none; background: #e0f2fe; padding: 5px 12px; border-radius: 6px;"></div>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px; height: 45px; font-weight: 700;">
-                                <i class="icon-send" style="font-size: 16px;"></i> Start Sales Import
-                            </button>
+                            <div style="margin-top: auto; padding-top: 25px;">
+                                <button type="submit" class="btn btn-primary" style="width: 100%; height: 45px; font-weight: 700;">
+                                    <i class="icon-send" style="font-size: 16px;"></i> Start Sales Import
+                                </button>
+                            </div>
                         </form>
                     </div>
 
                     <!-- Ledger Import Card -->
-                    <div class="card" style="border-top: 4px solid var(--secondary);">
+                    <div class="card" style="border-top: 4px solid var(--secondary); display: flex; flex-direction: column; height: 100%;">
                         <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 25px;">
                             <div style="width: 48px; height: 48px; background: var(--secondary); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white;">
                                 <i class="icon-dollar-sign" style="font-size: 24px;"></i>
@@ -118,17 +120,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 2px 0 0 0;">Import customer payments and collection tracking.</p>
                             </div>
                         </div>
-                        <form method="POST" enctype="multipart/form-data">
+                        <form method="POST" enctype="multipart/form-data" style="flex: 1; display: flex; flex-direction: column;">
                             <div class="upload-area" onclick="document.getElementById('ledgerInput').click()" style="border-color: #fbd38d;">
                                 <i class="icon-upload-cloud" style="color: var(--secondary);"></i>
                                 <div style="font-weight: 700; color: var(--text-main); font-size: 15px;">Click to select Ledger File</div>
-                                <div class="btn btn-outline" style="margin-top: 10px; font-size: 12px; pointer-events: none;">Browse Files</div>
+                                <div class="btn btn-outline" style="margin-top: 10px; font-size: 12px; pointer-events: none; padding: 6px 15px;">Browse Files</div>
                                 <input type="file" id="ledgerInput" name="ledger_file" accept=".csv" required onchange="updateFileInfo(this, 'ledgerInfo')" style="display: none;">
                                 <div id="ledgerInfo" style="margin-top: 15px; font-weight: 700; color: var(--secondary); font-size: 13px; display: none; background: #fff7ed; padding: 5px 12px; border-radius: 6px;"></div>
                             </div>
-                            <button type="submit" class="btn" style="width: 100%; background: var(--secondary); color: white; margin-top: 20px; height: 45px; font-weight: 700;">
-                                <i class="icon-send" style="font-size: 16px;"></i> Import Payments
-                            </button>
+                            <div style="margin-top: auto; padding-top: 25px;">
+                                <button type="submit" class="btn btn-warning" style="width: 100%; height: 45px; font-weight: 700;">
+                                    <i class="icon-send" style="font-size: 16px;"></i> Import Payments
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
