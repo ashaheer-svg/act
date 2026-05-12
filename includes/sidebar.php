@@ -3,34 +3,34 @@
  * Shared Sidebar Component
  *
  * Auto-detects the current page and highlights the correct nav item.
- * The Settings group expands automatically when on any Settings sub-page.
  */
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 
 // Map each page to its section (used for parent highlighting)
 $sectionMap = [
-    'index.php'        => 'dashboard',
-    'reports.php'      => 'reports',
-    'settings.php'     => 'settings',
-    'customers.php'    => 'settings',
-    'profit_entry.php' => 'settings',
-    'upload.php'       => 'settings',
-    'users.php'        => 'settings',
+    'index.php'           => 'dashboard',
+    'reports.php'         => 'reports',
+    'customers.php'       => 'operations',
+    'profit_entry.php'    => 'operations',
+    'upload.php'          => 'operations',
+    'product_mapping.php' => 'operations',
+    'settings.php'        => 'settings',
 ];
 
-// Map each settings sub-page to its sub-nav key
+// Map each page/hash to its sub-nav key
 $subPageMap = [
-    'settings.php'     => 'general',
-    'customers.php'    => 'customers',
-    'profit_entry.php' => 'profit',
-    'upload.php'       => 'upload',
-    'users.php'        => 'users',
+    'customers.php'       => 'customers',
+    'profit_entry.php'    => 'profit',
+    'upload.php'          => 'upload',
+    'product_mapping.php' => 'mapping',
+    'settings.php'        => 'system', // Defaults to system tab in settings
 ];
 
 $activeSection  = $sectionMap[$currentPage]  ?? '';
 $activeSubPage  = $subPageMap[$currentPage]  ?? '';
 $settingsOpen   = ($activeSection === 'settings');
+$opsOpen        = ($activeSection === 'operations');
 
 function navClass(string $section, string $activeSection, string $extra = ''): string {
     $cls = 'nav-item' . ($section === $activeSection ? ' active' : '');
@@ -62,6 +62,33 @@ function subNavClass(string $key, string $activeSubPage): string {
             <span>Reporting</span>
         </a>
 
+        <!-- Operations group -->
+        <div class="nav-group <?= $opsOpen ? 'open' : '' ?>">
+            <button class="nav-item nav-group-toggle" onclick="toggleNavGroup(this)" type="button">
+                <i class="icon-briefcase"></i>
+                <span>Operations</span>
+                <i class="icon-chevron-right nav-group-arrow"></i>
+            </button>
+            <div class="sub-nav">
+                <a href="upload.php" class="<?= subNavClass('upload', $activeSubPage) ?>">
+                    <i class="icon-folder-up"></i>
+                    <span>Data Upload</span>
+                </a>
+                <a href="profit_entry.php" class="<?= subNavClass('profit', $activeSubPage) ?>">
+                    <i class="icon-dollar-sign"></i>
+                    <span>Profit Entry</span>
+                </a>
+                <a href="customers.php" class="<?= subNavClass('customers', $activeSubPage) ?>">
+                    <i class="icon-building-2"></i>
+                    <span>Customers</span>
+                </a>
+                <a href="product_mapping.php" class="<?= subNavClass('mapping', $activeSubPage) ?>">
+                    <i class="icon-git-branch"></i>
+                    <span>Product Mapping</span>
+                </a>
+            </div>
+        </div>
+
         <!-- Settings group -->
         <div class="nav-group <?= $settingsOpen ? 'open' : '' ?>">
             <button class="nav-item nav-group-toggle" onclick="toggleNavGroup(this)" type="button">
@@ -70,50 +97,14 @@ function subNavClass(string $key, string $activeSubPage): string {
                 <i class="icon-chevron-right nav-group-arrow"></i>
             </button>
             <div class="sub-nav">
-                <a href="settings.php#general" class="<?= subNavClass('general', $activeSubPage) ?>">
+                <a href="settings.php#system" class="<?= subNavClass('system', $activeSubPage) ?>">
                     <i class="icon-sliders"></i>
-                    <span>General</span>
-                </a>
-                <a href="settings.php#security" class="<?= subNavClass('security', $activeSubPage) ?>">
-                    <i class="icon-shield"></i>
-                    <span>Security</span>
+                    <span>System Setup</span>
                 </a>
                 <a href="settings.php#team" class="<?= subNavClass('team', $activeSubPage) ?>">
                     <i class="icon-users"></i>
-                    <span>Sales Team</span>
+                    <span>Access & Team</span>
                 </a>
-                <a href="settings.php#rationalize" class="<?= subNavClass('rationalize', $activeSubPage) ?>">
-                    <i class="icon-git-branch"></i>
-                    <span>Product Mapping</span>
-                </a>
-                <?php if (isset($auth) && $auth->isAdmin()): ?>
-                <a href="settings.php#tax" class="<?= subNavClass('tax', $activeSubPage) ?>">
-                    <i class="icon-landmark"></i>
-                    <span>Tax & History</span>
-                </a>
-                <?php endif; ?>
-                <a href="customers.php" class="<?= subNavClass('customers', $activeSubPage) ?>">
-                    <i class="icon-building-2"></i>
-                    <span>Customers</span>
-                </a>
-                <a href="profit_entry.php" class="<?= subNavClass('profit', $activeSubPage) ?>">
-                    <i class="icon-dollar-sign"></i>
-                    <span>Profit Entry</span>
-                </a>
-                <a href="upload.php" class="<?= subNavClass('upload', $activeSubPage) ?>">
-                    <i class="icon-folder-up"></i>
-                    <span>Data Upload</span>
-                </a>
-                <?php if (isset($auth) && $auth->isAdmin()): ?>
-                <a href="settings.php#advanced" class="<?= subNavClass('advanced', $activeSubPage) ?>">
-                    <i class="icon-triangle-alert"></i>
-                    <span>Advanced</span>
-                </a>
-                <a href="users.php" class="<?= subNavClass('users', $activeSubPage) ?>">
-                    <i class="icon-user"></i>
-                    <span>User Management</span>
-                </a>
-                <?php endif; ?>
             </div>
         </div>
     </nav>

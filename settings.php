@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         }
     }
+    
     if ($action === 'update_limit') {
         try {
             $limitYear = $_POST['limit_year'] ?? date('Y');
@@ -139,9 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Code and Name are required');
             }
             $db->addSalesRep($repCode, $repName);
-            $message = 'Sales rep mapping added/updated successfully';
+            $message = 'Sales representative mapped successfully';
             $messageType = 'success';
-            $db->logActivity($user['id'], 'REP_MAPPING_UPDATED', "Mapped $repCode to $repName");
+            $db->logActivity($user['id'], 'SALES_REP_ADDED', "Mapped $repCode to $repName");
         } catch (Exception $e) {
             $message = 'Error: ' . $e->getMessage();
             $messageType = 'error';
@@ -150,70 +151,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'delete_sales_rep') {
         try {
-            $repCode = $_POST['rep_code'] ?? '';
-            $db->deleteSalesRep($repCode);
-            $message = 'Sales rep mapping deleted';
+            $repId = $_POST['rep_id'] ?? 0;
+            $db->deleteSalesRep($repId);
+            $message = 'Sales representative mapping deleted';
             $messageType = 'success';
-            $db->logActivity($user['id'], 'REP_MAPPING_DELETED', "Deleted mapping for $repCode");
+            $db->logActivity($user['id'], 'SALES_REP_DELETED', "Deleted rep mapping ID: $repId");
         } catch (Exception $e) {
             $message = 'Error: ' . $e->getMessage();
             $messageType = 'error';
         }
     }
 
-    if ($action === 'save_product_mapping') {
-        try {
-            $item = $_POST['item_description'] ?? '';
-            $category = $_POST['product_category'] ?? '';
-            if (empty($item) || empty($category)) {
-                throw new Exception('Item and Category are required');
-            }
-            $db->saveProductMapping($item, $category);
-            $message = "Product '$item' rationalized successfully. Historical records updated.";
-            $messageType = 'success';
-            $db->logActivity($user['id'], 'PRODUCT_MAPPED', "Mapped $item to $category");
-        } catch (Exception $e) {
-            $message = 'Error: ' . $e->getMessage();
-            $messageType = 'error';
-        }
-    }
+    if ($action === 'create_user') {
+        $username = $_POST['username'] ?? '';
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? 'viewer';
 
-    if ($action === 'save_bulk_mappings') {
-        try {
-            $mappings = $_POST['mappings'] ?? [];
-            $count = 0;
-            foreach ($mappings as $encodedItem => $category) {
-                $category = trim($category);
-                if (!empty($category)) {
-                    $item = base64_decode($encodedItem);
-                    $db->saveProductMapping($item, $category);
-                    $count++;
+        if (empty($username) || empty($password)) {
+            $message = 'Username and password are required';
+            $messageType = 'error';
+        } else {
+            try {
+                if ($auth->register($username, $password, $role)) {
+                    $message = "User '$username' created successfully";
+                    $messageType = 'success';
+                } else {
+                    $message = "Username '$username' already exists";
+                    $messageType = 'error';
                 }
+            } catch (Exception $e) {
+                $message = 'Error: ' . $e->getMessage();
+                $messageType = 'error';
             }
-            if ($count > 0) {
-                $message = "$count product mappings saved successfully. Historical records updated.";
-                $messageType = 'success';
-                $db->logActivity($user['id'], 'BULK_PRODUCT_MAPPED', "Mapped $count items");
-            } else {
-                $message = "No new categories were entered.";
-                $messageType = 'info';
-            }
-        } catch (Exception $e) {
-            $message = 'Bulk Error: ' . $e->getMessage();
-            $messageType = 'error';
         }
     }
 
-    if ($action === 'delete_product_mapping') {
-        try {
-            $mappingId = $_POST['mapping_id'] ?? 0;
-            $db->deleteProductMapping($mappingId);
-            $message = 'Product mapping rule deleted';
-            $messageType = 'success';
-            $db->logActivity($user['id'], 'PRODUCT_MAPPING_DELETED', "Deleted mapping ID: $mappingId");
-        } catch (Exception $e) {
-            $message = 'Error: ' . $e->getMessage();
+    if ($action === 'delete_user') {
+        $userId = $_POST['user_id'] ?? 0;
+        if ($userId == $user['id']) {
+            $message = 'You cannot delete your own account';
             $messageType = 'error';
+        } else {
+            $db->execute("DELETE FROM users WHERE id = ?", [$userId]);
+            $message = 'User deleted successfully';
+            $messageType = 'success';
         }
     }
 }
@@ -225,10 +206,7 @@ $companyName = $db->getSetting('company_name', '');
 $dbSize = $db->getDatabaseSize();
 $taxRules = $db->getTaxRules();
 $salesReps = $db->getSalesReps();
-
-// Product Rationalization Data
-$uncategorizedItems = $db->getUncategorizedItems();
-$existingMappings = $db->getAllMappings();
+$systemUsers = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -240,347 +218,124 @@ $existingMappings = $db->getAllMappings();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-
     <link rel="stylesheet" href="layout.css?v=1.0.2">
 </head>
 <body>
     <div class="app-container">
         <?php require_once 'includes/sidebar.php'; ?>
 
-        <!-- Main Wrapper -->
         <main class="main-wrapper">
             <?php $searchPlaceholder = 'Search settings...'; require_once 'includes/header.php'; ?>
 
             <div class="content-body">
-
-
-            <?php if ($message): ?>
-            <div class="message <?php echo $messageType; ?>">
-                <?php echo htmlspecialchars($message); ?>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
-            <div id="general" class="tab-content active">
-                <div class="card">
-                    <h2>General Configuration</h2>
-                    <form method="POST">
-                        <input type="hidden" name="action" value="update_settings">
-                        
-                        <div class="form-group">
-                            <label>Company Name</label>
-                            <input type="text" name="company_name" class="form-control" value="<?php echo htmlspecialchars($companyName); ?>">
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label>VAT Rate (e.g., 0.18 for 18%)</label>
-                                <input type="number" name="vat_rate" class="form-control" value="<?php echo $vatRate; ?>" step="0.01" min="0" max="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Currency Symbol</label>
-                                <input type="text" name="currency_symbol" class="form-control" value="<?php echo htmlspecialchars($currency); ?>">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </form>
+                <?php if ($message): ?>
+                <div class="message <?php echo $messageType; ?>">
+                    <?php echo htmlspecialchars($message); ?>
                 </div>
-            </div>
+                <?php endif; ?>
 
-            <div id="team" class="tab-content">
-                <div class="card">
-                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                        Sales Rep Mapping
-                        <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Team Management</span>
-                    </h2>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Map system Sales Rep codes to their actual names for easier reporting.</p>
+                <?php if ($auth->isAdmin() || $auth->isAccounts()): ?>
+                <!-- System Setup Tab -->
+                <div id="system" class="tab-content active">
+                    <div class="card">
+                        <h2>General Configuration</h2>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_settings">
+                            
+                            <div class="form-group">
+                                <label>Company Name</label>
+                                <input type="text" name="company_name" class="form-control" value="<?php echo htmlspecialchars($companyName); ?>">
+                            </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
-                        <div>
-                            <table class="tax-table">
-                                <thead>
-                                    <tr>
-                                        <th>Rep Code</th>
-                                        <th>Display Name</th>
-                                        <th style="text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($reps)): ?>
-                                    <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings found.</td></tr>
-                                    <?php else: ?>
-                                        <?php foreach ($reps as $r): ?>
-                                        <tr>
-                                            <td><code><?php echo htmlspecialchars($r['rep_code']); ?></code></td>
-                                            <td><strong><?php echo htmlspecialchars($r['rep_name']); ?></strong></td>
-                                            <td style="text-align: right;">
-                                                <form method="POST" onsubmit="return confirm('Delete this mapping?');">
-                                                    <input type="hidden" name="action" value="delete_sales_rep">
-                                                    <input type="hidden" name="rep_id" value="<?php echo $r['id']; ?>">
-                                                    <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
-                            <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Mapping</h3>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="add_sales_rep">
-                                
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                                 <div class="form-group">
-                                    <label>Sales Rep Code (from ERP)</label>
-                                    <input type="text" name="rep_code" class="form-control" placeholder="e.g. SR01" required>
+                                    <label>VAT Rate (e.g., 0.18 for 18%)</label>
+                                    <input type="number" name="vat_rate" class="form-control" value="<?php echo $vatRate; ?>" step="0.01" min="0" max="1">
                                 </div>
-
                                 <div class="form-group">
-                                    <label>Full Name / Display Name</label>
-                                    <input type="text" name="rep_name" class="form-control" placeholder="e.g. John Doe" required>
+                                    <label>Currency Symbol</label>
+                                    <input type="text" name="currency_symbol" class="form-control" value="<?php echo htmlspecialchars($currency); ?>">
                                 </div>
+                            </div>
 
-                                <button type="submit" class="btn btn-primary" style="width: 100%;">Save Mapping</button>
-                            </form>
-                        </div>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
                     </div>
-                </div>
-            </div>
-
-            <?php if ($auth->isAdmin()): ?>
-            <div id="tax" class="tab-content">
-                <div class="card">
-                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                        Reporting Visibility Limit
-                        <span style="font-size: 11px; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Control Period</span>
-                    </h2>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Non-admin users (Accounts/Viewers) can only view reports up to this date. Useful for locking reports during profit entry.</p>
                     
-                    <form method="POST" style="display: flex; gap: 20px; align-items: flex-end;">
-                        <input type="hidden" name="action" value="update_limit">
+                    <?php if ($auth->isAdmin()): ?>
+                    <!-- Admin Specific System Options -->
+                    <div class="card" style="margin-top: 30px;">
+                        <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                            Reporting Visibility Limit
+                            <span style="font-size: 11px; font-weight: 700; color: #1e40af; background: #dbeafe; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Control Period</span>
+                        </h2>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Non-admin users (Accounts/Viewers) can only view reports up to this date. Useful for locking reports during profit entry.</p>
                         
-                        <div class="form-group" style="flex: 1; margin: 0;">
-                            <label>Limit Year</label>
-                            <select name="limit_year" class="form-control">
-                                <?php 
-                                $currLimitY = $db->getSetting('limit_year', date('Y'));
-                                for($y=2023; $y<=2026; $y++): 
-                                ?>
-                                <option value="<?php echo $y; ?>" <?php echo $currLimitY == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group" style="flex: 1; margin: 0;">
-                            <label>Limit Month</label>
-                            <select name="limit_month" class="form-control">
-                                <?php 
-                                $currLimitM = $db->getSetting('limit_month', date('m'));
-                                for($m=1; $m<=12; $m++): $mStr = str_pad($m, 2, '0', STR_PAD_LEFT);
-                                ?>
-                                <option value="<?php echo $mStr; ?>" <?php echo $currLimitM == $mStr ? 'selected' : ''; ?>><?php echo date('F', mktime(0,0,0,$m,1)); ?></option>
-                                <?php endfor; ?>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary" style="width: 200px;">Set Limit</button>
-                    </form>
-                </div>
-
-                <div class="card" style="margin-top: 30px;">
-                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
-                        Tax History & Future Rules
-                        <span style="font-size: 11px; font-weight: 700; color: var(--success); background: #dcfce7; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Compliance Mode Active</span>
-                    </h2>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Define VAT changes based on effective dates. Invoices will automatically use the rate active on their transaction date.</p>
-
-                    <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
-                        <div>
-                            <table class="tax-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tax Name</th>
-                                        <th>Rate</th>
-                                        <th>Effective From</th>
-                                        <th style="text-align: right;">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($taxRules)): ?>
-                                    <tr>
-                                        <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No specific tax rules defined. Using global fallback.</td>
-                                    </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($taxRules as $rule): ?>
-                                        <tr>
-                                            <td><strong><?php echo htmlspecialchars($rule['tax_name']); ?></strong></td>
-                                            <td><span class="tax-badge"><?php echo ($rule['tax_rate'] * 100); ?>%</span></td>
-                                            <td><?php echo date('M d, Y', strtotime($rule['effective_from'])); ?></td>
-                                            <td style="text-align: right;">
-                                                <form method="POST" onsubmit="return confirm('Delete this tax rule?');">
-                                                    <input type="hidden" name="action" value="delete_tax_rule">
-                                                    <input type="hidden" name="rule_id" value="<?php echo $rule['id']; ?>">
-                                                    <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 18px;">🗑️</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border);">
-                            <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Tax Rule</h3>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="add_tax_rule">
-                                
-                                <div class="form-group">
-                                    <label>Tax Description</label>
-                                    <input type="text" name="tax_name" class="form-control" value="VAT" required>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Tax Rate (as decimal, e.g. 0.18)</label>
-                                    <input type="number" step="0.001" name="tax_rate" class="form-control" value="0.180" required>
-                                    <small style="color: var(--text-muted); font-size: 11px;">0.15 = 15%, 0.18 = 18%</small>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Effective From Date</label>
-                                    <input type="date" name="effective_from" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
-                                    <small style="color: var(--text-muted); font-size: 11px;">This rate applies to all invoices on or after this date.</small>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary" style="width: 100%;">Add Rule</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="advanced" class="tab-content">
-                <div class="card" style="border: 2px dashed #fee2e2;">
-                    <h2 style="color: var(--error);">Testing & Maintenance</h2>
-                    <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
-                        <strong>Reset Payment Data:</strong> This will clear all records in the <code>payments</code> table and reset the <code>paid_date</code> and <code>days_to_pay</code> metrics in your sales records. 
-                        <br><br>
-                        <span style="color: var(--error); font-weight: 700;">Note:</span> Your core sales invoices and customer profiles will NOT be affected.
-                    </p>
-                    <form method="POST" onsubmit="return confirm('RESET CONFIRMATION: This will clear ALL payment history and settlement metrics. Sales invoices will remain. Are you sure?');">
-                        <input type="hidden" name="action" value="reset_database">
-                        <button type="submit" class="btn btn-danger">Reset Payment & Settlement Data</button>
-                    </form>
-
-                    <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
-                        <input type="hidden" name="action" value="force_sync">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <p style="font-weight: 700; font-size: 14px;">Database Schema Repair</p>
-                                <p style="font-size: 12px; color: var(--text-muted);">Manually check and add missing columns/tables if you encounter SQL errors.</p>
+                        <form method="POST" style="display: flex; gap: 20px; align-items: flex-end;">
+                            <input type="hidden" name="action" value="update_limit">
+                            
+                            <div class="form-group" style="flex: 1; margin: 0;">
+                                <label>Limit Year</label>
+                                <select name="limit_year" class="form-control">
+                                    <?php 
+                                    $currLimitY = $db->getSetting('limit_year', date('Y'));
+                                    for($y=2023; $y<=2026; $y++): 
+                                    ?>
+                                    <option value="<?php echo $y; ?>" <?php echo $currLimitY == $y ? 'selected' : ''; ?>><?php echo $y; ?></option>
+                                    <?php endfor; ?>
+                                </select>
                             </div>
-                            <button type="submit" class="btn" style="background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border);">Force Sync Database</button>
-                        </div>
-                    </form>
-                </div>
-                <div style="margin-top: 30px; background: white; padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow);">
-                    <h3>System Status</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
-                        <div class="stat-small">
-                            <label>Database Size</label>
-                            <value><?php echo $dbSize; ?> MB</value>
-                        </div>
-                        <div class="stat-small">
-                            <label>Active User</label>
-                            <value><?php echo htmlspecialchars($user['username']); ?></value>
-                        </div>
-                    </div>
-                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted);">
-                        Build: Premium Dashboard Edition v1.2.0
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
 
-            <div id="rationalize" class="tab-content">
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                        <div>
-                            <h2>Product Category Rationalization</h2>
-                            <p style="color: var(--text-muted); font-size: 14px;">Map uncategorized items to proper categories. Rules will apply to historical and future data.</p>
-                        </div>
+                            <div class="form-group" style="flex: 1; margin: 0;">
+                                <label>Limit Month</label>
+                                <select name="limit_month" class="form-control">
+                                    <?php 
+                                    $currLimitM = $db->getSetting('limit_month', date('m'));
+                                    for($m=1; $m<=12; $m++): $mStr = str_pad($m, 2, '0', STR_PAD_LEFT);
+                                    ?>
+                                    <option value="<?php echo $mStr; ?>" <?php echo $currLimitM == $mStr ? 'selected' : ''; ?>><?php echo date('F', mktime(0,0,0,$m,1)); ?></option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="width: 200px;">Set Limit</button>
+                        </form>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 400px; gap: 40px;">
-                        <div>
-                            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--primary);">Items Missing Category</h3>
-                            <form method="POST">
-                                <input type="hidden" name="action" value="save_bulk_mappings">
-                                <div style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px;">
-                                    <table class="tax-table" style="margin-top: 0;">
-                                        <thead style="position: sticky; top: 0; z-index: 10; background: white;">
-                                            <tr>
-                                                <th>Uncategorized Item Description</th>
-                                                <th style="text-align: right;">Volume</th>
-                                                <th style="width: 250px;">Assign Category</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php if (empty($uncategorizedItems)): ?>
-                                            <tr>
-                                                <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">Great! All your items are categorized.</td>
-                                            </tr>
-                                            <?php else: ?>
-                                                <?php foreach ($uncategorizedItems as $item): ?>
-                                                <tr>
-                                                    <td style="font-size: 12px; font-weight: 600;"><?php echo htmlspecialchars($item['item_description']); ?></td>
-                                                    <td style="text-align: right; color: var(--text-muted);"><?php echo $item['occurrence_count']; ?></td>
-                                                    <td>
-                                                        <input type="text" name="mappings[<?php echo base64_encode($item['item_description']); ?>]" class="form-control" placeholder="e.g. HDD:Internal" style="padding: 6px 10px; font-size: 12px;">
-                                                    </td>
-                                                </tr>
-                                                <?php endforeach; ?>
-                                            <?php endif; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <?php if (!empty($uncategorizedItems)): ?>
-                                <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
-                                    <button type="submit" class="btn btn-primary">Save All Mappings</button>
-                                </div>
-                                <?php endif; ?>
-                            </form>
-                        </div>
+                    <div class="card" style="margin-top: 30px;">
+                        <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                            Tax History & Future Rules
+                            <span style="font-size: 11px; font-weight: 700; color: var(--success); background: #dcfce7; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Compliance Mode Active</span>
+                        </h2>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Define VAT changes based on effective dates. Invoices will automatically use the rate active on their transaction date.</p>
 
-                        <div>
-                            <h3 style="font-size: 16px; margin-bottom: 15px; color: var(--secondary);">Existing Mapping Rules</h3>
-                            <div style="max-height: 600px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; background: #fcfcfc;">
-                                <table class="tax-table" style="margin-top: 0;">
-                                    <thead style="position: sticky; top: 0; z-index: 10; background: white;">
+                        <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
+                            <div>
+                                <table class="tax-table">
+                                    <thead>
                                         <tr>
-                                            <th>Item</th>
-                                            <th>Category</th>
-                                            <th></th>
+                                            <th>Tax Name</th>
+                                            <th>Rate</th>
+                                            <th>Effective From</th>
+                                            <th style="text-align: right;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php if (empty($existingMappings)): ?>
+                                        <?php if (empty($taxRules)): ?>
                                         <tr>
-                                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No mapping rules defined yet.</td>
+                                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No specific tax rules defined. Using global fallback.</td>
                                         </tr>
                                         <?php else: ?>
-                                            <?php foreach ($existingMappings as $rule): ?>
+                                            <?php foreach ($taxRules as $rule): ?>
                                             <tr>
-                                                <td style="font-size: 11px;"><?php echo htmlspecialchars($rule['item_description']); ?></td>
-                                                <td style="font-size: 11px; font-weight: 700; color: var(--primary);"><?php echo htmlspecialchars($rule['product_category']); ?></td>
+                                                <td><strong><?php echo htmlspecialchars($rule['tax_name']); ?></strong></td>
+                                                <td><span class="tax-badge"><?php echo ($rule['tax_rate'] * 100); ?>%</span></td>
+                                                <td><?php echo date('M d, Y', strtotime($rule['effective_from'])); ?></td>
                                                 <td style="text-align: right;">
-                                                    <form method="POST" onsubmit="return confirm('Delete this rule?');">
-                                                        <input type="hidden" name="action" value="delete_product_mapping">
-                                                        <input type="hidden" name="mapping_id" value="<?php echo $rule['id']; ?>">
-                                                        <button type="submit" style="background: none; border: none; color: var(--error); cursor: pointer; font-size: 14px;">🗑️</button>
+                                                    <form method="POST" onsubmit="return confirm('Delete this tax rule?');">
+                                                        <input type="hidden" name="action" value="delete_tax_rule">
+                                                        <input type="hidden" name="rule_id" value="<?php echo $rule['id']; ?>">
+                                                        <button type="submit" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 18px;">🗑️</button>
                                                     </form>
                                                 </td>
                                             </tr>
@@ -589,50 +344,251 @@ $existingMappings = $db->getAllMappings();
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-            
-            <!-- Security Tab -->
-            <div id="security" class="tab-content">
-                <div class="card" style="max-width: 600px;">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 25px;">
-                        <div style="width: 40px; height: 40px; background: #fee2e2; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 20px;">🔒</div>
-                        <div>
-                            <h2 style="margin: 0;">Account Security</h2>
-                            <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Update your password and manage session security.</p>
+
+                            <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border-color);">
+                                <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Tax Rule</h3>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="add_tax_rule">
+                                    
+                                    <div class="form-group">
+                                        <label>Tax Description</label>
+                                        <input type="text" name="tax_name" class="form-control" value="VAT" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Tax Rate (as decimal, e.g. 0.18)</label>
+                                        <input type="number" step="0.001" name="tax_rate" class="form-control" value="0.180" required>
+                                        <small style="color: var(--text-muted); font-size: 11px;">0.15 = 15%, 0.18 = 18%</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Effective From Date</label>
+                                        <input type="date" name="effective_from" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                                        <small style="color: var(--text-muted); font-size: 11px;">This rate applies to all invoices on or after this date.</small>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary" style="width: 100%;">Add Rule</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
 
-                    <form method="POST">
-                        <input type="hidden" name="action" value="change_password">
-                        <div class="form-group">
-                            <label>Current Password</label>
-                            <input type="password" name="current_password" class="form-control" required>
+                    <div class="card" style="margin-top: 30px; border: 2px dashed #fee2e2;">
+                        <h2 style="color: var(--danger);">Testing & Maintenance</h2>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+                            <strong>Reset Payment Data:</strong> This will clear all records in the <code>payments</code> table and reset the <code>paid_date</code> and <code>days_to_pay</code> metrics in your sales records. 
+                            <br><br>
+                            <span style="color: var(--danger); font-weight: 700;">Note:</span> Your core sales invoices and customer profiles will NOT be affected.
+                        </p>
+                        <form method="POST" onsubmit="return confirm('RESET CONFIRMATION: This will clear ALL payment history and settlement metrics. Sales invoices will remain. Are you sure?');">
+                            <input type="hidden" name="action" value="reset_database">
+                            <button type="submit" class="btn btn-danger">Reset Payment & Settlement Data</button>
+                        </form>
+
+                        <form method="POST" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                            <input type="hidden" name="action" value="force_sync">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <p style="font-weight: 700; font-size: 14px;">Database Schema Repair</p>
+                                    <p style="font-size: 12px; color: var(--text-muted);">Manually check and add missing columns/tables if you encounter SQL errors.</p>
+                                </div>
+                                <button type="submit" class="btn" style="background: #f1f5f9; color: var(--text-main); border: 1px solid var(--border-color);">Force Sync Database</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div style="margin-top: 30px; background: white; padding: 25px; border-radius: var(--radius-xl); box-shadow: var(--shadow-sm);">
+                        <h3>System Status</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                            <div class="stat-small">
+                                <label>Database Size</label>
+                                <value><?php echo $dbSize; ?> MB</value>
+                            </div>
+                            <div class="stat-small">
+                                <label>Active User</label>
+                                <value><?php echo htmlspecialchars($user['username']); ?></value>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>New Password</label>
-                            <input type="password" name="new_password" class="form-control" required placeholder="Min 6 characters">
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                            Build: Premium Dashboard Edition v1.2.0
                         </div>
-                        <div class="form-group">
-                            <label>Confirm New Password</label>
-                            <input type="password" name="confirm_password" class="form-control" required>
-                        </div>
-                        <div style="margin-top: 30px;">
-                            <button type="submit" class="btn btn-primary">Update Password</button>
-                        </div>
-                    </form>
+                    </div>
+                    <?php endif; ?>
                 </div>
+
+                <!-- Access & Team Tab -->
+                <div id="team" class="tab-content">
+                    <div class="card">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 25px;">
+                            <div style="width: 40px; height: 40px; background: #fee2e2; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 20px;">🔒</div>
+                            <div>
+                                <h2 style="margin: 0;">Account Security</h2>
+                                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Update your password and manage session security.</p>
+                            </div>
+                        </div>
+
+                        <form method="POST">
+                            <input type="hidden" name="action" value="change_password">
+                            <div class="form-group" style="max-width: 400px;">
+                                <label>Current Password</label>
+                                <input type="password" name="current_password" class="form-control" required>
+                            </div>
+                            <div class="form-group" style="max-width: 400px;">
+                                <label>New Password</label>
+                                <input type="password" name="new_password" class="form-control" required placeholder="Min 6 characters">
+                            </div>
+                            <div class="form-group" style="max-width: 400px;">
+                                <label>Confirm New Password</label>
+                                <input type="password" name="confirm_password" class="form-control" required>
+                            </div>
+                            <div style="margin-top: 30px;">
+                                <button type="submit" class="btn btn-primary">Update Password</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card" style="margin-top: 30px;">
+                        <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                            Sales Rep Mapping
+                            <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">Team Management</span>
+                        </h2>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">Map system Sales Rep codes to their actual names for easier reporting.</p>
+
+                        <div style="display: grid; grid-template-columns: 1fr 350px; gap: 40px;">
+                            <div>
+                                <table class="tax-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Rep Code</th>
+                                            <th>Display Name</th>
+                                            <th style="text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($salesReps)): ?>
+                                        <tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 40px 0;">No sales rep mappings found.</td></tr>
+                                        <?php else: ?>
+                                            <?php foreach ($salesReps as $r): ?>
+                                            <tr>
+                                                <td><code><?php echo htmlspecialchars($r['rep_code']); ?></code></td>
+                                                <td><strong><?php echo htmlspecialchars($r['rep_name']); ?></strong></td>
+                                                <td style="text-align: right;">
+                                                    <form method="POST" onsubmit="return confirm('Delete this mapping?');">
+                                                        <input type="hidden" name="action" value="delete_sales_rep">
+                                                        <input type="hidden" name="rep_id" value="<?php echo $r['id']; ?>">
+                                                        <button type="submit" style="background: none; border: none; color: var(--danger); cursor: pointer; font-size: 18px;">🗑️</button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style="background: #f8fafc; padding: 25px; border-radius: 15px; border: 1px solid var(--border-color);">
+                                <h3 style="font-size: 16px; margin-bottom: 20px;">Add New Mapping</h3>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="add_sales_rep">
+                                    
+                                    <div class="form-group">
+                                        <label>Sales Rep Code (from ERP)</label>
+                                        <input type="text" name="rep_code" class="form-control" placeholder="e.g. SR01" required>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>Full Name / Display Name</label>
+                                        <input type="text" name="rep_name" class="form-control" placeholder="e.g. John Doe" required>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary" style="width: 100%;">Save Mapping</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php if ($auth->isAdmin()): ?>
+                    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 30px; margin-top: 30px;">
+                        <div class="card" style="height: fit-content;">
+                            <h3>Add New User</h3>
+                            <form method="POST" style="margin-top: 20px;">
+                                <input type="hidden" name="action" value="create_user">
+                                
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" name="username" class="form-control" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <input type="password" name="password" class="form-control" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Role</label>
+                                    <select name="role" class="form-control">
+                                        <option value="viewer">Viewer (Read-only)</option>
+                                        <option value="accounts">Accounts (Finance & CRM)</option>
+                                        <option value="admin">Administrator (Full Access)</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <h2>System Users</h2>
+                            <table class="table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align: left; padding: 10px;">Username</th>
+                                        <th style="text-align: left; padding: 10px;">Role</th>
+                                        <th style="text-align: left; padding: 10px;">Created At</th>
+                                        <th style="text-align: right; padding: 10px;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach($systemUsers as $u): ?>
+                                    <tr>
+                                        <td style="padding: 10px; border-bottom: 1px solid var(--border-color);"><?php echo htmlspecialchars($u['username']); ?></td>
+                                        <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">
+                                            <span style="font-size: 11px; font-weight: 700; color: #7c3aed; background: #f5f3ff; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">
+                                                <?php echo strtoupper($u['role']); ?>
+                                            </span>
+                                        </td>
+                                        <td style="padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 12px;">
+                                            <?php echo date('Y-m-d', strtotime($u['created_at'])); ?>
+                                        </td>
+                                        <td style="padding: 10px; border-bottom: 1px solid var(--border-color); text-align: right;">
+                                            <?php if ($u['id'] != $user['id']): ?>
+                                            <form method="POST" onsubmit="return confirm('Delete this user account?');">
+                                                <input type="hidden" name="action" value="delete_user">
+                                                <input type="hidden" name="user_id" value="<?php echo $u['id']; ?>">
+                                                <button type="submit" class="btn-danger-link">Remove</button>
+                                            </form>
+                                            <?php else: ?>
+                                            <span style="font-size: 12px; color: var(--text-muted); font-style: italic;">(You)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                </div>
+                <?php endif; ?>
             </div>
-        </div>
+        </main>
     </div>
 
     <?php require_once 'includes/layout_js.php'; ?>
     <script>
     function showTab(tabId) {
-        if (!tabId) tabId = 'general';
+        if (!tabId) tabId = 'system';
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.sidebar .sub-nav-item').forEach(el => el.classList.remove('active'));
         
@@ -646,7 +602,7 @@ $existingMappings = $db->getAllMappings();
                 sidebarItem.classList.add('active');
             }
             
-            // We only update hash if it's different, to prevent jumping
+            // Update hash without jumping
             if (window.location.hash.replace('#', '') !== tabId) {
                 window.history.replaceState(null, null, '#' + tabId);
             }
@@ -659,10 +615,12 @@ $existingMappings = $db->getAllMappings();
         <?php 
         $lastAction = $_POST['action'] ?? '';
         $jumpTo = '';
-        if (strpos($lastAction, 'sales_rep') !== false) $jumpTo = 'team';
-        if (strpos($lastAction, 'product_mapping') !== false || $lastAction === 'save_bulk_mappings') $jumpTo = 'rationalize';
-        if ($lastAction === 'update_limit' || strpos($lastAction, 'tax_rule') !== false) $jumpTo = 'tax';
-        if ($lastAction === 'reset_database' || $lastAction === 'force_sync') $jumpTo = 'advanced';
+        if (strpos($lastAction, 'sales_rep') !== false || strpos($lastAction, 'user') !== false || strpos($lastAction, 'password') !== false) {
+            $jumpTo = 'team';
+        }
+        if (strpos($lastAction, 'tax_rule') !== false || $lastAction === 'update_settings' || $lastAction === 'reset_database' || $lastAction === 'force_sync' || $lastAction === 'update_limit') {
+            $jumpTo = 'system';
+        }
         ?>
         
         const jumpTo = "<?php echo $jumpTo; ?>";
@@ -671,18 +629,14 @@ $existingMappings = $db->getAllMappings();
         } else if (hash) {
             showTab(hash);
         } else {
-            showTab('general');
+            showTab('system');
         }
     });
 
-    // Listen to hash changes (e.g. from clicking sidebar links)
     window.addEventListener('hashchange', () => {
         const hash = window.location.hash.replace('#', '');
         if (hash) showTab(hash);
     });
     </script>
-            </div><!-- .content-body -->
-        </main><!-- .main-wrapper -->
-    </div><!-- .app-container -->
 </body>
 </html>
