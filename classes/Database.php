@@ -366,9 +366,10 @@ class Database {
     /**
      * CRM: Get all customer profiles with their types
      */
-    public function getCustomerProfiles() {
+    public function getCustomerProfiles($limit = null, $offset = 0) {
         $this->syncCustomerProfiles(); // Ensure we have latest names
-        return $this->fetchAll("
+        
+        $sql = "
             SELECT p.*, 
                    COUNT(s.id) as lifetime_invoices,
                    SUM(s.base_value) as lifetime_revenue
@@ -376,7 +377,21 @@ class Database {
             LEFT JOIN sales s ON p.customer_name = s.customer_name
             GROUP BY p.customer_name
             ORDER BY lifetime_revenue DESC
-        ");
+        ";
+
+        if ($limit !== null) {
+            $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        }
+
+        return $this->fetchAll($sql);
+    }
+
+    /**
+     * CRM: Get total customer count
+     */
+    public function countCustomers() {
+        $row = $this->fetch("SELECT COUNT(*) as total FROM customer_profiles");
+        return $row ? (int)$row['total'] : 0;
     }
 
     public function getCustomerPayments($customerName) {

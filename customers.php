@@ -4,6 +4,8 @@ require_once 'classes/Database.php';
 require_once 'classes/Auth.php';
 
 $db = new Database(DATABASE_PATH);
+$db->initialize(); // Ensure schema is up to date (fixes is_verified error)
+
 $auth = new Auth($db);
 $auth->requireAccounts(); // Admin or Accounts
 
@@ -12,6 +14,11 @@ $currency = $db->getSetting('currency_symbol', '$');
 
 $message = '';
 $error = '';
+
+// Pagination settings
+$itemsPerPage = 25;
+$currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$offset = ($currentPage - 1) * $itemsPerPage;
 
 // Handle Bulk Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'bulk_update') {
@@ -39,7 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-$customers = $db->getCustomerProfiles();
+$totalCustomers = $db->countCustomers();
+$totalPages = ceil($totalCustomers / $itemsPerPage);
+$customers = $db->getCustomerProfiles($itemsPerPage, $offset);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -51,7 +60,7 @@ $customers = $db->getCustomerProfiles();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
-    <link rel="stylesheet" href="layout.css?v=1.0.2">
+    <link rel="stylesheet" href="layout.css?v=1.0.3">
     <style>
         .badge {
             display: inline-flex;
@@ -106,6 +115,49 @@ $customers = $db->getCustomerProfiles();
             font-family: inherit;
             cursor: pointer;
         }
+
+        /* Pagination Styles */
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 30px;
+        }
+
+        .pagination-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .pagination-link:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #f0f9ff;
+        }
+
+        .pagination-link.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .pagination-link.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            background: var(--bg-main);
+        }
     </style>
 </head>
 <body>
@@ -156,7 +208,7 @@ $customers = $db->getCustomerProfiles();
                         <input type="text" id="customerSearch" class="form-control" style="width: 300px;" placeholder="Filter by name..." onkeyup="filterCustomers()">
                     </div>
                     <div style="font-size: 13px; color: var(--text-muted);">
-                        Total Customers: <strong><?php echo count($customers); ?></strong>
+                        Showing <?php echo count($customers); ?> of <strong><?php echo $totalCustomers; ?></strong>
                     </div>
                 </div>
                 
@@ -189,7 +241,7 @@ $customers = $db->getCustomerProfiles();
                                 <?php echo htmlspecialchars($currency); ?><?php echo number_format($c['lifetime_revenue'] ?? 0, 0); ?>
                             </td>
                             <td style="text-align: center;">
-                                <?php if ($c['is_verified']): ?>
+                                <?php if (isset($c['is_verified']) && $c['is_verified']): ?>
                                     <span class="badge badge-verified" title="Checked"><i class="icon-check" style="font-size: 10px; margin-right: 4px;"></i> Verified</span>
                                 <?php else: ?>
                                     <span class="badge badge-unverified">Unverified</span>
@@ -209,6 +261,28 @@ $customers = $db->getCustomerProfiles();
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+
+                <?php if ($totalPages > 1): ?>
+                <div class="pagination">
+                    <a href="?page=<?php echo max(1, $currentPage - 1); ?>" class="pagination-link <?php echo $currentPage <= 1 ? 'disabled' : ''; ?>">
+                        <i class="icon-chevron-left"></i>
+                    </a>
+                    
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                        <?php if ($i == 1 || $i == $totalPages || ($i >= $currentPage - 2 && $i <= $currentPage + 2)): ?>
+                            <a href="?page=<?php echo $i; ?>" class="pagination-link <?php echo $i == $currentPage ? 'active' : ''; ?>">
+                                <?php echo $i; ?>
+                            </a>
+                        <?php elseif ($i == $currentPage - 3 || $i == $currentPage + 3): ?>
+                            <span style="color: var(--text-muted);">...</span>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+
+                    <a href="?page=<?php echo min($totalPages, $currentPage + 1); ?>" class="pagination-link <?php echo $currentPage >= $totalPages ? 'disabled' : ''; ?>">
+                        <i class="icon-chevron-right"></i>
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
         </form>
             </div><!-- .content-body -->
@@ -281,6 +355,8 @@ $customers = $db->getCustomerProfiles();
                     x = rows[i].getElementsByTagName("TD")[n];
                     y = rows[i + 1].getElementsByTagName("TD")[n];
                     
+                    if (!x || !y) continue;
+
                     let valX = x.textContent.toLowerCase().replace(/[^a-z0-9.]/g, '');
                     let valY = y.textContent.toLowerCase().replace(/[^a-z0-9.]/g, '');
                     
