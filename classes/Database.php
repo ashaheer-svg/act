@@ -21,6 +21,7 @@ class Database {
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             $this->db->exec('PRAGMA foreign_keys = ON');
+            $this->db->exec('PRAGMA journal_mode = WAL');
         } catch (PDOException $e) {
             $this->error = $e->getMessage();
             die('Database Connection Failed: ' . $this->error);
@@ -334,9 +335,6 @@ class Database {
         return $row ? $row['setting_value'] : $default;
     }
 
-    /**
-     * CRM: Sync unique customers from sales into profiles
-     */
     public function syncCustomerProfiles() {
         $this->db->exec("
             INSERT OR IGNORE INTO customer_profiles (customer_name)
@@ -561,7 +559,10 @@ class Database {
                 'date_format' => 'Y-m-d',
                 'backup_enabled' => '1',
                 'limit_year' => date('Y'),
-                'limit_month' => date('m')
+                'limit_month' => date('m'),
+                'api_secret_key' => bin2hex(random_bytes(24)),
+                'last_qb_sync' => '',
+                'last_qb_sync_summary' => ''
             ];
 
             foreach ($defaults as $key => $value) {
@@ -594,7 +595,10 @@ class Database {
                 'product_category' => "ALTER TABLE sales ADD COLUMN product_category TEXT",
                 'sales_rep_code' => "ALTER TABLE sales ADD COLUMN sales_rep_code TEXT",
                 'paid_date' => "ALTER TABLE sales ADD COLUMN paid_date DATE",
-                'days_to_pay' => "ALTER TABLE sales ADD COLUMN days_to_pay INTEGER"
+                'days_to_pay' => "ALTER TABLE sales ADD COLUMN days_to_pay INTEGER",
+                'po_number' => "ALTER TABLE sales ADD COLUMN po_number TEXT",
+                'memo' => "ALTER TABLE sales ADD COLUMN memo TEXT",
+                'qb_txn_id' => "ALTER TABLE sales ADD COLUMN qb_txn_id TEXT"
             ];
 
             foreach ($needed as $col => $sql) {

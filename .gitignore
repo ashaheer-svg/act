@@ -29,3 +29,7 @@ Thumbs.db
 # Composer (if you add dependencies later)
 vendor/
 composer.lock
+
+# .NET Build output
+app/bin/
+app/obj/

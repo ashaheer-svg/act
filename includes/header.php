@@ -39,7 +39,7 @@ $searchPlaceholder = $searchPlaceholder ?? 'Search...';
                 </div>
                 <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
                 <?php if ($auth->isAdmin()): ?>
-                <a href="users.php" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
+                <a href="settings.php#team" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
                 <?php endif; ?>
                 <div class="dropdown-divider"></div>
                 <form method="POST" action="logout.php" style="margin: 0;">
