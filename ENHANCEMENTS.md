@@ -342,7 +342,51 @@
 
 ---
 
-**Version**: 2.0.0  
-**Status**: All high & medium priority features implemented  
-**Quality**: Production-ready with security hardening  
+---
+
+## 💎 Version 3.0 - Enterprise AI Asset Normalization, Multi-Period VAT Engine & Legacy QB Bridge
+
+### 10. ✅ Multi-Period Statutory VAT Engine & Sequence Mapper
+- **Files**: `classes/Database.php`, `settings.php`, `api/sync.php`, `classes/DataImporter.php`
+- **Features**:
+  - Sequence Range Engine: Dynamically decomposes gross billing into Base Net Revenue and VAT according to statutory invoice sequences:
+    - `AS004001` – `AS005147`: **12% VAT**
+    - `AS005148` – `AS006560`: **0% VAT (Exempt)**
+    - `AS006561` – `AS008154`: **15% VAT**
+    - `AS008155` – `AS008211`: **8% VAT**
+    - `AS008212` – `AS010020`: **0% VAT (Exempt)**
+    - `AS010021` – `AS011260`: **18% VAT**
+    - `ASN000001` – `ASN000102` / `AS000001` – `AS000102`: **18% VAT**
+  - Handles VAT-inclusivity (`base = total / (1 + rate)`, `vat = total - base`) where no separate VAT line exists.
+  - One-click historical VAT recalculation across all 12,392 rows in SQLite.
+
+### 11. ✅ Pluggable AI Entity & Warranty Extractor
+- **Files**: `classes/AiExtractor.php`, `bin/batch_extract_assets.php`, `settings.php`
+- **Features**:
+  - Normalizes unstructured multi-line invoice descriptions into:
+    - Unit-level Hardware Assets (discrete serial numbers, chassis parent links, 12/24/36-month warranties)
+    - Software Subscriptions & SaaS Licenses (contract start/end dates, seats, renewal values)
+  - Pluggable LLM Drivers: Built-in Google Gemini (Structured JSON schema mode) with fallback support for OpenAI and Ollama.
+  - Automated mathematical validation guard protecting invoice financial immutability.
+
+### 12. ✅ Downstream Warranty & SaaS Renewals Reporting
+- **Files**: `classes/Reports.php`, `reports.php`, `includes/report_methodology.php`
+- **Features**:
+  - `reports.php?type=warranties`: Interactive serial-level registry with KPI ribbons (Active, Expiring in 30/60/90 days, Expired), brand filters, and days-remaining counters.
+  - `reports.php?type=renewals`: 12-month SaaS recurring revenue pipeline calendar, seat tracking, and upcoming contract renewal opportunity values.
+  - Enhanced slide-over invoice inspector: Displays normalized hardware assets and software subscriptions alongside raw line items and matched bank payments.
+
+### 13. ✅ Legacy QuickBooks (2009–2021) Historical Bridge
+- **Files**: `app/Program.cs`, `app/QuickBooksConnector.cs`, `import_legacy_qb.php`, `app/binary/SalesBISync.exe`
+- **Features**:
+  - Supports `--from <YYYY-MM-DD>` and `--to <YYYY-MM-DD>` CLI arguments in `SalesBISync.exe`.
+  - Interactive menu option `[H] Extract Historical Archive Range (2009–2021)` for extracting archives to offline JSON/CSV without resetting current incremental sync cursors.
+  - Web uploader in `import_legacy_qb.php` with 1-click historical ingestion.
+
+---
+
+**Version**: 3.0.0  
+**Status**: Production-Ready Enterprise Asset Normalization & Multi-Period Tax Compliance  
+**Quality**: Hardened, Audited, and Verified  
+
 

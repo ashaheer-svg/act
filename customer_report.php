@@ -25,7 +25,7 @@ if (!$customerScore) {
     die("Customer data not found.");
 }
 
-$currency = $db->getSetting('currency_symbol', '$');
+$currency = $db->getSetting('currency_symbol', 'LKR ');
 $companyName = $db->getSetting('company_name', 'Sales Analytics Platform');
 
 $riskColor = '#10b981';
@@ -163,11 +163,15 @@ if ($customerScore['risk_level'] === 'Critical') $riskColor = '#ef4444';
                 </div>
 
                 <h2 class="section-title">Purchasing Habits & Product Distribution</h2>
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                    Filtered for valid commercial purchases and serialized warranty units. Non-viable 0-value description placeholders are omitted.
+                </div>
                 <table class="table">
                     <thead>
                         <tr>
                             <th>Item Description</th>
                             <th>Category</th>
+                            <th class="text-right">Units</th>
                             <th class="text-right">Freq</th>
                             <th class="text-right">Value (<?php echo $currency; ?>)</th>
                         </tr>
@@ -177,8 +181,15 @@ if ($customerScore['risk_level'] === 'Critical') $riskColor = '#ef4444';
                         <tr>
                             <td><?php echo htmlspecialchars($p['item_description']); ?></td>
                             <td><span style="font-size: 10px; color: var(--text-muted); font-weight: 700; background: #e2e8f0; padding: 2px 8px; border-radius: 4px;"><?php echo htmlspecialchars($p['main_category'] ?? 'General'); ?></span></td>
+                            <td class="text-right"><?php echo (int)($p['total_units'] ?? 0); ?></td>
                             <td class="text-right"><?php echo $p['frequency']; ?></td>
-                            <td class="text-right" style="font-weight: 800;"><?php echo number_format($p['total_value'], 2); ?></td>
+                            <td class="text-right" style="font-weight: 800;">
+                                <?php if ($p['total_value'] > 0): ?>
+                                    <?php echo number_format($p['total_value'], 2); ?>
+                                <?php else: ?>
+                                    <span style="font-size: 11px; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Warranty Asset (0.00)</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

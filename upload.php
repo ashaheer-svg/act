@@ -9,7 +9,7 @@ $auth = new Auth($db);
 $auth->requireAccounts(); // Admin or Accounts
 
 $user = $auth->getCurrentUser();
-$currency = $db->getSetting('currency_symbol', '$');
+$currency = $db->getSetting('currency_symbol', 'LKR ');
 $importer = new DataImporter($db, $user['id']);
 
 $message = '';

@@ -1,0 +1,4 @@
+﻿Type,Date,Num,Name,Item,Description,Sales Tax Code,Qty,Amount,Product Category,Rep,PONumber,Memo,QBTxnID
+Invoice,2026-08-28,INV-30735,Apex Global Technologies,Servers:Rackmount,"PowerEdge R750 2U Server [S/N: PE-99482-SN10294 | Dual Xeon Gold, 64GB DDR4, 2x 960GB NVMe]",Taxable Sales,1,5900.00,Hardware,JS,PO-APEX-4491,Primary data center deployment,
+Invoice,2026-08-30,INV-63358,Matrix Logistics Ltd,Networking:Switches,Cisco Catalyst 9300 48-Port PoE+ [S/N: FCW2419L02A | MAC: 00:1A:2B:3C:4D:5E],Taxable Sales,2,4800.00,Hardware,MR,PO-MAT-8812,Branch network upgrade,
+Invoice,2026-09-02,INV-32900,Summit Healthcare Partners,Services:Consulting,Cloud Infrastructure Security Audit & Optimization,Taxable Sales,15,3750.00,Services,JS,PO-SHP-2026-9,Phase 1 completed,

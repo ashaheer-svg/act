@@ -8,7 +8,7 @@ $auth = new Auth($db);
 $auth->requireAccounts(); // Admin or Accounts
 
 $user = $auth->getCurrentUser();
-$currency = $db->getSetting('currency_symbol', '$');
+$currency = $db->getSetting('currency_symbol', 'LKR ');
 
 $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');

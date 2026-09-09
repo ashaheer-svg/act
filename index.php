@@ -12,12 +12,13 @@ $reports = new Reports($db);
 $user = $auth->getCurrentUser();
 
 // Load dynamic settings
-$currency = $db->getSetting('currency_symbol', '$');
+$currency = $db->getSetting('currency_symbol', 'LKR ');
 $vatRate = $db->getSetting('vat_rate', '0.18');
 
 // Get date range for reports
+$availableYears = $reports->getAvailableYears();
 $month = $_GET['month'] ?? date('m');
-$year = $_GET['year'] ?? date('Y');
+$year = $_GET['year'] ?? (!empty($availableYears) ? $availableYears[0] : date('Y'));
 $reportType = $_GET['report'] ?? 'dashboard';
 
 $dateFrom = "$year-$month-01";
@@ -65,9 +66,9 @@ try {
                     
                     <div style="display: flex; gap: 12px; background: white; padding: 6px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
                         <select id="yearSelect" class="custom-select" style="border: none; background: none; width: auto;" onchange="applyFilters()">
-                            <option value="2024" <?php echo $year == '2024' ? 'selected' : ''; ?>>2024</option>
-                            <option value="2025" <?php echo $year == '2025' ? 'selected' : ''; ?>>2025</option>
-                            <option value="2026" <?php echo $year == '2026' ? 'selected' : ''; ?>>2026</option>
+                            <?php foreach ($availableYears as $y): ?>
+                                <option value="<?php echo htmlspecialchars($y); ?>" <?php echo $year == $y ? 'selected' : ''; ?>><?php echo htmlspecialchars($y); ?></option>
+                            <?php endforeach; ?>
                         </select>
                         <select id="monthSelect" class="custom-select" style="border: none; background: none; width: auto;" onchange="applyFilters()">
                             <?php for($m = 1; $m <= 12; $m++): ?>
@@ -79,7 +80,7 @@ try {
                     </div>
                 </div>
 
-                <div class="dashboard-grid">
+                <div class="dashboard-grid" id="dashboardGrid">
                     <?php if (($summary['total_invoices'] ?? 0) == 0): ?>
                     <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 80px 20px; border: 2px dashed var(--border-color); background: #fcfdfe;">
                         <div style="font-size: 60px; margin-bottom: 20px;">📂</div>
@@ -88,40 +89,79 @@ try {
                         <a href="upload.php" class="btn-primary" style="text-decoration: none; display: inline-block; width: auto; padding: 14px 40px;">Upload Your First File</a>
                     </div>
                     <?php else: ?>
-                    <div class="card">
+                    <!-- Executive Financial Methodology & Standards Guide -->
+                    <div class="methodology-card" style="grid-column: 1 / -1; margin-bottom: 8px;">
+                        <div class="methodology-header" onclick="toggleIndexMethodology()" title="Click to view or hide calculation logic & standards">
+                            <div class="methodology-header-title">
+                                <i class="icon-calculator" style="color: var(--sidebar-active);"></i>
+                                <span>Executive Metric Standards & Financial Calculation Guide</span>
+                                <span class="methodology-badge">LKR Standard • IRD RAMIS Tax Model</span>
+                            </div>
+                            <div class="methodology-action">
+                                <span class="methodology-toggle-text" id="indexMethodologyText">Show Logic & Formulas</span>
+                                <span class="methodology-toggle-icon" id="indexMethodologyIcon">▶</span>
+                            </div>
+                        </div>
+                        <div class="methodology-body collapsed" id="indexMethodologyBody">
+                            <div class="methodology-grid">
+                                <div class="methodology-col">
+                                    <div class="methodology-col-label usage"><i class="icon-target"></i> Business Usage</div>
+                                    <p>Provides C-suite and finance directors with an authoritative view of commercial turnover, statutory tax commitments, and cash realization velocity across all active customer accounts in Sri Lanka Rupees (LKR).</p>
+                                </div>
+                                <div class="methodology-col">
+                                    <div class="methodology-col-label validity"><i class="icon-shield-check"></i> Scope & Validity</div>
+                                    <p>Reconciled against QuickBooks commercial billing from 2021 to present. 0-value placeholder rows and header descriptions are filtered out; valid serialized warranty replacements and physical dispatches are preserved.</p>
+                                </div>
+                                <div class="methodology-col">
+                                    <div class="methodology-col-label calc"><i class="icon-calculator"></i> Calculation Method & Formulas</div>
+                                    <p>• <strong>Net Base:</strong> <span class="methodology-formula">Σ base_value = total_amount / 1.18</span></p>
+                                    <p>• <strong>Gross Billed:</strong> <span class="methodology-formula">Σ total_amount</span> (Inc. 18% VAT)</p>
+                                    <p>• <strong>Outstanding AR:</strong> <span class="methodology-formula">Gross Billed - Total Payments</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" title="Formula: Σ base_value = total_amount / 1.18 (Excl. 18% VAT)">
                         <div class="card-label">Total Revenue (Base)</div>
                         <div class="card-value" style="color: var(--sidebar-active);"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_revenue_base'] ?? 0, 0); ?></div>
-                        <div class="card-footer"><span>📄</span> <?php echo $summary['total_invoices'] ?? 0; ?> invoices</div>
+                        <div class="kpi-formula-sub"><code>Formula:</code> Σ base_value (Excl. 18% VAT)</div>
+                        <div class="card-footer" style="margin-top: 8px;"><span>📄</span> <?php echo $summary['total_invoices'] ?? 0; ?> valid billing lines</div>
                     </div>
 
-                    <div class="card">
-                        <div class="card-label">Total After VAT</div>
+                    <div class="card" title="Formula: Σ total_amount (Total Legal Commercial Claim)">
+                        <div class="card-label">Total After VAT (Gross)</div>
                         <div class="card-value"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_amount'] ?? 0, 0); ?></div>
-                        <div class="card-footer">Revenue to collect</div>
+                        <div class="kpi-formula-sub"><code>Formula:</code> Σ total_amount (Legal Receivable)</div>
+                        <div class="card-footer" style="margin-top: 8px;">Full commercial claim</div>
                     </div>
 
-                    <div class="card" style="background: #f0fdf4; border-color: #bbf7d0;">
-                        <div class="card-label" style="color: #166534;">VAT Collected</div>
+                    <div class="card" style="background: #f0fdf4; border-color: #bbf7d0;" title="Formula: Gross Billed - Base Net Revenue">
+                        <div class="card-label" style="color: #166534;">VAT Collected (18%)</div>
                         <div class="card-value" style="color: #15803d;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_vat'] ?? 0, 0); ?></div>
-                        <div class="card-footer" style="color: #166534;">To be remitted</div>
+                        <div class="kpi-formula-sub" style="color: #166534;"><code>Formula:</code> Gross Billed - Base Net</div>
+                        <div class="card-footer" style="color: #166534; margin-top: 8px;">Statutory IRD liability</div>
                     </div>
 
-                    <div class="card" style="background: #fffbeb; border-color: #fde68a;">
-                        <div class="card-label" style="color: #92400e;">Total Payments</div>
+                    <div class="card" style="background: #fffbeb; border-color: #fde68a;" title="Formula: Σ confirmed bank deposits and received payments">
+                        <div class="card-label" style="color: #92400e;">Total Payments Received</div>
                         <div class="card-value" style="color: #b45309;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_payments_received'] ?? 0, 0); ?></div>
-                        <div class="card-footer" style="color: #d97706;">Historical Collection</div>
+                        <div class="kpi-formula-sub" style="color: #92400e;"><code>Formula:</code> Σ confirmed bank payments</div>
+                        <div class="card-footer" style="color: #d97706; margin-top: 8px;">Realized treasury cash</div>
                     </div>
 
-                    <div class="card" style="background: #fef2f2; border-color: #fecaca;">
-                        <div class="card-label" style="color: #991b1b;">Total Outstanding</div>
+                    <div class="card" style="background: #fef2f2; border-color: #fecaca;" title="Formula: Gross Billed - Total Received Payments">
+                        <div class="card-label" style="color: #991b1b;">Total Outstanding (AR)</div>
                         <div class="card-value" style="color: #dc2626;"><?php echo htmlspecialchars($currency); ?><?php echo number_format($summary['total_outstanding'] ?? 0, 0); ?></div>
-                        <div class="card-footer" style="color: #ef4444;">Accounts Receivable</div>
+                        <div class="kpi-formula-sub" style="color: #991b1b;"><code>Formula:</code> Gross Billed - Total Received</div>
+                        <div class="card-footer" style="color: #ef4444; margin-top: 8px;">Active credit exposure</div>
                     </div>
 
-                    <div class="card">
-                        <div class="card-label">Unique Customers</div>
+                    <div class="card" title="Scope: Count of unique billing customer entities">
+                        <div class="card-label">Active Customers</div>
                         <div class="card-value"><?php echo $summary['unique_customers'] ?? 0; ?></div>
-                        <div class="card-footer">Customer base active</div>
+                        <div class="kpi-formula-sub"><code>Scope:</code> Distinct purchasing entities</div>
+                        <div class="card-footer" style="margin-top: 8px;">Corporate & partner accounts</div>
                     </div>
 
                     <div class="card" style="grid-column: span 2;">
@@ -170,6 +210,32 @@ try {
             const year = document.getElementById('yearSelect').value;
             const month = document.getElementById('monthSelect').value;
             window.location.href = `index.php?year=${year}&month=${month}`;
+        }
+
+        function toggleIndexMethodology() {
+            const body = document.getElementById('indexMethodologyBody');
+            const icon = document.getElementById('indexMethodologyIcon');
+            const text = document.getElementById('indexMethodologyText');
+            const grid = document.getElementById('dashboardGrid');
+            if (!body) return;
+            const isCollapsed = body.classList.contains('collapsed');
+            if (isCollapsed) {
+                body.classList.remove('collapsed');
+                if (icon) {
+                    icon.classList.add('expanded');
+                    icon.textContent = '▼';
+                }
+                if (text) text.textContent = 'Hide Logic & Formulas';
+                if (grid) grid.classList.add('show-formulas');
+            } else {
+                body.classList.add('collapsed');
+                if (icon) {
+                    icon.classList.remove('expanded');
+                    icon.textContent = '▶';
+                }
+                if (text) text.textContent = 'Show Logic & Formulas';
+                if (grid) grid.classList.remove('show-formulas');
+            }
         }
     </script>
 </body>

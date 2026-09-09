@@ -1,8 +1,13 @@
 {
-  "server_url": "https://yourdomain.com/act/api/sync.php",
+  "server_url": "https://act.active.lk/api/sync.php",
   "api_key": "5c36ac8a4928a3feda2ef93d7e6c90ff5183d97ac1982867",
-  "last_sync_date": "",
+  "last_sync_date": "2026-09-07T00:15:42",
   "qb_company_file": "",
   "batch_size": 500,
-  "include_serial_numbers": true
+  "include_serial_numbers": true,
+  "save_local_copy": true,
+  "export_folder": "exports",
+  "log_file": "logs/sync_log.txt",
+  "require_qb_running": true,
+  "sync_interval_minutes": 60
 }

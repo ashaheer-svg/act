@@ -11,7 +11,7 @@ $auth = new Auth($db);
 $auth->requireAccounts(); 
 
 $user = $auth->getCurrentUser();
-$currency = $db->getSetting('currency_symbol', '$');
+$currency = $db->getSetting('currency_symbol', 'LKR ');
 
 $message = '';
 $error = '';
@@ -29,7 +29,7 @@ $pageNum = isset($_GET['page']) ? max(1, min((int)$_GET['page'], max(1, $totalPa
 $offset = ($pageNum - 1) * $itemsPerPage;
 
 // Handle Updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'bulk_update') {
         $names = $_POST['customer_names'] ?? [];
         $type = $_POST['bulk_type'] ?? '';
@@ -161,7 +161,18 @@ function sortIcon($col, $currentSort, $currentDir) {
                                 <?php foreach ($customers as $c): ?>
                                 <tr>
                                     <td class="checkbox-cell"><input type="checkbox" name="customer_names[]" value="<?php echo htmlspecialchars($c['customer_name']); ?>" class="row-check" onchange="refreshSelection()"></td>
-                                    <td style="font-weight: 700;"><?php echo htmlspecialchars($c['customer_name']); ?></td>
+                                    <td style="font-weight: 700;">
+                                        <div><?php echo htmlspecialchars($c['customer_name']); ?></div>
+                                        <?php if (!empty($c['company_name']) && $c['company_name'] !== $c['customer_name']): ?>
+                                            <div style="font-size: 11px; font-weight: 500; color: var(--text-muted);"><?php echo htmlspecialchars($c['company_name']); ?></div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($c['phone']) || !empty($c['email'])): ?>
+                                            <div style="font-size: 11px; font-weight: 400; color: var(--text-muted); margin-top: 2px;">
+                                                <?php if (!empty($c['phone'])): ?><span title="Phone">📞 <?php echo htmlspecialchars($c['phone']); ?></span> <?php endif; ?>
+                                                <?php if (!empty($c['email'])): ?><span title="Email" style="margin-left: 6px;">✉️ <?php echo htmlspecialchars($c['email']); ?></span><?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><span class="badge <?php echo ($c['customer_type'] ?? '') === 'Partner' ? 'badge-partner' : 'badge-end'; ?>"><?php echo htmlspecialchars($c['customer_type'] ?? 'End Customer'); ?></span></td>
                                     <td style="text-align: right;"><?php echo $c['lifetime_invoices']; ?></td>
                                     <td style="text-align: right; font-weight: 700; color: var(--primary);"><?php echo $currency . number_format($c['lifetime_revenue'] ?? 0, 0); ?></td>

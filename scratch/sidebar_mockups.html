@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rationalized High-Density List View - Activity Sales BI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Single unified font family: Inter with OpenType tabular numerals -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../docs/lucide-font/lucide.css">
+    <style>
+        :root {
+            --bg-canvas: #f8fafc;
+            --surface-card: #ffffff;
+            --border-card: #cbd5e1;
+            --border-subtle: #e2e8f0;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-subtle: #eff6ff;
+            --sidebar-bg: #090d16;
+            --sidebar-hover: rgba(255, 255, 255, 0.07);
+            --sidebar-text: #94a3b8;
+            --sidebar-width: 180px;
+            --sidebar-collapsed-width: 50px;
+            --header-height: 38px;
+        }
+
+        /* STRICT TYPOGRAPHIC RATIONALIZATION: 
+           Only 1 font family (Inter), OpenType tabular-nums for vertical alignment */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-canvas);
+            color: var(--text-main);
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            overflow-x: hidden;
+            font-size: 12px;
+            line-height: 1.4;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Bar */
+        .lab-bar {
+            background: #090d16;
+            color: white;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            border-bottom: 1px solid #1e293b;
+        }
+        .lab-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .lab-tag {
+            background: #2563eb;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .lab-controls {
+            display: flex;
+            gap: 6px;
+        }
+        .ctrl-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ctrl-btn:hover { background: #334155; color: white; }
+        .ctrl-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        /* Shell */
+        .app-shell {
+            display: flex;
+            min-height: calc(100vh - 35px);
+        }
+
+        /* COLLAPSIBLE SLIMLINE RAIL (180px <-> 50px) */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            flex-shrink: 0;
+            transition: width 0.18s ease;
+            user-select: none;
+        }
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        .sb-header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            justify-content: space-between;
+        }
+        .sb-brand {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .sb-logo {
+            width: 22px;
+            height: 22px;
+            background: #2563eb;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+        .sb-brand-text {
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            color: white;
+        }
+        .sidebar.collapsed .sb-brand-text { display: none; }
+        .sb-toggle {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #94a3b8;
+            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+        .sb-toggle:hover { color: white; border-color: white; }
+
+        .sb-nav {
+            flex: 1;
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .sb-group {
+            font-size: 8.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #475569;
+            padding: 6px 8px 2px 8px;
+            white-space: nowrap;
+        }
+        .sidebar.collapsed .sb-group { display: none; }
+
+        .sb-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 11.5px;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: all 0.1s;
+        }
+        .sb-item i {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+            color: #94a3b8;
+            flex-shrink: 0;
+        }
+        .sb-item:hover { background: var(--sidebar-hover); color: white; }
+        .sb-item:hover i { color: white; }
+        .sb-item.active {
+            background: rgba(37, 99, 235, 0.18);
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        .sb-item.active i { color: #60a5fa; }
+        .sb-cnt {
+            margin-left: auto;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 1px 4px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+        }
+        .sidebar.collapsed .sb-item {
+            justify-content: center;
+            padding: 6px 0;
+        }
+        .sidebar.collapsed .sb-item span,
+        .sidebar.collapsed .sb-item .sb-cnt { display: none; }
+
+        .sb-footer {
+            padding: 6px 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 10px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sidebar.collapsed .sb-footer span { display: none; }
+
+        /* MAIN DATA WORKSPACE */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-canvas);
+        }
+
+        /* 38px COMPACT COMMAND HEADER */
+        .command-bar {
+            height: var(--header-height);
+            background: white;
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .cb-tabs {
+            display: flex;
+            background: #f1f5f9;
+            padding: 2px;
+            border-radius: 4px;
+            gap: 2px;
+        }
+        .cb-tab {
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .cb-tab.active {
+            background: white;
+            color: var(--text-main);
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+        .cb-tab-badge {
+            font-size: 9px;
+            font-weight: 600;
+            background: #e2e8f0;
+            padding: 0 4px;
+            border-radius: 3px;
+        }
+
+        .search-field {
+            position: relative;
+            width: 240px;
+        }
+        .search-field input {
+            width: 100%;
+            height: 26px;
+            padding: 0 6px 0 22px;
+            font-size: 11px;
+            font-family: inherit;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: #f8fafc;
+            outline: none;
+        }
+        .search-field input:focus {
+            background: white;
+            border-color: #2563eb;
+        }
+        .search-field i {
+            position: absolute;
+            left: 6px;
+            top: 6px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .cb-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sel-compact {
+            height: 26px;
+            font-size: 11px;
+            font-family: inherit;
+            font-weight: 500;
+            padding: 0 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            background: white;
+            color: var(--text-main);
+            outline: none;
+            cursor: pointer;
+        }
+        .btn-compact {
+            height: 26px;
+            padding: 0 8px;
+            font-size: 11px;
+            font-family: inherit;
+            font-weight: 500;
+            border-radius: 4px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: var(--text-main);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-compact.primary {
+            background: #0f172a;
+            color: white;
+            border: none;
+        }
+
+        /* DATA VIEW */
+        .data-area {
+            flex: 1;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        /* SLIM 1-LINE METRIC STRIP (28px) */
+        .metric-strip {
+            background: white;
+            border: 1px solid var(--border-card);
+            border-radius: 4px;
+            padding: 4px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 11px;
+            flex-shrink: 0;
+            color: var(--text-secondary);
+        }
+        .metric-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .metric-val {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .metric-divider {
+            width: 1px;
+            height: 14px;
+            background: var(--border-subtle);
+        }
+
+        /* =========================================================
+           RATIONALIZED DATA TABLE (Pure Inter, 28px Rows)
+           ========================================================= */
+        .grid-card {
+            background: white;
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.03);
+            overflow: hidden;
+        }
+        .grid-scroll {
+            flex: 1;
+            overflow: auto;
+        }
+        table.rational-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+            font-family: inherit;
+        }
+        table.rational-table th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--border-card);
+            white-space: nowrap;
+            z-index: 10;
+            text-align: left;
+        }
+        table.rational-table td {
+            padding: 5px 8px; /* Compact 26px - 28px row height */
+            border-bottom: 1px solid #f1f5f9;
+            white-space: nowrap;
+            color: var(--text-main);
+            font-weight: 400;
+        }
+        table.rational-table tr:hover td {
+            background: #f8fafc;
+            cursor: pointer;
+        }
+        table.rational-table tr.selected td {
+            background: #eff6ff;
+        }
+
+        /* Consistent unified column weights without font switching */
+        .cell-id {
+            font-weight: 600;
+            color: #2563eb;
+        }
+        .cell-name {
+            font-weight: 500;
+            color: #0f172a;
+        }
+        .cell-num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            color: #334155;
+        }
+        .cell-total {
+            text-align: right;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        /* RATIONALIZED BADGES: All badges share same height (18px) and border-radius (3px) */
+        .tag {
+            font-size: 10px;
+            font-weight: 500;
+            padding: 1px 5px;
+            border-radius: 3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            line-height: 1.3;
+        }
+        .tag-blue { background: #eff6ff; color: #1d4ed8; }
+        .tag-green { background: #f0fdf4; color: #15803d; }
+        .tag-gray { background: #f1f5f9; color: #475569; }
+        .tag-paid { background: #ecfdf5; color: #15803d; font-weight: 600; font-size: 9.5px; }
+        .tag-unpaid { background: #fffbeb; color: #b45309; font-weight: 600; font-size: 9.5px; }
+
+        /* Master-Detail Split Pane */
+        .split-layout {
+            display: flex;
+            gap: 8px;
+            flex: 1;
+            min-height: 0;
+        }
+        .split-grid {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .split-drawer {
+            width: 380px;
+            background: white;
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 14px rgba(15,23,42,0.05);
+        }
+        .drawer-head {
+            padding: 8px 10px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11.5px;
+        }
+        .drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .drawer-card {
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            padding: 8px;
+            background: #fafbfc;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Lab Switcher -->
+    <div class="lab-bar">
+        <div class="lab-title">
+            <span class="lab-tag">Design Review</span>
+            <span>Rationalized Typography & Compact List View</span>
+        </div>
+        <div class="lab-controls">
+            <button class="ctrl-btn active" id="btnDense" onclick="setDensity('compact')">
+                <i class="icon-align-justify"></i> Compact Height (28px)
+            </button>
+            <button class="ctrl-btn" id="btnRelaxed" onclick="setDensity('relaxed')">
+                <i class="icon-menu"></i> Standard Height (36px)
+            </button>
+            <button class="ctrl-btn" onclick="toggleDrawer()">
+                <i class="icon-columns"></i> Toggle Side Drawer
+            </button>
+            <button class="ctrl-btn" onclick="toggleSidebar()" style="background:#2563eb; color:white; border-color:#3b82f6;">
+                <i class="icon-sidebar"></i> Toggle Rail (180px &harr; 50px)
+            </button>
+        </div>
+    </div>
+
+    <!-- App Shell -->
+    <div class="app-shell">
+
+        <!-- COLLAPSIBLE SLIMLINE RAIL (180px <-> 50px) -->
+        <aside class="sidebar" id="mainSidebar">
+            <div class="sb-header">
+                <div class="sb-brand">
+                    <div class="sb-logo">A</div>
+                    <span class="sb-brand-text">Active BI</span>
+                </div>
+                <button class="sb-toggle" onclick="toggleSidebar()" title="Collapse sidebar">
+                    <i class="icon-chevrons-left" id="sbIcon"></i>
+                </button>
+            </div>
+
+            <nav class="sb-nav">
+                <div class="sb-group">Intelligence</div>
+                <a href="#" class="sb-item"><i class="icon-layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="#" class="sb-item active"><i class="icon-file-text"></i><span>Invoices</span><span class="sb-cnt">2.5k</span></a>
+                <a href="#" class="sb-item"><i class="icon-bar-chart-2"></i><span>Performance</span></a>
+                <a href="#" class="sb-item"><i class="icon-database"></i><span>Explorer</span></a>
+
+                <div class="sb-group">Assets & Ledger</div>
+                <a href="#" class="sb-item"><i class="icon-shield"></i><span>Warranties</span><span class="sb-cnt">7.7k</span></a>
+                <a href="#" class="sb-item"><i class="icon-refresh-cw"></i><span>SaaS & MAs</span><span class="sb-cnt">393</span></a>
+                <a href="#" class="sb-item"><i class="icon-users"></i><span>Customers</span><span class="sb-cnt">648</span></a>
+                <a href="#" class="sb-item"><i class="icon-dollar-sign"></i><span>Profit Entry</span></a>
+
+                <div class="sb-group">System</div>
+                <a href="#" class="sb-item"><i class="icon-folder-up"></i><span>QB Sync</span></a>
+                <a href="#" class="sb-item"><i class="icon-git-branch"></i><span>Mapping</span></a>
+                <a href="#" class="sb-item"><i class="icon-settings"></i><span>Settings</span></a>
+            </nav>
+
+            <div class="sb-footer">
+                <span>🟢 QB Synced</span>
+                <i class="icon-log-out" style="cursor:pointer;" title="Logout"></i>
+            </div>
+        </aside>
+
+        <!-- WORKSPACE -->
+        <main class="workspace">
+
+            <!-- 38px UNIFIED COMMAND BAR -->
+            <header class="command-bar">
+                <div class="cb-tabs">
+                    <button class="cb-tab active">Invoices <span class="cb-tab-badge">2,559</span></button>
+                    <button class="cb-tab">Hardware Warranties <span class="cb-tab-badge">7,781</span></button>
+                    <button class="cb-tab">SaaS & MAs <span class="cb-tab-badge">393</span></button>
+                </div>
+
+                <div class="search-field">
+                    <i class="icon-search"></i>
+                    <input type="text" placeholder="Search invoices, customers, S/N...">
+                </div>
+
+                <div class="cb-actions">
+                    <select class="sel-compact">
+                        <option>Year: 2026</option>
+                        <option>All Years</option>
+                    </select>
+                    <select class="sel-compact">
+                        <option>Month: Sep (09)</option>
+                        <option>All Months</option>
+                    </select>
+                    <select class="sel-compact">
+                        <option>Status: All</option>
+                        <option>Settled</option>
+                        <option>Unpaid</option>
+                    </select>
+                    <button class="btn-compact primary"><i class="icon-download"></i> CSV</button>
+                </div>
+            </header>
+
+            <div class="data-area">
+
+                <!-- 1-LINE COMPACT METRIC STRIP -->
+                <div class="metric-strip">
+                    <div class="metric-item">
+                        <span>Net Pre-VAT:</span>
+                        <span class="metric-val">LKR 4,601,310</span>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-item">
+                        <span>18% VAT:</span>
+                        <span class="metric-val" style="color:#2563eb;">LKR 828,236</span>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-item">
+                        <span>Gross Billed:</span>
+                        <span class="metric-val">LKR 5,429,546</span>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-item">
+                        <span>Variance:</span>
+                        <span class="metric-val" style="color:#15803d;">$0.00 Reconciled</span>
+                    </div>
+                    <div class="metric-divider"></div>
+                    <div class="metric-item" style="color:#64748b; font-size:10px;">
+                        <span>Font: <strong>Inter (Tabular)</strong> &bull; Row Height: <strong id="rhDisplay">28px</strong></span>
+                    </div>
+                </div>
+
+                <!-- SPLIT OR FULL GRID -->
+                <div class="split-layout">
+
+                    <!-- DATA TABLE -->
+                    <div class="split-grid">
+                        <div class="grid-card">
+                            <div class="grid-scroll">
+                                <table class="rational-table" id="mainTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 75px;">Date</th>
+                                            <th style="width: 85px;">Invoice #</th>
+                                            <th>Customer Name</th>
+                                            <th style="width: 40px;">Rep</th>
+                                            <th style="width: 90px;">PO #</th>
+                                            <th style="width: 140px;">Identified Entities</th>
+                                            <th style="text-align: right; width: 90px;">Base Net</th>
+                                            <th style="text-align: right; width: 85px;">18% VAT</th>
+                                            <th style="text-align: right; width: 100px;">Total Gross</th>
+                                            <th style="text-align: center; width: 65px;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tableBody">
+                                        <tr class="selected" onclick="pickRow('AS000102', this)">
+                                            <td style="color:#64748b;">2026-09-05</td>
+                                            <td class="cell-id">AS000102</td>
+                                            <td class="cell-name">Hexar Evolution (Pvt) Ltd</td>
+                                            <td style="color:#475569;">AD</td>
+                                            <td style="color:#475569;">HXRPO-00825</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 3 HW (3 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">257,627</td>
+                                            <td class="cell-num" style="color:#64748b;">46,373</td>
+                                            <td class="cell-total">304,000</td>
+                                            <td style="text-align: center;"><span class="tag tag-unpaid">UNPAID</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000101', this)">
+                                            <td style="color:#64748b;">2026-09-04</td>
+                                            <td class="cell-id">AS000101</td>
+                                            <td class="cell-name">TechCERT</td>
+                                            <td style="color:#475569;">AD</td>
+                                            <td style="color:#475569;">TC-PO-2026</td>
+                                            <td>
+                                                <span class="tag tag-green">🔄 1 MA/Sub</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">56,774</td>
+                                            <td class="cell-num" style="color:#64748b;">10,219</td>
+                                            <td class="cell-total">66,993</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000100', this)">
+                                            <td style="color:#64748b;">2026-09-04</td>
+                                            <td class="cell-id">AS000100</td>
+                                            <td class="cell-name">Barclays Computers (Pvt) Ltd</td>
+                                            <td style="color:#475569;">HS</td>
+                                            <td style="color:#475569;">BC-99214</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 2 HW (2 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">125,424</td>
+                                            <td class="cell-num" style="color:#64748b;">22,576</td>
+                                            <td class="cell-total">148,000</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000099', this)">
+                                            <td style="color:#64748b;">2026-09-04</td>
+                                            <td class="cell-id">AS000099</td>
+                                            <td class="cell-name">FT Soft (Pvt) Ltd</td>
+                                            <td style="color:#475569;">HS</td>
+                                            <td style="color:#475569;">FTS-2026-94</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 5 HW (5 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">979,894</td>
+                                            <td class="cell-num" style="color:#64748b;">176,381</td>
+                                            <td class="cell-total">1,156,275</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000098', this)">
+                                            <td style="color:#64748b;">2026-09-04</td>
+                                            <td class="cell-id">AS000098</td>
+                                            <td class="cell-name">I M Solutions</td>
+                                            <td style="color:#475569;">AD</td>
+                                            <td style="color:#475569;">IMS-882</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 2 HW (2 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">35,508</td>
+                                            <td class="cell-num" style="color:#64748b;">6,392</td>
+                                            <td class="cell-total">41,900</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000097', this)">
+                                            <td style="color:#64748b;">2026-09-03</td>
+                                            <td class="cell-id">AS000097</td>
+                                            <td class="cell-name">GTS Technology Solutions</td>
+                                            <td style="color:#475569;">AD</td>
+                                            <td style="color:#475569;">GTS-8812</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 4 HW (4 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">1,736,695</td>
+                                            <td class="cell-num" style="color:#64748b;">312,605</td>
+                                            <td class="cell-total">2,049,300</td>
+                                            <td style="text-align: center;"><span class="tag tag-unpaid">UNPAID</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000096', this)">
+                                            <td style="color:#64748b;">2026-09-02</td>
+                                            <td class="cell-id">AS000096</td>
+                                            <td class="cell-name">Softlogic Information Tech</td>
+                                            <td style="color:#475569;">HS</td>
+                                            <td style="color:#475569;">SL-7712</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 2 HW (2 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">144,068</td>
+                                            <td class="cell-num" style="color:#64748b;">25,932</td>
+                                            <td class="cell-total">170,000</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000095', this)">
+                                            <td style="color:#64748b;">2026-09-02</td>
+                                            <td class="cell-id">AS000095</td>
+                                            <td class="cell-name">Call Lanka Telecom (Pvt) Ltd</td>
+                                            <td style="color:#475569;">AD</td>
+                                            <td style="color:#475569;">CL-2026-9</td>
+                                            <td>
+                                                <span class="tag tag-blue">💻 2 HW (2 S/N)</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">30,164</td>
+                                            <td class="cell-num" style="color:#64748b;">5,429</td>
+                                            <td class="cell-total">35,593</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                        <tr onclick="pickRow('AS000094', this)">
+                                            <td style="color:#64748b;">2026-09-01</td>
+                                            <td class="cell-id">AS000094</td>
+                                            <td class="cell-name">National Development Bank PLC</td>
+                                            <td style="color:#475569;">AD</td>
+                                            <td style="color:#475569;">NDB-IT-812</td>
+                                            <td>
+                                                <span class="tag tag-green">🔄 2 MA/Sub</span>
+                                                <span class="tag tag-gray">18% Inc</span>
+                                            </td>
+                                            <td class="cell-num">440,678</td>
+                                            <td class="cell-num" style="color:#64748b;">79,322</td>
+                                            <td class="cell-total">520,000</td>
+                                            <td style="text-align: center;"><span class="tag tag-paid">SETTLED</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SIDE DRAWER (AUDIT & VERIFICATION) -->
+                    <div class="split-drawer" id="sideDrawer">
+                        <div class="drawer-head">
+                            <span style="font-weight:600; color:#0f172a;">Invoice Inspector &bull; <strong id="dwId" style="color:#2563eb;">AS000102</strong></span>
+                            <button onclick="toggleDrawer()" style="background:none; border:none; font-size:16px; cursor:pointer; color:#64748b;">&times;</button>
+                        </div>
+                        <div class="drawer-body">
+                            <!-- Customer and Total Card -->
+                            <div class="drawer-card">
+                                <div style="font-weight:600; color:#0f172a;" id="dwCust">Hexar Evolution (Pvt) Ltd</div>
+                                <div style="color:#64748b; font-size:10.5px; margin-top:2px;">PO: HXRPO-00825 &bull; Rep: AD &bull; Date: 2026-09-05</div>
+                                <div style="display:flex; justify-content:space-between; margin-top:6px; padding-top:6px; border-top:1px solid #e2e8f0; font-weight:600;">
+                                    <span style="color:#475569;">Total Billed:</span>
+                                    <span style="color:#0f172a;">LKR 304,000</span>
+                                </div>
+                            </div>
+
+                            <!-- Hardware Assets Identified -->
+                            <div>
+                                <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:#475569; margin-bottom:4px; display:flex; justify-content:space-between;">
+                                    <span>Identified Hardware Assets (3)</span>
+                                    <span style="color:#2563eb;">All Serialized</span>
+                                </div>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <div class="drawer-card" style="padding:6px 8px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-weight:600; color:#1e293b;">2580ZDRK5SJZ7</span>
+                                            <span class="tag tag-green">Active (36M)</span>
+                                        </div>
+                                        <div style="font-size:10.5px; color:#475569; margin-top:2px;">Synology DiskStation DS225+ 2Bay NAS</div>
+                                    </div>
+                                    <div class="drawer-card" style="padding:6px 8px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-weight:600; color:#1e293b;">WW6AG0QE</span>
+                                            <span class="tag tag-green">Active (36M)</span>
+                                        </div>
+                                        <div style="font-size:10.5px; color:#475569; margin-top:2px;">4 TB Seagate Ironwolf NAS Hard Drive</div>
+                                    </div>
+                                    <div class="drawer-card" style="padding:6px 8px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <span style="font-weight:600; color:#1e293b;">WW6AG0RG</span>
+                                            <span class="tag tag-green">Active (36M)</span>
+                                        </div>
+                                        <div style="font-size:10.5px; color:#475569; margin-top:2px;">4 TB Seagate Ironwolf NAS Hard Drive</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- QuickBooks Raw Text -->
+                            <div>
+                                <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:#475569; margin-bottom:4px;">
+                                    <span>Verbatim QuickBooks Raw Text</span>
+                                </div>
+                                <div class="drawer-card" style="font-size:10.5px; line-height:1.4; background:#f8fafc;">
+                                    <div style="margin-bottom:4px;">
+                                        <strong>Line 1:</strong> Synology DiskStation DS225+ 2Bay NAS<br>
+                                        <span style="color:#2563eb; font-weight:500;">S/N : 2580ZDRK5SJZ7</span> &bull; LKR 132,000
+                                    </div>
+                                    <div>
+                                        <strong>Line 2:</strong> 4 TB Seagate Ironwolf NAS Hard Drive<br>
+                                        <span style="color:#2563eb; font-weight:500;">S/N : WW6AG0QE, WW6AG0RG</span> &bull; LKR 172,000
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sb = document.getElementById('mainSidebar');
+            const icon = document.getElementById('sbIcon');
+            const collapsed = sb.classList.toggle('collapsed');
+            icon.className = collapsed ? 'icon-chevrons-right' : 'icon-chevrons-left';
+        }
+
+        function toggleDrawer() {
+            const dw = document.getElementById('sideDrawer');
+            dw.style.display = (dw.style.display === 'none') ? 'flex' : 'none';
+        }
+
+        function setDensity(mode) {
+            const table = document.getElementById('mainTable');
+            const btnD = document.getElementById('btnDense');
+            const btnR = document.getElementById('btnRelaxed');
+            const rh = document.getElementById('rhDisplay');
+
+            if (mode === 'compact') {
+                btnD.classList.add('active');
+                btnR.classList.remove('active');
+                table.querySelectorAll('td').forEach(td => td.style.padding = '5px 8px');
+                table.querySelectorAll('th').forEach(th => th.style.padding = '6px 8px');
+                rh.innerText = '28px';
+            } else {
+                btnR.classList.add('active');
+                btnD.classList.remove('active');
+                table.querySelectorAll('td').forEach(td => td.style.padding = '10px 8px');
+                table.querySelectorAll('th').forEach(th => th.style.padding = '10px 8px');
+                rh.innerText = '36px';
+            }
+        }
+
+        function pickRow(id, tr) {
+            document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected'));
+            tr.classList.add('selected');
+            document.getElementById('dwId').innerText = id;
+            document.getElementById('dwCust').innerText = tr.querySelector('.cell-name').innerText;
+            const dw = document.getElementById('sideDrawer');
+            dw.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>

@@ -17,7 +17,7 @@ class DataImporter {
         
         // Load dynamic settings
         $this->vatRate = floatval($this->db->getSetting('vat_rate', '0.18'));
-        $this->currency = $this->db->getSetting('currency_symbol', '$');
+        $this->currency = $this->db->getSetting('currency_symbol', 'LKR ');
     }
 
     /**
@@ -399,18 +399,41 @@ class DataImporter {
                     continue;
                 }
 
-                // Calculate VAT values
+                // Calculate VAT values using dynamic sequence rules
                 $invoiceDate = $this->formatDate($record['Date'] ?? '');
                 $amount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
+                $invNum = trim($record['Num'] ?? '');
                 $taxCode = trim($record['Sales Tax Code'] ?? '');
+                $itemDesc = $record['Item'] ?? '';
                 
-                // NEW: Get dynamic rate for THIS SPECIFIC DATE
-                $currentVatRate = $this->db->getTaxRateForDate($invoiceDate);
-                $calcResult = $this->calculateVAT($amount, $taxCode, $currentVatRate);
+                $rule = $this->db->getTaxRuleForInvoice($invNum, $invoiceDate);
+                $rate = $rule['rate'];
+
+                if ($rate <= 0 || $amount == 0) {
+                    $base = $amount;
+                    $vat = 0.00;
+                    $total = $amount;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
+                } else {
+                    $isVatLine = (bool)preg_match('/^(VAT|Value Added Tax|\d+%\s*VAT)/i', $itemDesc);
+                    if ($isVatLine) {
+                        $base = 0.00;
+                        $vat = $amount;
+                        $total = $amount;
+                        $appliedRate = $rate;
+                        $vatTreatment = 'VAT_EXCLUSIVE_BREAKUP';
+                    } else {
+                        $base = round($amount / (1 + $rate), 2);
+                        $vat = round($amount - $base, 2);
+                        $total = $amount;
+                        $appliedRate = $rate;
+                        $vatTreatment = 'VAT_INCLUSIVE';
+                    }
+                }
 
                 // Rationalization: Resolve category using mappings if source is empty
                 $category = $record['Product Category'] ?? '';
-                $itemDesc = $record['Item'] ?? '';
                 
                 if (empty($category) || $category === $itemDesc) {
                     $mapping = $this->db->fetch("SELECT product_category FROM product_mappings WHERE item_description = ?", [$itemDesc]);
@@ -427,23 +450,24 @@ class DataImporter {
                         invoice_type, invoice_date, invoice_number, customer_name,
                         item_description, tax_code, quantity, qb_amount,
                         base_value, vat_component, applied_tax_rate, total_amount, 
-                        product_category, sales_rep_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        product_category, sales_rep_code, vat_treatment
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     [
                         $record['Type'] ?? 'Invoice',
                         $invoiceDate,
-                        $record['Num'] ?? '',
+                        $invNum,
                         $record['Name'] ?? '',
                         $itemDesc,
                         $taxCode,
                         floatval(str_replace(',', '', $record['Qty'] ?? 1)),
                         $amount,
-                        $calcResult['base'],
-                        $calcResult['vat'],
-                        $currentVatRate,
-                        $calcResult['total'],
+                        $base,
+                        $vat,
+                        $appliedRate,
+                        $total,
                         $category,
-                        $this->findRepCode($record)
+                        $this->findRepCode($record),
+                        $vatTreatment
                     ]
                 );
 

@@ -20,8 +20,8 @@ class Auth {
      * Start and validate session
      */
     private function startSession() {
-        session_name(SESSION_NAME);
         if (session_status() === PHP_SESSION_NONE) {
+            session_name(SESSION_NAME);
             session_start();
         }
         $this->validateSession();

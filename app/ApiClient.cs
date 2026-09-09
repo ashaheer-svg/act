@@ -86,6 +86,37 @@ public class ApiClient
         }
     }
 
+    public async Task<(bool Success, string Message)> TestConnectionAsync(string serverUrl, string apiKey)
+    {
+        if (string.IsNullOrWhiteSpace(serverUrl))
+        {
+            return (false, "Server URL is not configured in config.json.");
+        }
+
+        try
+        {
+            string separator = serverUrl.Contains('?') ? "&" : "?";
+            string testUrl = $"{serverUrl}{separator}api_key={Uri.EscapeDataString(apiKey ?? "")}";
+
+            using var getReq = new HttpRequestMessage(HttpMethod.Get, testUrl);
+            getReq.Headers.Add("X-API-KEY", apiKey ?? "");
+
+            using var response = await _httpClient.SendAsync(getReq);
+            string body = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Connected successfully! Server health check OK.");
+            }
+
+            return await TestApiConnectivityAsync(serverUrl, apiKey ?? "");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Connection failed: {ex.Message}");
+        }
+    }
+
     public async Task<(bool Success, string Message)> TestApiConnectivityAsync(string serverUrl, string apiKey)
     {
         var dummyPayload = new SyncPayload
@@ -94,7 +125,7 @@ public class ApiClient
             Payments = new List<PaymentRecord>()
         };
 
-        var (success, message, response) = await PostSyncDataAsync(serverUrl, apiKey, dummyPayload);
+        var (success, message, _) = await PostSyncDataAsync(serverUrl, apiKey, dummyPayload);
         return (success, message);
     }
 }

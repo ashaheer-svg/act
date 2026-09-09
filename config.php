@@ -27,7 +27,7 @@ define('SESSION_NAME', 'sales_bi_session');
 
 // Business Settings
 define('VAT_RATE', 0.18); // 18% VAT
-define('CURRENCY', '$');
+define('CURRENCY', 'LKR ');
 
 // Error Display (temporarily enabled for debugging)
 define('DEBUG_MODE', true);

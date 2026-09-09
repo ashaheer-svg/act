@@ -1,0 +1,5 @@
+﻿[2026-09-07 00:13:36] [SKIPPED] QuickBooks Desktop is not running (qbw32.exe or qbw.exe process not found). Data export did not start.
+[2026-09-07 00:15:42] [SUCCESS] Sync completed successfully. Extracted & Transferred: 3 Invoices, 1 Payments, 3 Customers. Server: 3 imported, 0 skipped. Duration: 1.45s.
+[2026-09-07 16:46:45] [SUCCESS] [DRY RUN] Completed. Extracted: 3 Invoices, 1 Payments, 3 Customers. Duration: 0.40s.
+[2026-09-07 17:43:52] [SUCCESS] [DRY RUN] Completed. Extracted: 3 Invoices, 1 Payments, 3 Customers. Duration: 0.42s.
+[2026-09-07 17:44:13] [SUCCESS] [DRY RUN] Completed. Extracted: 3 Invoices, 1 Payments, 3 Customers. Duration: 0.41s.
