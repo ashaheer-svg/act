@@ -555,10 +555,10 @@ class Database {
                 $tinNum = '';
                 $isVat = 0;
                 
-                if (preg_match('/(?:VAT|SVAT)\s*(?:No\.?|#|Reg(?:istration)?)?\s*[:.-]?\s*([0-9]{9}(?:-[0-9]{4})?|[0-9A-Z\-\/]{7,})/i', $text, $m)) {
+                if (preg_match('/(?:VAT|SVAT)\s*(?:No\.?|#|Reg(?:istration)?)?\s*[:.-]?\s*([0-9]{9}(?:-[0-9]{3,4})?|[0-9A-Z\-\/]{7,})/i', $text, $m)) {
                     $vatNum = trim($m[1]);
                     $isVat = 1;
-                } elseif (preg_match('/\b([0-9]{9}-7000)\b/', $text, $m)) {
+                } elseif (preg_match('/\b([0-9]{9}-7000?)\b/', $text, $m)) {
                     $vatNum = trim($m[1]);
                     $isVat = 1;
                 }

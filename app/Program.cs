@@ -682,42 +682,130 @@ class Program
             return 0;
         }
 
-        var payload = new SyncPayload
+        int batchSize = config.BatchSize > 0 ? config.BatchSize : 500;
+        var apiClient = new ApiClient();
+
+        int totalInvoicesImported = 0;
+        int totalInvoicesSkipped = 0;
+        int totalPaymentsImported = 0;
+        int totalCustomersImported = 0;
+        string lastServerTimestamp = "";
+
+        // 1. Upload Customers first (Phase 1: ensuring customer VAT registration is cached before invoices)
+        if (customers.Count > 0)
         {
-            Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
-            Timestamp = DateTime.UtcNow.ToString("o"),
-            Invoices = invoices,
-            Payments = payments,
-            Customers = customers
-        };
+            using (var prog = new ProgressIndicator($"Uploading {customers.Count} customer profiles to {config.ServerUrl}...", isQuiet))
+            {
+                var custPayload = new SyncPayload
+                {
+                    Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                    Timestamp = DateTime.UtcNow.ToString("o"),
+                    Customers = customers,
+                    Invoices = new List<InvoiceRecord>(),
+                    Payments = new List<PaymentRecord>()
+                };
 
-        using (var uploadProgress = new ProgressIndicator($"Uploading payload to {config.ServerUrl} ({invoices.Count} invoices, {payments.Count} payments, {customers.Count} customers)...", isQuiet))
+                var (success, msg, resp) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, custPayload);
+                if (!success)
+                {
+                    string failMsg = $"Customer upload failed: {msg}";
+                    Logger.LogFailure(config.LogFile, failMsg);
+                    prog.Fail(failMsg);
+                    return 1;
+                }
+                totalCustomersImported = resp?.ImportedCustomers ?? customers.Count;
+                lastServerTimestamp = resp?.SyncTimestamp ?? "";
+                prog.Complete($"Transferred {customers.Count} customer accounts [OK]");
+            }
+        }
+
+        // 2. Upload Invoices in Batches (Phase 2: chunked by batch_size to prevent HTTP 400 payload limits)
+        if (invoices.Count > 0)
         {
-            var apiClient = new ApiClient();
-            var (success, message, response) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, payload);
-
-            if (!success)
+            int totalBatches = (int)Math.Ceiling((double)invoices.Count / batchSize);
+            for (int b = 0; b < totalBatches; b++)
             {
-                string failMsg = $"Upload failed: {message}";
-                Logger.LogFailure(config.LogFile, failMsg);
-                uploadProgress.Fail(failMsg);
-                return 1;
+                var batch = invoices.Skip(b * batchSize).Take(batchSize).ToList();
+                int fromIdx = b * batchSize + 1;
+                int toIdx = Math.Min((b + 1) * batchSize, invoices.Count);
+
+                using (var prog = new ProgressIndicator($"[{b + 1}/{totalBatches}] Uploading invoices {fromIdx}–{toIdx} of {invoices.Count}...", isQuiet))
+                {
+                    var invPayload = new SyncPayload
+                    {
+                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        Customers = new List<CustomerRecord>(),
+                        Invoices = batch,
+                        Payments = new List<PaymentRecord>()
+                    };
+
+                    var (success, msg, resp) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, invPayload);
+                    if (!success)
+                    {
+                        string failMsg = $"Invoice batch {b + 1}/{totalBatches} failed: {msg}";
+                        Logger.LogFailure(config.LogFile, failMsg);
+                        prog.Fail(failMsg);
+                        return 1;
+                    }
+                    totalInvoicesImported += resp?.ImportedInvoices ?? batch.Count;
+                    totalInvoicesSkipped += resp?.SkippedInvoices ?? 0;
+                    lastServerTimestamp = resp?.SyncTimestamp ?? "";
+                    prog.Complete($"Invoices {fromIdx}–{toIdx} ({batch.Count} lines) [OK]");
+                }
             }
+        }
 
-            uploadProgress.Complete($"Sync succeeded! Server response: {message}");
-            stopwatch.Stop();
-
-            string successSummary = $"Sync completed successfully. Extracted & Transferred: {invoices.Count} Invoices, {payments.Count} Payments, {customers.Count} Customers. Server: {response?.ImportedInvoices ?? invoices.Count} imported, {response?.SkippedInvoices ?? 0} skipped. Duration: {stopwatch.Elapsed.TotalSeconds:F2}s.";
-            Logger.LogSuccess(config.LogFile, successSummary);
-
-            if (response != null && !isQuiet)
+        // 3. Upload Payments in Batches (Phase 3: chunked by batch_size)
+        if (payments.Count > 0)
+        {
+            int totalBatches = (int)Math.Ceiling((double)payments.Count / batchSize);
+            for (int b = 0; b < totalBatches; b++)
             {
-                Console.WriteLine($"   - Imported Invoices   : {response.ImportedInvoices}");
-                Console.WriteLine($"   - Skipped (Duplicates): {response.SkippedInvoices}");
-                Console.WriteLine($"   - Imported Payments   : {response.ImportedPayments}");
-                Console.WriteLine($"   - Imported Customers  : {response.ImportedCustomers}");
-                Console.WriteLine($"   - Server Timestamp    : {response.SyncTimestamp}");
+                var batch = payments.Skip(b * batchSize).Take(batchSize).ToList();
+                int fromIdx = b * batchSize + 1;
+                int toIdx = Math.Min((b + 1) * batchSize, payments.Count);
+
+                using (var prog = new ProgressIndicator($"[{b + 1}/{totalBatches}] Uploading payments {fromIdx}–{toIdx} of {payments.Count}...", isQuiet))
+                {
+                    var payPayload = new SyncPayload
+                    {
+                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        Customers = new List<CustomerRecord>(),
+                        Invoices = new List<InvoiceRecord>(),
+                        Payments = batch
+                    };
+
+                    var (success, msg, resp) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, payPayload);
+                    if (!success)
+                    {
+                        string failMsg = $"Payment batch {b + 1}/{totalBatches} failed: {msg}";
+                        Logger.LogFailure(config.LogFile, failMsg);
+                        prog.Fail(failMsg);
+                        return 1;
+                    }
+                    totalPaymentsImported += resp?.ImportedPayments ?? batch.Count;
+                    lastServerTimestamp = resp?.SyncTimestamp ?? "";
+                    prog.Complete($"Payments {fromIdx}–{toIdx} ({batch.Count} records) [OK]");
+                }
             }
+        }
+
+        stopwatch.Stop();
+        string successSummary = $"Sync completed successfully! Extracted & Transferred: {invoices.Count} Invoices, {payments.Count} Payments, {customers.Count} Customers in {stopwatch.Elapsed.TotalSeconds:F2}s.";
+        Logger.LogSuccess(config.LogFile, successSummary);
+
+        if (!isQuiet)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"\n[SUCCESS] Sync completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s!");
+            Console.ResetColor();
+            Console.WriteLine($"   - Imported Invoices   : {totalInvoicesImported}");
+            Console.WriteLine($"   - Skipped (Duplicates): {totalInvoicesSkipped}");
+            Console.WriteLine($"   - Imported Payments   : {totalPaymentsImported}");
+            Console.WriteLine($"   - Imported Customers  : {totalCustomersImported}");
+            Console.WriteLine($"   - Server Timestamp    : {lastServerTimestamp}");
         }
 
         // Update local sync date (only for incremental / current syncs, not historical ranges)

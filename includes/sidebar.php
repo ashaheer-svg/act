@@ -126,6 +126,10 @@ $settingsOpen = ($currentPage === 'settings.php');
     </nav>
 
     <div class="sidebar-footer">
+        <button type="button" class="nav-item sidebar-footer-toggle" id="sidebarFooterToggleBtn" onclick="toggleSidebar()" data-title="Collapse" style="background: none; border: none; width: 100%; cursor: pointer; text-align: left; color: var(--sidebar-text);">
+            <i class="icon-chevrons-left" id="sidebarFooterToggleIcon"></i>
+            <span>Collapse</span>
+        </button>
         <form method="POST" action="logout.php" style="margin: 0;">
             <button type="submit" class="nav-item" data-title="Logout" style="background: none; border: none; width: 100%; cursor: pointer; text-align: left;">
                 <i class="icon-log-out"></i>
@@ -134,3 +138,4 @@ $settingsOpen = ($currentPage === 'settings.php');
         </form>
     </div>
 </aside>
+<?php require_once __DIR__ . '/layout_js.php'; ?>

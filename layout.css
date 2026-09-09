@@ -140,8 +140,26 @@ body {
     padding: 0;
 }
 
+.sidebar.collapsed .logo-container {
+    display: none;
+}
+
 .sidebar.collapsed .sidebar-collapse-toggle {
-    display: none; /* In collapsed state, top header button or logo restores it */
+    display: flex !important;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .sidebar-collapse-toggle:hover {
+    background: var(--primary);
+    transform: scale(1.06);
 }
 
 .sidebar-nav {

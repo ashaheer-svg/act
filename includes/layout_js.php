@@ -7,12 +7,26 @@
 /* ── Sidebar collapse toggle ── */
 function updateSidebarIcon(collapsed) {
     const icon = document.getElementById('sidebarToggleIcon');
+    const collapseBtn = document.getElementById('sidebarCollapseBtn');
     if (icon) {
-        if (collapsed) {
-            icon.className = 'icon-chevrons-right';
-        } else {
-            icon.className = 'icon-chevrons-left';
-        }
+        icon.className = collapsed ? 'icon-chevrons-right' : 'icon-chevrons-left';
+    }
+    if (collapseBtn) {
+        collapseBtn.title = collapsed ? 'Expand Sidebar (180px)' : 'Collapse Sidebar (50px)';
+    }
+
+    const footerIcon = document.getElementById('sidebarFooterToggleIcon');
+    const footerBtn = document.getElementById('sidebarFooterToggleBtn');
+    const footerSpan = footerBtn ? footerBtn.querySelector('span') : null;
+    if (footerIcon) {
+        footerIcon.className = collapsed ? 'icon-chevrons-right' : 'icon-chevrons-left';
+    }
+    if (footerSpan) {
+        footerSpan.textContent = collapsed ? 'Expand' : 'Collapse';
+    }
+    if (footerBtn) {
+        footerBtn.setAttribute('data-title', collapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
+        footerBtn.title = collapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
     }
 }
 

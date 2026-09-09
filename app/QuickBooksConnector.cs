@@ -714,10 +714,10 @@ public class QuickBooksConnector
         string tinNum = "";
         bool isVat = false;
 
-        // 1. Explicit VAT Registration Number
+        // 1. Explicit VAT Registration Number (supports current 4-digit -7000 and legacy 3-digit -700 suffixes)
         var vatMatch = System.Text.RegularExpressions.Regex.Match(
             full,
-            @"(?:VAT|SVAT)\s*(?:No\.?|#|Reg(?:istration)?)?\s*[:.-]?\s*([0-9]{9}(?:-[0-9]{4})?|[0-9A-Z\-\/]{7,})",
+            @"(?:VAT|SVAT)\s*(?:No\.?|#|Reg(?:istration)?)?\s*[:.-]?\s*([0-9]{9}(?:-[0-9]{3,4})?|[0-9A-Z\-\/]{7,})",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         if (vatMatch.Success)
@@ -727,7 +727,7 @@ public class QuickBooksConnector
         }
         else
         {
-            var vatDirect = System.Text.RegularExpressions.Regex.Match(full, @"\b([0-9]{9}-7000)\b");
+            var vatDirect = System.Text.RegularExpressions.Regex.Match(full, @"\b([0-9]{9}-7000?)\b");
             if (vatDirect.Success)
             {
                 vatNum = vatDirect.Groups[1].Value.Trim();
