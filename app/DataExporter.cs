@@ -17,23 +17,28 @@ public static class DataExporter
         public string ExportDirectory { get; set; } = "";
         public string JsonFile { get; set; } = "";
         public string? InvoiceCsvFile { get; set; }
+        public string? CreditMemoCsvFile { get; set; }
         public string? PaymentCsvFile { get; set; }
         public string? CustomerCsvFile { get; set; }
         public int InvoiceCount { get; set; }
+        public int CreditMemoCount { get; set; }
         public int PaymentCount { get; set; }
         public int CustomerCount { get; set; }
     }
 
     /// <summary>
-    /// Saves the extracted invoices, payments, and customers to local JSON and CSV files for analysis.
+    /// Saves the extracted invoices, credit memos, payments, and customers to local JSON and CSV files for analysis.
     /// </summary>
     public static ExportResult SaveExport(
         List<InvoiceRecord> invoices,
-        List<PaymentRecord> payments,
+        List<CreditMemoRecord>? creditMemos = null,
+        List<PaymentRecord>? payments = null,
         List<CustomerRecord>? customers = null,
         string? customDirectory = null,
         string prefix = "qb_data")
     {
+        creditMemos ??= new List<CreditMemoRecord>();
+        payments ??= new List<PaymentRecord>();
         customers ??= new List<CustomerRecord>();
 
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -49,6 +54,7 @@ public static class DataExporter
         string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HHmmss");
         string jsonPath = Path.Combine(exportDir, $"{prefix}_{timestamp}.json");
         string invoiceCsvPath = Path.Combine(exportDir, $"{prefix}_invoices_{timestamp}.csv");
+        string creditMemoCsvPath = Path.Combine(exportDir, $"{prefix}_credit_memos_{timestamp}.csv");
         string paymentCsvPath = Path.Combine(exportDir, $"{prefix}_payments_{timestamp}.csv");
         string customerCsvPath = Path.Combine(exportDir, $"{prefix}_customers_{timestamp}.csv");
 
@@ -58,9 +64,11 @@ public static class DataExporter
             export_timestamp = DateTime.UtcNow.ToString("o"),
             local_time = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             total_invoices = invoices.Count,
+            total_credit_memos = creditMemos.Count,
             total_payments = payments.Count,
             total_customers = customers.Count,
             invoices = invoices,
+            credit_memos = creditMemos,
             payments = payments,
             customers = customers
         };
@@ -70,7 +78,7 @@ public static class DataExporter
 
         // 2. Write Invoices CSV
         var invCsv = new StringBuilder();
-        invCsv.AppendLine("Type,Date,Num,Name,Item,Description,Sales Tax Code,Qty,Amount,Product Category,Rep,PONumber,Memo,QBTxnID,Subtotal,SalesTaxTotal,SalesTaxRate,SalesTaxItem,CustomerTaxCode,AppliedAmount,BalanceRemaining,IsPaid,DueDate,ShipDate,Terms,UnitPrice");
+        invCsv.AppendLine("Type,Date,Num,Name,Item,Description,Sales Tax Code,Qty,Amount,Product Category,Rep,PONumber,Memo,QBTxnID,Subtotal,SalesTaxTotal,SalesTaxRate,SalesTaxItem,CustomerTaxCode,AppliedAmount,BalanceRemaining,IsPaid,DueDate,ShipDate,Terms,UnitPrice,EndCustomer");
         foreach (var inv in invoices)
         {
             invCsv.AppendLine(string.Join(",",
@@ -99,12 +107,45 @@ public static class DataExporter
                 EscapeCsv(inv.DueDate),
                 EscapeCsv(inv.ShipDate),
                 EscapeCsv(inv.Terms),
-                inv.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                inv.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                EscapeCsv(inv.EndCustomer)
             ));
         }
         File.WriteAllText(invoiceCsvPath, invCsv.ToString(), Encoding.UTF8);
 
-        // 3. Write Payments CSV
+        // 3. Write Credit Memos CSV
+        var cmCsv = new StringBuilder();
+        cmCsv.AppendLine("Type,Date,Num,Name,Item,Description,Sales Tax Code,Qty,Amount,Product Category,Rep,PONumber,Memo,QBTxnID,Subtotal,SalesTaxTotal,SalesTaxRate,TotalAmount,CreditRemaining,AppliedToInvoice,AppliedAmount,UnitPrice");
+        foreach (var cm in creditMemos)
+        {
+            cmCsv.AppendLine(string.Join(",",
+                EscapeCsv(cm.Type),
+                EscapeCsv(cm.Date),
+                EscapeCsv(cm.Num),
+                EscapeCsv(cm.Name),
+                EscapeCsv(cm.Item),
+                EscapeCsv(cm.Description),
+                EscapeCsv(cm.SalesTaxCode),
+                cm.Qty.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                cm.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                EscapeCsv(cm.ProductCategory),
+                EscapeCsv(cm.Rep),
+                EscapeCsv(cm.PONumber),
+                EscapeCsv(cm.Memo),
+                EscapeCsv(cm.QBTxnID),
+                cm.Subtotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                cm.SalesTaxTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                cm.SalesTaxRate.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                cm.TotalAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                cm.CreditRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                EscapeCsv(cm.AppliedToInvoice),
+                cm.AppliedAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                cm.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            ));
+        }
+        File.WriteAllText(creditMemoCsvPath, cmCsv.ToString(), Encoding.UTF8);
+
+        // 4. Write Payments CSV
         var payCsv = new StringBuilder();
         payCsv.AppendLine("CustomerName,InvoiceNum,PaymentDate,ReferenceNum,Amount,PaymentMethod,DepositToAccount,Memo,UnusedPayment");
         foreach (var pay in payments)
@@ -172,9 +213,11 @@ public static class DataExporter
             ExportDirectory = exportDir,
             JsonFile = jsonPath,
             InvoiceCsvFile = invoiceCsvPath,
+            CreditMemoCsvFile = creditMemoCsvPath,
             PaymentCsvFile = paymentCsvPath,
             CustomerCsvFile = customerCsvPath,
             InvoiceCount = invoices.Count,
+            CreditMemoCount = creditMemos.Count,
             PaymentCount = payments.Count,
             CustomerCount = customers.Count
         };

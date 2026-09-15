@@ -120,6 +120,102 @@ public class InvoiceRecord
 
     [JsonPropertyName("unit_price")]
     public decimal UnitPrice { get; set; } = 0;
+
+    [JsonPropertyName("end_customer")]
+    public string EndCustomer { get; set; } = "";
+}
+
+public class LinkedTxnRecord
+{
+    [JsonPropertyName("txn_id")]
+    public string TxnID { get; set; } = "";
+
+    [JsonPropertyName("txn_type")]
+    public string TxnType { get; set; } = "";
+
+    [JsonPropertyName("txn_date")]
+    public string TxnDate { get; set; } = "";
+
+    [JsonPropertyName("ref_number")]
+    public string RefNumber { get; set; } = "";
+
+    [JsonPropertyName("link_type")]
+    public string LinkType { get; set; } = "";
+
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; } = 0;
+}
+
+public class CreditMemoRecord
+{
+    [JsonPropertyName("Type")]
+    public string Type { get; set; } = "Credit Memo";
+
+    [JsonPropertyName("Date")]
+    public string Date { get; set; } = "";
+
+    [JsonPropertyName("Num")]
+    public string Num { get; set; } = "";
+
+    [JsonPropertyName("Name")]
+    public string Name { get; set; } = "";
+
+    [JsonPropertyName("Item")]
+    public string Item { get; set; } = "";
+
+    [JsonPropertyName("Description")]
+    public string Description { get; set; } = "";
+
+    [JsonPropertyName("Sales Tax Code")]
+    public string SalesTaxCode { get; set; } = "Taxable Sales";
+
+    [JsonPropertyName("Qty")]
+    public decimal Qty { get; set; } = 1;
+
+    [JsonPropertyName("Amount")]
+    public decimal Amount { get; set; } = 0;
+
+    [JsonPropertyName("Product Category")]
+    public string ProductCategory { get; set; } = "";
+
+    [JsonPropertyName("Rep")]
+    public string Rep { get; set; } = "";
+
+    [JsonPropertyName("PONumber")]
+    public string PONumber { get; set; } = "";
+
+    [JsonPropertyName("Memo")]
+    public string Memo { get; set; } = "";
+
+    [JsonPropertyName("QBTxnID")]
+    public string QBTxnID { get; set; } = "";
+
+    [JsonPropertyName("subtotal")]
+    public decimal Subtotal { get; set; } = 0;
+
+    [JsonPropertyName("sales_tax_total")]
+    public decimal SalesTaxTotal { get; set; } = 0;
+
+    [JsonPropertyName("sales_tax_rate")]
+    public decimal SalesTaxRate { get; set; } = 0;
+
+    [JsonPropertyName("total_amount")]
+    public decimal TotalAmount { get; set; } = 0;
+
+    [JsonPropertyName("credit_remaining")]
+    public decimal CreditRemaining { get; set; } = 0;
+
+    [JsonPropertyName("applied_to_invoice")]
+    public string AppliedToInvoice { get; set; } = "";
+
+    [JsonPropertyName("applied_amount")]
+    public decimal AppliedAmount { get; set; } = 0;
+
+    [JsonPropertyName("unit_price")]
+    public decimal UnitPrice { get; set; } = 0;
+
+    [JsonPropertyName("linked_txns")]
+    public List<LinkedTxnRecord> LinkedTxns { get; set; } = new();
 }
 
 public class PaymentRecord
@@ -289,6 +385,9 @@ public class SyncPayload
     [JsonPropertyName("invoices")]
     public List<InvoiceRecord> Invoices { get; set; } = new();
 
+    [JsonPropertyName("credit_memos")]
+    public List<CreditMemoRecord> CreditMemos { get; set; } = new();
+
     [JsonPropertyName("payments")]
     public List<PaymentRecord> Payments { get; set; } = new();
 
@@ -309,6 +408,9 @@ public class SyncResponse
 
     [JsonPropertyName("skipped_invoices")]
     public int SkippedInvoices { get; set; }
+
+    [JsonPropertyName("imported_credit_memos")]
+    public int ImportedCreditMemos { get; set; }
 
     [JsonPropertyName("imported_payments")]
     public int ImportedPayments { get; set; }

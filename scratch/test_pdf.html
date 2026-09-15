@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+    <div id="report-content" style="padding: 20px; font-family: sans-serif;">
+        <h1>Activity Sales BI - Unpaid Invoices Ledger</h1>
+        <p>Generated on 2026-09-11</p>
+        <table border="1" style="width: 100%; border-collapse: collapse;">
+            <thead><tr><th>Invoice #</th><th>Customer</th><th>Total</th></tr></thead>
+            <tbody><tr><td>ASN000104</td><td>Commercial Bank</td><td>LKR 460,000.00</td></tr></tbody>
+        </table>
+    </div>
+    <button onclick="testPdf()">Generate PDF</button>
+    <script>
+        function testPdf() {
+            const el = document.getElementById('report-content');
+            html2pdf().set({
+                margin: 10,
+                filename: 'test_report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            }).from(el).save();
+        }
+    </script>
+</body>
+</html>

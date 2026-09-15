@@ -224,8 +224,9 @@ try {
                 base_value, vat_component, applied_tax_rate, total_amount,
                 product_category, sales_rep_code, po_number, memo, qb_txn_id, vat_treatment,
                 subtotal, sales_tax_total, sales_tax_rate, sales_tax_item, customer_tax_code,
-                applied_amount, balance_remaining, is_paid, is_pending, due_date, ship_date, terms, unit_price
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                applied_amount, balance_remaining, is_paid, is_pending, due_date, ship_date, terms, unit_price,
+                end_customer
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ";
 
         foreach ($invoices as $inv) {
@@ -236,16 +237,26 @@ try {
             $itemDesc = trim($inv['Description'] ?? $inv['Item'] ?? $inv['item_description'] ?? 'Item');
             $rawAmount = $inv['Amount'] ?? $inv['amount'] ?? 0;
             $cleanAmount = floatval(str_replace(',', '', $rawAmount));
+            $txnId = trim($inv['QBTxnID'] ?? $inv['qb_txn_id'] ?? '');
+
+            // Fallback for opening balance or unnumbered legacy transactions
+            if (empty($num) && !empty($txnId)) {
+                $num = 'OB-' . $txnId;
+            }
 
             if (empty($num) || empty($customer)) {
                 $invoicesSkipped++;
                 continue;
             }
 
-            // Check duplicate
+            // Date parsing (parsed before duplicate check to allow historical and modern sequences to coexist)
+            $rawDate = $inv['Date'] ?? $inv['invoice_date'] ?? date('Y-m-d');
+            $date = date('Y-m-d', strtotime(str_replace('/', '-', $rawDate)));
+
+            // Check duplicate (including invoice_date so legacy and modern sequence resets like AS000001 do not collide)
             $existing = $db->fetch(
-                "SELECT id FROM sales WHERE invoice_number = ? AND customer_name = ? AND item_description = ? AND qb_amount = ? LIMIT 1",
-                [$num, $customer, $itemDesc, $cleanAmount]
+                "SELECT id FROM sales WHERE invoice_number = ? AND invoice_date = ? AND customer_name = ? AND item_description = ? AND qb_amount = ? LIMIT 1",
+                [$num, $date, $customer, $itemDesc, $cleanAmount]
             );
 
             if ($existing) {
@@ -253,9 +264,13 @@ try {
                 continue;
             }
 
-            // Date parsing
-            $rawDate = $inv['Date'] ?? $inv['invoice_date'] ?? date('Y-m-d');
-            $date = date('Y-m-d', strtotime(str_replace('/', '-', $rawDate)));
+            // End Customer resolution
+            $endCustomer = trim($inv['end_customer'] ?? $inv['EndCustomer'] ?? '');
+            if (empty($endCustomer)) {
+                if (preg_match('/\(?\s*End\s+Customers?\s*[:\-\s]\s*(.*?)\)?$/i', $itemDesc, $ecm)) {
+                    $endCustomer = trim(trim($ecm[1]), "()\"'");
+                }
+            }
 
             // Dynamic VAT calculation based on invoice sequence range & customer registration
             $taxCode = trim($inv['Sales Tax Code'] ?? $inv['tax_code'] ?? 'Taxable Sales');
@@ -263,7 +278,13 @@ try {
             $rate = $rule['rate'];
             $isVatReg = $custVatMap[$customer] ?? 0;
 
-            if ($rate <= 0 || $cleanAmount == 0 || stripos($taxCode, 'Non') !== false || stripos($taxCode, 'Zero') !== false || stripos($taxCode, 'Exempt') !== false) {
+            if ($cleanAmount == 0) {
+                $base = 0.00;
+                $vat = 0.00;
+                $total = 0.00;
+                $appliedRate = 0.00;
+                $vatTreatment = 'VAT_EXEMPT';
+            } elseif ($rate <= 0) {
                 $base = $cleanAmount;
                 $vat = 0.00;
                 $total = $cleanAmount;
@@ -276,8 +297,8 @@ try {
                     $vat = $cleanAmount;
                     $total = $cleanAmount;
                     $appliedRate = $rate;
-                    $vatTreatment = 'VAT_EXCLUSIVE_BREAKUP';
-                } elseif ($isVatReg == 1) {
+                    $vatTreatment = 'PLUS_VAT';
+                } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
                     // Customer IS VAT-Registered: Line is Net Base, VAT is +18% on top (PLUS_VAT)
                     $base = $cleanAmount;
                     $vat = round($cleanAmount * $rate, 2);
@@ -285,12 +306,13 @@ try {
                     $appliedRate = $rate;
                     $vatTreatment = 'PLUS_VAT';
                 } else {
-                    // Customer is NOT VAT-Registered: Invoice is VAT-inclusive (no separate VAT breakdown)
+                    // VAT-Inclusive invoice: Under government regulations, VAT is included in price.
+                    // Converted to +VAT invoice for system purposes with +VAT tag.
                     $total = $cleanAmount;
                     $base = round($cleanAmount / (1 + $rate), 2);
                     $vat = round($total - $base, 2);
                     $appliedRate = $rate;
-                    $vatTreatment = 'VAT_INCLUSIVE';
+                    $vatTreatment = 'PLUS_VAT';
                 }
             }
 
@@ -355,14 +377,165 @@ try {
                 $dueDate,
                 $shipDate,
                 $terms,
-                $unitPrice
+                $unitPrice,
+                $endCustomer
             ]);
+
+            // Propagate End Customer across all items of this invoice if known
+            if (!empty($endCustomer)) {
+                $db->execute("UPDATE sales SET end_customer = ? WHERE invoice_number = ? AND (end_customer IS NULL OR end_customer = '')", [$endCustomer, $num]);
+                $db->execute("UPDATE invoice_items SET end_customer = ? WHERE invoice_number = ? AND (end_customer IS NULL OR end_customer = '')", [$endCustomer, $num]);
+                $db->execute("UPDATE hardware_assets SET end_customer = ? WHERE invoice_number = ? AND (end_customer IS NULL OR end_customer = '')", [$endCustomer, $num]);
+                $db->execute("UPDATE software_subscriptions SET end_customer = ? WHERE invoice_number = ? AND (end_customer IS NULL OR end_customer = '')", [$endCustomer, $num]);
+            }
 
             $invoicesImported++;
         }
     }
 
-    // 3. Process Payments & Settlements
+    // 3. Process Credit Memos (Goods Returns / Credit Notes)
+    $creditMemos = $payload['credit_memos'] ?? [];
+    $creditMemosImported = 0;
+    if (!empty($creditMemos)) {
+        $insertCreditMemoStmt = "
+            INSERT INTO sales (
+                invoice_type, invoice_date, invoice_number, customer_name,
+                item_description, tax_code, quantity, qb_amount,
+                base_value, vat_component, applied_tax_rate, total_amount,
+                product_category, sales_rep_code, po_number, memo, qb_txn_id, vat_treatment,
+                subtotal, sales_tax_total, sales_tax_rate, unit_price, end_customer
+            ) VALUES ('Credit Memo', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ";
+
+        foreach ($creditMemos as $cm) {
+            $num = trim($cm['Num'] ?? $cm['credit_memo_number'] ?? '');
+            $customer = trim($cm['Name'] ?? $cm['customer_name'] ?? '');
+            $itemDesc = trim($cm['Description'] ?? $cm['Item'] ?? 'Credit Memo Item');
+            $rawAmount = $cm['Amount'] ?? $cm['amount'] ?? 0;
+            $cleanAmount = floatval(str_replace(',', '', $rawAmount));
+            $txnId = trim($cm['QBTxnID'] ?? $cm['qb_txn_id'] ?? '');
+
+            if (empty($num) || empty($customer)) {
+                continue;
+            }
+
+            $rawDate = $cm['Date'] ?? $cm['credit_memo_date'] ?? date('Y-m-d');
+            $date = date('Y-m-d', strtotime(str_replace('/', '-', $rawDate)));
+
+            // Negative amount for sales accounting
+            $signedAmount = -abs($cleanAmount);
+
+            // Duplicate check
+            $existing = $db->fetch(
+                "SELECT id FROM sales WHERE invoice_number = ? AND invoice_date = ? AND customer_name = ? AND item_description = ? AND qb_amount = ? LIMIT 1",
+                [$num, $date, $customer, $itemDesc, $signedAmount]
+            );
+
+            if (!$existing) {
+                $rule = $db->getTaxRuleForInvoice($num, $date);
+                $rate = $rule['rate'];
+                $isVatReg = $custVatMap[$customer] ?? 0;
+                $taxCode = trim($cm['Sales Tax Code'] ?? 'Taxable Sales');
+
+                if ($cleanAmount == 0 || $rate <= 0) {
+                    $base = $signedAmount;
+                    $vat = 0.00;
+                    $total = $signedAmount;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
+                } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
+                    $base = $signedAmount;
+                    $vat = round($signedAmount * $rate, 2);
+                    $total = round($base + $vat, 2);
+                    $appliedRate = $rate;
+                    $vatTreatment = 'PLUS_VAT';
+                } else {
+                    $total = $signedAmount;
+                    $base = round($signedAmount / (1 + $rate), 2);
+                    $vat = round($total - $base, 2);
+                    $appliedRate = $rate;
+                    $vatTreatment = 'PLUS_VAT';
+                }
+
+                $qty = -abs(floatval($cm['Qty'] ?? 1));
+                $category = trim($cm['Product Category'] ?? '');
+                $rep = trim($cm['Rep'] ?? '');
+                $poNumber = trim($cm['PONumber'] ?? '');
+                $memo = trim($cm['Memo'] ?? '');
+                $subtotal = -abs(floatval($cm['subtotal'] ?? 0));
+                $salesTaxTotal = -abs(floatval($cm['sales_tax_total'] ?? 0));
+                $salesTaxRate = floatval($cm['sales_tax_rate'] ?? 0);
+                $unitPrice = floatval($cm['unit_price'] ?? abs($cleanAmount));
+
+                $db->execute($insertCreditMemoStmt, [
+                    $date, $num, $customer, $itemDesc, $taxCode, $qty, $signedAmount,
+                    $base, $vat, $appliedRate, $total, $category, $rep, $poNumber, $memo,
+                    $txnId, $vatTreatment, $subtotal, $salesTaxTotal, $salesTaxRate, $unitPrice, ''
+                ]);
+            }
+
+            // Linked invoice settlement & payment insertion
+            $appliedInvoice = trim($cm['applied_to_invoice'] ?? $cm['AppliedToInvoice'] ?? '');
+            $appliedAmount = floatval(str_replace(',', '', $cm['applied_amount'] ?? $cm['AppliedAmount'] ?? 0));
+
+            // Also check linked_txns array
+            $linkedTxns = $cm['linked_txns'] ?? [];
+            if (empty($appliedInvoice) && !empty($linkedTxns)) {
+                foreach ($linkedTxns as $lk) {
+                    if (strcasecmp($lk['txn_type'] ?? '', 'Invoice') === 0 && !empty($lk['ref_number'])) {
+                        $appliedInvoice = trim($lk['ref_number']);
+                        $appliedAmount = floatval($lk['amount'] ?? $appliedAmount);
+                        break;
+                    }
+                }
+            }
+
+            if (!empty($appliedInvoice) && $appliedAmount > 0) {
+                // Record in payments table so the invoice modal & payments ledger reflect credit memo settlement
+                $existingPay = $db->fetch(
+                    "SELECT id FROM payments WHERE customer_name = ? AND reference_num = ? AND invoice_num = ? AND payment_method = 'Credit Memo' LIMIT 1",
+                    [$customer, $num, $appliedInvoice]
+                );
+                if (!$existingPay) {
+                    $db->execute(
+                        "INSERT INTO payments (customer_name, payment_date, reference_num, amount, invoice_num, payment_method, memo) VALUES (?, ?, ?, ?, ?, 'Credit Memo', ?)",
+                        [$customer, $date, $num, $appliedAmount, $appliedInvoice, "Applied Credit Memo #$num"]
+                    );
+                }
+
+                // Update invoice balance in sales
+                $db->execute(
+                    "UPDATE sales SET balance_remaining = MAX(0, balance_remaining - ?), applied_amount = applied_amount + ? WHERE invoice_number = ? AND customer_name = ?",
+                    [$appliedAmount, $appliedAmount, $appliedInvoice, $customer]
+                );
+
+                // If fully settled, mark is_paid = 1
+                $invRow = $db->fetch(
+                    "SELECT balance_remaining, total_amount FROM sales WHERE invoice_number = ? AND customer_name = ? LIMIT 1",
+                    [$appliedInvoice, $customer]
+                );
+                if ($invRow && floatval($invRow['balance_remaining']) <= 0.01) {
+                    $db->execute(
+                        "UPDATE sales SET is_paid = 1, paid_date = ? WHERE invoice_number = ? AND customer_name = ?",
+                        [$date, $appliedInvoice, $customer]
+                    );
+                }
+            }
+
+            // Check if any serial number is returned in the item description
+            if (preg_match('/(?:S\/N|Serial|SN|Lot)[:\s]+([A-Z0-9\-_]{5,})/i', $itemDesc, $snMatch)) {
+                $returnedSerial = trim($snMatch[1]);
+                $db->execute(
+                    "UPDATE hardware_assets SET status = 'Returned / Credited', warranty_status = 'Credited / Replaced' WHERE serial_number LIKE ? AND customer_name = ?",
+                    ['%' . $returnedSerial . '%', $customer]
+                );
+            }
+
+            $creditMemosImported++;
+        }
+    }
+
+    // 4. Process Payments & Settlements
     if (!empty($payments)) {
         foreach ($payments as $pay) {
             $customer = trim($pay['customer_name'] ?? $pay['Name'] ?? '');
@@ -389,8 +562,8 @@ try {
             // If matched to an invoice, compute days to pay and mark settled
             if (!empty($invoiceNum)) {
                 $matchedInvoice = $db->fetch(
-                    "SELECT invoice_date FROM sales WHERE invoice_number = ? AND customer_name = ? LIMIT 1",
-                    [$invoiceNum, $customer]
+                    "SELECT invoice_date FROM sales WHERE invoice_number = ? AND customer_name = ? ORDER BY abs(julianday(invoice_date) - julianday(?)) ASC LIMIT 1",
+                    [$invoiceNum, $customer, $payDate]
                 );
 
                 if ($matchedInvoice) {
@@ -400,8 +573,8 @@ try {
                     if ($days < 0) $days = 0;
 
                     $db->execute(
-                        "UPDATE sales SET paid_date = ?, days_to_pay = ?, is_paid = 1 WHERE invoice_number = ? AND customer_name = ?",
-                        [$payDate, $days, $invoiceNum, $customer]
+                        "UPDATE sales SET paid_date = ?, days_to_pay = ?, is_paid = 1 WHERE invoice_number = ? AND customer_name = ? AND invoice_date = ?",
+                        [$payDate, $days, $invoiceNum, $customer, $matchedInvoice['invoice_date']]
                     );
                 }
             }
@@ -416,14 +589,14 @@ try {
     // Update settings: last sync timestamp & count
     $now = date('Y-m-d H:i:s');
     $db->setSetting('last_qb_sync', $now);
-    $db->setSetting('last_qb_sync_summary', "Imported $invoicesImported invoices, $paymentsImported payments, $customersImported customers at $now");
+    $db->setSetting('last_qb_sync_summary', "Imported $invoicesImported invoices, $creditMemosImported credit memos, $paymentsImported payments, $customersImported customers at $now");
 
     // Audit log
     $clientIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
     $db->logActivity(
         1,
         'QB_API_SYNC',
-        "Sync completed: $invoicesImported invoices imported ($invoicesSkipped skipped), $paymentsImported payments, $customersImported customers updated",
+        "Sync completed: $invoicesImported invoices imported ($invoicesSkipped skipped), $creditMemosImported credit memos, $paymentsImported payments, $customersImported customers updated",
         $clientIp
     );
 
@@ -434,6 +607,7 @@ try {
         'message' => 'Sync completed successfully.',
         'imported_invoices' => $invoicesImported,
         'skipped_invoices' => $invoicesSkipped,
+        'imported_credit_memos' => $creditMemosImported,
         'imported_payments' => $paymentsImported,
         'imported_customers' => $customersImported,
         'sync_timestamp' => $now

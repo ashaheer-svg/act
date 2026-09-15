@@ -357,10 +357,12 @@ class DataImporter {
                 
                 // Check if record already exists (Smarter check: include item and amount)
                 $cleanAmount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
+                $invoiceDate = $this->formatDate($record['Date'] ?? '');
                 $existingRecord = $this->db->fetch(
-                    "SELECT * FROM sales WHERE invoice_number = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
+                    "SELECT * FROM sales WHERE invoice_number = ? AND invoice_date = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
                     [
                         $record['Num'] ?? '', 
+                        $invoiceDate,
                         $record['Name'] ?? '', 
                         $record['Item'] ?? '', 
                         $cleanAmount
@@ -376,7 +378,7 @@ class DataImporter {
                         'name' => $record['Name'] ?? 'N/A',
                         'item' => $record['Item'] ?? 'N/A',
                         'amount' => $record['Amount'] ?? 0,
-                        'reason' => 'Duplicate record (same Invoice, Customer, Item, and Amount)'
+                        'reason' => 'Duplicate record (same Invoice, Date, Customer, Item, and Amount)'
                     ];
                     
                     // Capture duplicate set for auditing
@@ -399,17 +401,25 @@ class DataImporter {
                     continue;
                 }
 
-                // Calculate VAT values using dynamic sequence rules
-                $invoiceDate = $this->formatDate($record['Date'] ?? '');
+                // Calculate VAT values using dynamic sequence rules & customer registration
                 $amount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
                 $invNum = trim($record['Num'] ?? '');
+                $customerName = trim($record['Name'] ?? '');
                 $taxCode = trim($record['Sales Tax Code'] ?? '');
                 $itemDesc = $record['Item'] ?? '';
                 
                 $rule = $this->db->getTaxRuleForInvoice($invNum, $invoiceDate);
                 $rate = $rule['rate'];
+                $custProfile = $this->db->fetch("SELECT is_vat_registered FROM customer_profiles WHERE customer_name = ? LIMIT 1", [$customerName]);
+                $isVatReg = (int)($custProfile['is_vat_registered'] ?? 0);
 
-                if ($rate <= 0 || $amount == 0) {
+                if ($amount == 0) {
+                    $base = 0.00;
+                    $vat = 0.00;
+                    $total = 0.00;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
+                } elseif ($rate <= 0) {
                     $base = $amount;
                     $vat = 0.00;
                     $total = $amount;
@@ -422,13 +432,21 @@ class DataImporter {
                         $vat = $amount;
                         $total = $amount;
                         $appliedRate = $rate;
-                        $vatTreatment = 'VAT_EXCLUSIVE_BREAKUP';
-                    } else {
-                        $base = round($amount / (1 + $rate), 2);
-                        $vat = round($amount - $base, 2);
-                        $total = $amount;
+                        $vatTreatment = 'PLUS_VAT';
+                    } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
+                        $base = $amount;
+                        $vat = round($amount * $rate, 2);
+                        $total = round($base + $vat, 2);
                         $appliedRate = $rate;
-                        $vatTreatment = 'VAT_INCLUSIVE';
+                        $vatTreatment = 'PLUS_VAT';
+                    } else {
+                        // VAT-Inclusive invoice: Under government regulations, VAT is included in price.
+                        // Converted to +VAT invoice for system purposes with +VAT tag.
+                        $total = $amount;
+                        $base = round($amount / (1 + $rate), 2);
+                        $vat = round($total - $base, 2);
+                        $appliedRate = $rate;
+                        $vatTreatment = 'PLUS_VAT';
                     }
                 }
 
@@ -554,7 +572,7 @@ class DataImporter {
     private function categorizeProduct($item) {
         $item_lower = strtolower($item);
 
-        if (strpos($item_lower, 'synology') !== false || strpos($item_lower, 'nas') !== false) {
+        if (strpos($item_lower, 'synology') !== false || strpos($item_lower, 'sinology') !== false || strpos($item_lower, 'nas') !== false) {
             return 'Synology/NAS Storage';
         } elseif (strpos($item_lower, 'bdcom') !== false || strpos($item_lower, 'switch') !== false) {
             return 'Network Equipment';

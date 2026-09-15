@@ -146,6 +146,12 @@ class Auth {
      */
     public function requireLogin() {
         if (!$this->isLoggedIn()) {
+            if (isset($_GET['ajax_invoice_details']) || isset($_GET['ajax_customer_history']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                while (ob_get_level()) { ob_end_clean(); }
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Your session has expired. Please refresh the page and log in again.']);
+                exit();
+            }
             header('Location: login.php');
             exit();
         }
@@ -241,4 +247,3 @@ class Auth {
         }
     }
 }
-?>

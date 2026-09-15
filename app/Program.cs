@@ -498,15 +498,16 @@ class Program
         }
 
         List<InvoiceRecord> invoices;
+        List<CreditMemoRecord> creditMemos;
         List<PaymentRecord> payments;
         List<CustomerRecord> customers;
 
         if (isMock)
         {
-            using var progress = new ProgressIndicator("Generating mock invoices, payments, and customers...", isQuiet);
+            using var progress = new ProgressIndicator("Generating mock invoices, credit memos, payments, and customers...", isQuiet);
             await Task.Delay(350);
-            (invoices, payments, customers) = QuickBooksConnector.GetMockData();
-            progress.Complete($"Mock data ready: {invoices.Count} invoice lines, {payments.Count} payments, {customers.Count} customers.");
+            (invoices, creditMemos, payments, customers) = QuickBooksConnector.GetMockData();
+            progress.Complete($"Mock data ready: {invoices.Count} invoice lines, {creditMemos.Count} credit memos, {payments.Count} payments, {customers.Count} customers.");
         }
         else
         {
@@ -563,41 +564,52 @@ class Program
                         break;
                     case "invoices_query":
                         currentStep?.Dispose();
-                        currentStep = new ProgressIndicator("[1/3] Querying QuickBooks Invoices & line items (QBXML)...", isQuiet);
+                        currentStep = new ProgressIndicator("[1/4] Querying QuickBooks Invoices & line items (QBXML)...", isQuiet);
                         break;
                     case "invoices_parse":
-                        currentStep?.Update("[1/3] Parsing invoice line items and serial numbers...");
+                        currentStep?.Update("[1/4] Parsing invoice line items and serial numbers...");
                         break;
                     case "invoices_done":
-                        currentStep?.Complete($"[1/3] Invoices: {detail}");
+                        currentStep?.Complete($"[1/4] Invoices: {detail}");
+                        currentStep = null;
+                        break;
+                    case "credit_memos_query":
+                        currentStep?.Dispose();
+                        currentStep = new ProgressIndicator("[2/4] Querying QuickBooks Credit Memos / Returns (QBXML)...", isQuiet);
+                        break;
+                    case "credit_memos_parse":
+                        currentStep?.Update("[2/4] Parsing credit memos and returned serials...");
+                        break;
+                    case "credit_memos_done":
+                        currentStep?.Complete($"[2/4] Credit Memos: {detail}");
                         currentStep = null;
                         break;
                     case "payments_query":
                         currentStep?.Dispose();
-                        currentStep = new ProgressIndicator("[2/3] Querying QuickBooks Received Payments (QBXML)...", isQuiet);
+                        currentStep = new ProgressIndicator("[3/4] Querying QuickBooks Received Payments (QBXML)...", isQuiet);
                         break;
                     case "payments_parse":
-                        currentStep?.Update("[2/3] Parsing received payment records...");
+                        currentStep?.Update("[3/4] Parsing received payment records...");
                         break;
                     case "payments_done":
-                        currentStep?.Complete($"[2/3] Payments: {detail}");
+                        currentStep?.Complete($"[3/4] Payments: {detail}");
                         currentStep = null;
                         break;
                     case "customers_query":
                         currentStep?.Dispose();
-                        currentStep = new ProgressIndicator("[3/3] Querying QuickBooks Customer Directory (QBXML)...", isQuiet);
+                        currentStep = new ProgressIndicator("[4/4] Querying QuickBooks Customer Directory (QBXML)...", isQuiet);
                         break;
                     case "customers_parse":
-                        currentStep?.Update("[3/3] Parsing customer directory and contact records...");
+                        currentStep?.Update("[4/4] Parsing customer directory and contact records...");
                         break;
                     case "customers_done":
-                        currentStep?.Complete($"[3/3] Customers: {detail}");
+                        currentStep?.Complete($"[4/4] Customers: {detail}");
                         currentStep = null;
                         break;
                 }
             }
 
-            var (invList, payList, custList, error) = connector.ExtractData(
+            var (invList, cmList, payList, custList, error) = connector.ExtractData(
                 config.QbCompanyFile,
                 fromModifiedDate,
                 config.IncludeSerialNumbers,
@@ -616,6 +628,7 @@ class Program
             }
 
             invoices = invList;
+            creditMemos = cmList;
             payments = payList;
             customers = custList;
         }
@@ -623,7 +636,7 @@ class Program
         if (!isQuiet)
         {
             Console.WriteLine();
-            PrintSuccess($"Extraction complete: {invoices.Count} invoice line items, {payments.Count} payments, {customers.Count} customers.", isQuiet);
+            PrintSuccess($"Extraction complete: {invoices.Count} invoice line items, {creditMemos.Count} credit memo items, {payments.Count} payments, {customers.Count} customers.", isQuiet);
         }
 
         // SAVE LOCAL COPY (If configured, or if running Extract & Save Locally Only)
@@ -632,7 +645,7 @@ class Program
             string prefix = isMock 
                 ? "mock_export" 
                 : (!string.IsNullOrEmpty(fromTxnDate) ? "legacy_qb_export" : "qb_export");
-            var export = DataExporter.SaveExport(invoices, payments, customers, config.ExportFolder, prefix);
+            var export = DataExporter.SaveExport(invoices, creditMemos, payments, customers, config.ExportFolder, prefix);
 
             PrintSuccess($"Saved local copy for analysis to exports directory!", isQuiet);
             if (!isQuiet)
@@ -641,15 +654,16 @@ class Program
                 Console.WriteLine($"   📁 Folder     : {export.ExportDirectory}");
                 Console.WriteLine($"   📄 Master JSON: {Path.GetFileName(export.JsonFile)}");
                 Console.WriteLine($"   📊 CSV 1 (Inv): {Path.GetFileName(export.InvoiceCsvFile)} ({export.InvoiceCount} lines)");
-                Console.WriteLine($"   📊 CSV 2 (Pay): {Path.GetFileName(export.PaymentCsvFile)} ({export.PaymentCount} records)");
-                Console.WriteLine($"   📊 CSV 3 (Cust): {Path.GetFileName(export.CustomerCsvFile)} ({export.CustomerCount} profiles)");
+                Console.WriteLine($"   📊 CSV 2 (CM) : {Path.GetFileName(export.CreditMemoCsvFile)} ({export.CreditMemoCount} lines)");
+                Console.WriteLine($"   📊 CSV 3 (Pay): {Path.GetFileName(export.PaymentCsvFile)} ({export.PaymentCount} records)");
+                Console.WriteLine($"   📊 CSV 4 (Cust): {Path.GetFileName(export.CustomerCsvFile)} ({export.CustomerCount} profiles)");
                 Console.ResetColor();
             }
 
             if (saveLocalOnly)
             {
                 stopwatch.Stop();
-                string localMsg = $"Local extraction completed. Extracted: {invoices.Count} Invoices, {payments.Count} Payments, {customers.Count} Customers. Duration: {stopwatch.Elapsed.TotalSeconds:F2}s.";
+                string localMsg = $"Local extraction completed. Extracted: {invoices.Count} Invoices, {creditMemos.Count} Credit Memos, {payments.Count} Payments, {customers.Count} Customers. Duration: {stopwatch.Elapsed.TotalSeconds:F2}s.";
                 Logger.LogSuccess(config.LogFile, localMsg);
 
                 if (!isQuiet && !isHeadless && !Console.IsInputRedirected)
@@ -670,11 +684,11 @@ class Program
         {
             stopwatch.Stop();
             PrintInfo("[DRY RUN] Completed. No records were posted to the server.", isQuiet);
-            Logger.LogSuccess(config.LogFile, $"[DRY RUN] Completed. Extracted: {invoices.Count} Invoices, {payments.Count} Payments, {customers.Count} Customers. Duration: {stopwatch.Elapsed.TotalSeconds:F2}s.");
+            Logger.LogSuccess(config.LogFile, $"[DRY RUN] Completed. Extracted: {invoices.Count} Invoices, {creditMemos.Count} Credit Memos, {payments.Count} Payments, {customers.Count} Customers. Duration: {stopwatch.Elapsed.TotalSeconds:F2}s.");
             return 0;
         }
 
-        if (invoices.Count == 0 && payments.Count == 0 && customers.Count == 0)
+        if (invoices.Count == 0 && creditMemos.Count == 0 && payments.Count == 0 && customers.Count == 0)
         {
             stopwatch.Stop();
             PrintInfo("No new or modified records found to sync.", isQuiet);
@@ -687,6 +701,7 @@ class Program
 
         int totalInvoicesImported = 0;
         int totalInvoicesSkipped = 0;
+        int totalCreditMemosImported = 0;
         int totalPaymentsImported = 0;
         int totalCustomersImported = 0;
         string lastServerTimestamp = "";
@@ -702,6 +717,7 @@ class Program
                     Timestamp = DateTime.UtcNow.ToString("o"),
                     Customers = customers,
                     Invoices = new List<InvoiceRecord>(),
+                    CreditMemos = new List<CreditMemoRecord>(),
                     Payments = new List<PaymentRecord>()
                 };
 
@@ -737,6 +753,7 @@ class Program
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Customers = new List<CustomerRecord>(),
                         Invoices = batch,
+                        CreditMemos = new List<CreditMemoRecord>(),
                         Payments = new List<PaymentRecord>()
                     };
 
@@ -756,7 +773,44 @@ class Program
             }
         }
 
-        // 3. Upload Payments in Batches (Phase 3: chunked by batch_size)
+        // 3. Upload Credit Memos in Batches (Phase 3: chunked by batch_size)
+        if (creditMemos.Count > 0)
+        {
+            int totalBatches = (int)Math.Ceiling((double)creditMemos.Count / batchSize);
+            for (int b = 0; b < totalBatches; b++)
+            {
+                var batch = creditMemos.Skip(b * batchSize).Take(batchSize).ToList();
+                int fromIdx = b * batchSize + 1;
+                int toIdx = Math.Min((b + 1) * batchSize, creditMemos.Count);
+
+                using (var prog = new ProgressIndicator($"[{b + 1}/{totalBatches}] Uploading credit memos {fromIdx}–{toIdx} of {creditMemos.Count}...", isQuiet))
+                {
+                    var cmPayload = new SyncPayload
+                    {
+                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        Customers = new List<CustomerRecord>(),
+                        Invoices = new List<InvoiceRecord>(),
+                        CreditMemos = batch,
+                        Payments = new List<PaymentRecord>()
+                    };
+
+                    var (success, msg, resp) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, cmPayload);
+                    if (!success)
+                    {
+                        string failMsg = $"Credit memo batch {b + 1}/{totalBatches} failed: {msg}";
+                        Logger.LogFailure(config.LogFile, failMsg);
+                        prog.Fail(failMsg);
+                        return 1;
+                    }
+                    totalCreditMemosImported += resp?.ImportedCreditMemos ?? batch.Count;
+                    lastServerTimestamp = resp?.SyncTimestamp ?? "";
+                    prog.Complete($"Credit Memos {fromIdx}–{toIdx} ({batch.Count} lines) [OK]");
+                }
+            }
+        }
+
+        // 4. Upload Payments in Batches (Phase 4: chunked by batch_size)
         if (payments.Count > 0)
         {
             int totalBatches = (int)Math.Ceiling((double)payments.Count / batchSize);
@@ -774,6 +828,7 @@ class Program
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Customers = new List<CustomerRecord>(),
                         Invoices = new List<InvoiceRecord>(),
+                        CreditMemos = new List<CreditMemoRecord>(),
                         Payments = batch
                     };
 
@@ -793,7 +848,7 @@ class Program
         }
 
         stopwatch.Stop();
-        string successSummary = $"Sync completed successfully! Extracted & Transferred: {invoices.Count} Invoices, {payments.Count} Payments, {customers.Count} Customers in {stopwatch.Elapsed.TotalSeconds:F2}s.";
+        string successSummary = $"Sync completed successfully! Extracted & Transferred: {invoices.Count} Invoices, {creditMemos.Count} Credit Memos, {payments.Count} Payments, {customers.Count} Customers in {stopwatch.Elapsed.TotalSeconds:F2}s.";
         Logger.LogSuccess(config.LogFile, successSummary);
 
         if (!isQuiet)
@@ -801,11 +856,12 @@ class Program
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"\n[SUCCESS] Sync completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s!");
             Console.ResetColor();
-            Console.WriteLine($"   - Imported Invoices   : {totalInvoicesImported}");
-            Console.WriteLine($"   - Skipped (Duplicates): {totalInvoicesSkipped}");
-            Console.WriteLine($"   - Imported Payments   : {totalPaymentsImported}");
-            Console.WriteLine($"   - Imported Customers  : {totalCustomersImported}");
-            Console.WriteLine($"   - Server Timestamp    : {lastServerTimestamp}");
+            Console.WriteLine($"   - Imported Invoices    : {totalInvoicesImported}");
+            Console.WriteLine($"   - Skipped (Duplicates) : {totalInvoicesSkipped}");
+            Console.WriteLine($"   - Imported Credit Memos: {totalCreditMemosImported}");
+            Console.WriteLine($"   - Imported Payments    : {totalPaymentsImported}");
+            Console.WriteLine($"   - Imported Customers   : {totalCustomersImported}");
+            Console.WriteLine($"   - Server Timestamp     : {lastServerTimestamp}");
         }
 
         // Update local sync date (only for incremental / current syncs, not historical ranges)

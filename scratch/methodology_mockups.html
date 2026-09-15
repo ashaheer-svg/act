@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Methodology UI/UX Minimization Mockup Lab - Activity Sales BI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../docs/lucide-font/lucide.css">
+    <style>
+        :root {
+            --bg-canvas: #f1f5f9;
+            --surface-card: #ffffff;
+            --surface-subtle: #f8fafc;
+            --border-card: #cbd5e1;
+            --border-subtle: #e2e8f0;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --purple: #7c3aed;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-canvas);
+            color: var(--text-main);
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: 80px;
+        }
+
+        /* Top Header */
+        .lab-header {
+            background: #090d16;
+            color: white;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1e293b;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .lab-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .lab-badge {
+            background: #2563eb;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .lab-title {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+        .lab-sub {
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        /* Intro Banner */
+        .intro-banner {
+            max-width: 1260px;
+            margin: 24px auto 0;
+            padding: 0 20px;
+        }
+        .intro-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .intro-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #2563eb;
+            background: #eff6ff;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+        .intro-card h1 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .intro-card p {
+            color: #475569;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+        .savings-pills {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .savings-pill {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .savings-pill strong {
+            color: #059669;
+            font-size: 13px;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1260px;
+            margin: 24px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        /* Concept Card */
+        .concept-card {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .concept-card.recommended {
+            border: 2px solid #2563eb;
+        }
+        .concept-header {
+            padding: 16px 24px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .concept-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .concept-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 12px;
+        }
+        .concept-card.recommended .concept-num {
+            background: #2563eb;
+        }
+        .concept-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .concept-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+        .badge-recommended {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+        .badge-baseline {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+        .badge-alternative {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+        .concept-stats {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            color: #64748b;
+        }
+        .stat-val {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .concept-body {
+            padding: 24px;
+        }
+        .concept-desc {
+            font-size: 13.5px;
+            color: #475569;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        /* Mockup Stage (Simulating reports.php window) */
+        .stage-box {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 16px;
+            position: relative;
+            min-height: 220px;
+        }
+        .stage-banner {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 800;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Shared Dummy UI Elements */
+        .dummy-cmd-bar {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+        .dummy-title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dummy-report-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .dummy-tag {
+            font-size: 11px;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        .dummy-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .dummy-btn {
+            padding: 5px 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border-radius: 5px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            color: #334155;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+        }
+        .dummy-btn:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+        .dummy-btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+        }
+        .dummy-btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .dummy-table-preview {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-size: 11.5px;
+            color: #64748b;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .dummy-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background: #f8fafc;
+            border-radius: 4px;
+        }
+        .dummy-row strong {
+            color: #0f172a;
+        }
+
+        /* ========================================================
+           BASELINE (CURRENT): FULL WIDTH CARD (CONSUMES ~78px VERTICAL)
+           ======================================================== */
+        .methodology-card-current {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        .methodology-header-current {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 18px;
+            background: #f8fafc;
+            cursor: pointer;
+        }
+        .methodology-badge-current {
+            font-size: 11px;
+            font-weight: 600;
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            margin-left: 8px;
+        }
+
+        /* ========================================================
+           CONCEPT A: INLINE COMPACT ACTION PILL BUTTON (RECOMMENDED)
+           Minimizes down to a sleek 28px inline pill button!
+           ======================================================== */
+        .methodology-pill-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            user-select: none;
+            margin-bottom: 12px;
+        }
+        .methodology-pill-trigger:hover {
+            background: #f1f5f9;
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        .methodology-pill-trigger.active {
+            background: #eff6ff;
+            border-color: #2563eb;
+            color: #1d4ed8;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+        .pill-badge {
+            font-size: 10px;
+            font-weight: 700;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+        .methodology-pill-trigger.active .pill-badge {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Expandable content for Concept A */
+        .methodology-drawer-content {
+            display: none;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-left: 4px solid #2563eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-md);
+            animation: slideDown 0.2s ease;
+        }
+        .methodology-drawer-content.show {
+            display: block;
+        }
+
+        /* 3-column methodology layout */
+        .methodology-grid-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin-top: 10px;
+        }
+        .methodology-col-demo {
+            background: #f8fafc;
+            border: 1px solid #edf2f7;
+            border-radius: 6px;
+            padding: 12px 14px;
+            font-size: 12px;
+        }
+        .methodology-col-label-demo {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .col-usage { color: #2563eb; }
+        .col-validity { color: #059669; }
+        .col-calc { color: #7c3aed; }
+        .formula-box {
+            display: inline-block;
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            font-size: 11px;
+            background: #eef2ff;
+            color: #3730a3;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #c7d2fe;
+            margin-top: 4px;
+        }
+
+        /* ========================================================
+           CONCEPT B: COMMAND BAR BUTTON (0px REPORT BODY SPACE)
+           Methodology button lives inside the top command bar
+           ======================================================== */
+        .cmd-methodology-btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+            padding: 5px 11px;
+            font-size: 11.5px;
+            font-weight: 700;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+        .cmd-methodology-btn:hover {
+            background: #f8fafc;
+            border-color: #7c3aed;
+            color: #7c3aed;
+        }
+        .cmd-methodology-btn.active {
+            background: #f5f3ff;
+            border-color: #7c3aed;
+            color: #6d28d9;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+        }
+        .b-dropdown-panel {
+            display: none;
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-left: 4px solid #7c3aed;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-lg);
+            animation: slideDown 0.2s ease;
+        }
+        .b-dropdown-panel.show {
+            display: block;
+        }
+
+        /* ========================================================
+           CONCEPT C: SLIDE-OVER SIDE DRAWER (ZERO VERTICAL DISPLACEMENT)
+           Slides in from right side; data table never moves!
+           ======================================================== */
+        .side-drawer-backdrop {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 8px;
+            z-index: 40;
+            backdrop-filter: blur(1px);
+        }
+        .side-drawer-backdrop.show {
+            display: block;
+        }
+        .side-drawer {
+            position: absolute;
+            top: 0; right: 0; bottom: 0;
+            width: 440px;
+            background: white;
+            border-left: 1px solid #cbd5e1;
+            border-radius: 0 8px 8px 0;
+            box-shadow: -4px 0 16px rgba(0,0,0,0.12);
+            z-index: 50;
+            transform: translateX(100%);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .side-drawer.show {
+            transform: translateX(0);
+        }
+        .drawer-header {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Interactive Action Box */
+        .action-box {
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: #eff6ff;
+            border: 1px dashed #bfdbfe;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #1e40af;
+        }
+
+        /* Matrix Table */
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 16px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        .matrix-table th {
+            background: #0f172a;
+            color: white;
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+        .matrix-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+        }
+        .matrix-table tr:hover td {
+            background: #f8fafc;
+        }
+        .star-rating {
+            color: #f59e0b;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Lab Header -->
+    <header class="lab-header">
+        <div class="lab-brand">
+            <span class="lab-badge">UI/UX Lab</span>
+            <div>
+                <div class="lab-title">Report Methodology Minimization - Interactive Mockups</div>
+                <div class="lab-sub">Evaluation of 3 ergonomic patterns to minimize report methodology cards into buttons</div>
+            </div>
+        </div>
+        <div style="font-size: 12px; color: #cbd5e1; font-weight: 600;">
+            Active Business Intelligence &bull; Reports Engine v2.3
+        </div>
+    </header>
+
+    <!-- Intro & Problem Scope -->
+    <div class="intro-banner">
+        <div class="intro-card">
+            <span class="intro-tag"><i class="icon-sliders"></i> Directive Under Review</span>
+            <h1>Minimizing Report Methodology to a Button by Default</h1>
+            <p>
+                Currently across all business reports (Commercial Invoices, Unpaid Invoices, Warranties, LTV, Churn, Tax Audit, EOL, Contracts, etc.), the <code>.methodology-card</code> header is rendered full-width directly below the command bar. Even when collapsed, it consumes <strong>78px of vertical screen real estate</strong>, pushing down the critical KPI summary ribbon, charts, and invoice data tables.
+            </p>
+            <div class="savings-pills">
+                <div class="savings-pill">
+                    Current Baseline: <strong style="color: #dc2626;">78px Height</strong> (Always rendered full-width)
+                </div>
+                <div class="savings-pill">
+                    Concept A (Inline Action Pill): <strong>28px Height</strong> (64% vertical space saved!)
+                </div>
+                <div class="savings-pill">
+                    Concept B (Command Bar Button): <strong>0px Height</strong> (100% vertical space saved by default!)
+                </div>
+                <div class="savings-pill">
+                    Concept C (Slide-Over Drawer): <strong>0px Page Shift</strong> (Zero layout jump when reading rules)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- ========================================================
+             BASELINE (CURRENT STATE)
+             ======================================================== -->
+        <div class="concept-card" id="card-baseline">
+            <div class="concept-header">
+                <div class="concept-meta">
+                    <div class="concept-num" style="background: #64748b;">0</div>
+                    <div>
+                        <div class="concept-title">Current Baseline (Full-Width Card Header)</div>
+                        <div style="font-size: 11.5px; color: #64748b;">Full-width horizontal strip rendered across every report</div>
+                    </div>
+                </div>
+                <span class="concept-badge badge-baseline">Current State (Needs Fix)</span>
+                <div class="concept-stats">
+                    <span>Default Height: <span class="stat-val" style="color: #dc2626;">~78px</span></span>
+                    <span>Page Shift: <span class="stat-val">Pushes table down</span></span>
+                </div>
+            </div>
+            <div class="concept-body">
+                <p class="concept-desc">
+                    In the current system, every report displays a full-width card container. While the body can be toggled, the header occupies a full row across the top of the report, cluttering the view on standard laptop viewports.
+                </p>
+
+                <div class="stage-box">
+                    <div class="stage-banner">
+                        <span>Simulated Report Viewport (1280 &times; 585)</span>
+                        <span style="color: #dc2626; font-weight: 700;">Consumes 78px of viewport height</span>
+                    </div>
+
+                    <!-- Dummy Command Bar -->
+                    <div class="dummy-cmd-bar">
+                        <div class="dummy-title-group">
+                            <i class="icon-file-text" style="color: #2563eb;"></i>
+                            <span class="dummy-report-title">Commercial Invoices & Sales Audit</span>
+                            <span class="dummy-tag">FY 2026</span>
+                        </div>
+                        <div class="dummy-btn-group">
+                            <button class="dummy-btn"><i class="icon-printer"></i> Print</button>
+                            <button class="dummy-btn dummy-btn-primary"><i class="icon-file-text"></i> PDF</button>
+                            <button class="dummy-btn"><i class="icon-download"></i> CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Current Methodology Card -->
+                    <div class="methodology-card-current">
+                        <div class="methodology-header-current" onclick="toggleBaselineDemo()">
+                            <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;">
+                                <i class="icon-calculator" style="color: #2563eb;"></i>
+                                <span>Invoice Summary & Line-Item Audit Methodology</span>
+                                <span class="methodology-badge-current">Document Audit • Tax Invoice Integrity</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #0284c7;">
+                                <span id="baselineToggleText">Show Logic & Formulas</span>
+                                <span id="baselineToggleIcon">▶</span>
+                            </div>
+                        </div>
+                        <div id="baselineBody" style="display: none; padding: 14px; border-top: 1px solid #f1f5f9; background: white;">
+                            <div style="font-size: 12px; color: #475569;">
+                                <strong>Calculation:</strong> Base Net = total_amount / 1.18 &bull; 18% VAT = total_amount - base_value
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table Preview below -->
+                    <div class="dummy-table-preview">
+                        <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">Invoices Data Table (Pushed Down by Card)</div>
+                        <div class="dummy-row"><span>AS010245 &bull; Avian Technologies</span><strong>LKR 450,000.00</strong></div>
+                        <div class="dummy-row"><span>AS010244 &bull; Barclays Computers</span><strong>LKR 1,280,000.00</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             CONCEPT A: INLINE COMPACT ACTION PILL BUTTON (RECOMMENDED)
+             ======================================================== -->
+        <div class="concept-card recommended" id="card-concept-a">
+            <div class="concept-header">
+                <div class="concept-meta">
+                    <div class="concept-num">A</div>
+                    <div>
+                        <div class="concept-title">Concept A: Inline Compact Action Pill Button</div>
+                        <div style="font-size: 11.5px; color: #64748b;">Compact button nestled cleanly directly above content &bull; Unrolls in-place</div>
+                    </div>
+                </div>
+                <span class="concept-badge badge-recommended">Recommended &bull; Most Intuitive</span>
+                <div class="concept-stats">
+                    <span>Default Height: <span class="stat-val" style="color: #059669;">28px</span> (-64% space)</span>
+                    <span>Click: <span class="stat-val">Smooth In-Place Accordion</span></span>
+                </div>
+            </div>
+            <div class="concept-body">
+                <p class="concept-desc">
+                    Replaces the entire bulky card with a sleek, self-contained action button: <code>[ 🧮 Report Methodology & Formulas ▾ ]</code>. It sits cleanly in the header or directly above the report content taking only <strong>28px of vertical height</strong>. When clicked, it expands into the full 3-column methodology guide and provides an intuitive <code>[ Minimize ▲ ]</code> button to collapse back immediately.
+                </p>
+
+                <div class="stage-box">
+                    <div class="stage-banner">
+                        <span>Live Interactive Stage &bull; Click the button to test expansion</span>
+                        <span style="color: #059669; font-weight: 700;">Saves 50px of vertical space!</span>
+                    </div>
+
+                    <!-- Dummy Command Bar -->
+                    <div class="dummy-cmd-bar">
+                        <div class="dummy-title-group">
+                            <i class="icon-file-text" style="color: #2563eb;"></i>
+                            <span class="dummy-report-title">Commercial Invoices & Sales Audit</span>
+                            <span class="dummy-tag">FY 2026</span>
+                        </div>
+                        <div class="dummy-btn-group">
+                            <button class="dummy-btn"><i class="icon-printer"></i> Print</button>
+                            <button class="dummy-btn dummy-btn-primary"><i class="icon-file-text"></i> PDF</button>
+                            <button class="dummy-btn"><i class="icon-download"></i> CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Concept A Button Trigger -->
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <button id="btnConceptA" class="methodology-pill-trigger" onclick="toggleConceptA()">
+                            <i class="icon-calculator" style="color: #2563eb;"></i>
+                            <span id="labelConceptA">View Report Methodology & Formulas</span>
+                            <span class="pill-badge">18% VAT Standard</span>
+                            <span id="arrowConceptA" style="font-size: 10px; margin-left: 2px;">▾</span>
+                        </button>
+                        <span style="font-size: 11px; color: #64748b;">Compact 28px button &bull; Click to reveal calculation logic</span>
+                    </div>
+
+                    <!-- Concept A Unrolled Content -->
+                    <div id="contentConceptA" class="methodology-drawer-content">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="icon-calculator" style="color: #2563eb; font-size: 16px;"></i>
+                                <strong style="font-size: 13.5px; color: #0f172a;">Commercial Invoices & Line-Item Audit Methodology</strong>
+                                <span class="methodology-badge-current">Document Audit • Tax Invoice Integrity</span>
+                            </div>
+                            <button onclick="toggleConceptA()" class="dummy-btn" style="font-size: 11px; padding: 3px 8px;">
+                                <i class="icon-chevron-up"></i> Minimize
+                            </button>
+                        </div>
+
+                        <div class="methodology-grid-demo">
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-usage"><i class="icon-target"></i> Business Usage</div>
+                                <p style="color: #334155; line-height: 1.5;">Used by billing auditors and credit controllers to verify commercial document totals, tax breakdowns, and serial dispatches.</p>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-validity"><i class="icon-shield-check"></i> Scope & Validity</div>
+                                <p style="color: #334155; line-height: 1.5;">Aggregates line items by QuickBooks Invoice Number in LKR. Zero-value description rows are excluded while warranty dispatches are preserved.</p>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-calc"><i class="icon-calculator"></i> Calculation Method</div>
+                                <p style="margin-bottom: 4px;">• <strong>Base Net:</strong> <span class="formula-box">Σ total_amount / 1.18</span></p>
+                                <p style="margin-bottom: 4px;">• <strong>18% VAT:</strong> <span class="formula-box">Σ total_amount - base_value</span></p>
+                                <p>• <strong>Gross Billed:</strong> <span class="formula-box">Σ total_amount</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table Preview below -->
+                    <div class="dummy-table-preview">
+                        <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">Invoices Data Table (Immediate Visibility)</div>
+                        <div class="dummy-row"><span>AS010245 &bull; Avian Technologies</span><strong>LKR 450,000.00</strong></div>
+                        <div class="dummy-row"><span>AS010244 &bull; Barclays Computers</span><strong>LKR 1,280,000.00</strong></div>
+                    </div>
+                </div>
+
+                <div class="action-box">
+                    <span><strong>UX Benefit:</strong> The button is clearly visible right where users look, takes up a negligible 28px, and smoothly animates open/closed without cluttering the screen.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             CONCEPT B: TOP COMMAND BAR BUTTON (ZERO BODY SPACE)
+             ======================================================== -->
+        <div class="concept-card" id="card-concept-b">
+            <div class="concept-header">
+                <div class="concept-meta">
+                    <div class="concept-num">B</div>
+                    <div>
+                        <div class="concept-title">Concept B: Top Command-Bar Action Button</div>
+                        <div style="font-size: 11.5px; color: #64748b;">Integrated directly alongside Print, PDF, and CSV &bull; 0px vertical body footprint</div>
+                    </div>
+                </div>
+                <span class="concept-badge badge-alternative">Zero Vertical Space</span>
+                <div class="concept-stats">
+                    <span>Default Height: <span class="stat-val" style="color: #059669;">0px</span> (100% space saved)</span>
+                    <span>Integration: <span class="stat-val">Command Cluster</span></span>
+                </div>
+            </div>
+            <div class="concept-body">
+                <p class="concept-desc">
+                    Places a dedicated <code>[ 🧮 Methodology ]</code> button directly into the top Command Bar <code>.cmd-right</code> next to <code>[ Print ]</code>, <code>[ PDF ]</code>, and <code>[ CSV ]</code>. In the default state, the report content area has <strong>EXACTLY ZERO PIXELS (0px)</strong> consumed by methodology. Clicking the button drops down an executive guide banner.
+                </p>
+
+                <div class="stage-box">
+                    <div class="stage-banner">
+                        <span>Live Interactive Stage &bull; Click "Methodology" in the command bar</span>
+                        <span style="color: #059669; font-weight: 700;">100% Zero vertical space by default!</span>
+                    </div>
+
+                    <!-- Dummy Command Bar with Concept B Button -->
+                    <div class="dummy-cmd-bar">
+                        <div class="dummy-title-group">
+                            <i class="icon-file-text" style="color: #2563eb;"></i>
+                            <span class="dummy-report-title">Commercial Invoices & Sales Audit</span>
+                            <span class="dummy-tag">FY 2026</span>
+                        </div>
+                        <div class="dummy-btn-group">
+                            <!-- Concept B Button -->
+                            <button id="btnConceptB" class="cmd-methodology-btn" onclick="toggleConceptB()">
+                                <i class="icon-calculator" style="color: #7c3aed;"></i> Methodology <span id="arrowConceptB" style="font-size: 9px;">▾</span>
+                            </button>
+                            <button class="dummy-btn"><i class="icon-printer"></i> Print</button>
+                            <button class="dummy-btn dummy-btn-primary"><i class="icon-file-text"></i> PDF</button>
+                            <button class="dummy-btn"><i class="icon-download"></i> CSV</button>
+                        </div>
+                    </div>
+
+                    <!-- Concept B Dropdown Panel -->
+                    <div id="contentConceptB" class="b-dropdown-panel">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="icon-calculator" style="color: #7c3aed; font-size: 16px;"></i>
+                                <strong style="font-size: 13.5px; color: #0f172a;">Commercial Invoices & Line-Item Audit Methodology</strong>
+                                <span class="methodology-badge-current" style="background: #ede9fe; color: #6d28d9;">Document Audit • Tax Invoice Integrity</span>
+                            </div>
+                            <button onclick="toggleConceptB()" class="dummy-btn" style="font-size: 11px; padding: 3px 8px;">
+                                <i class="icon-x"></i> Close
+                            </button>
+                        </div>
+
+                        <div class="methodology-grid-demo">
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-usage"><i class="icon-target"></i> Business Usage</div>
+                                <p style="color: #334155; line-height: 1.5;">Used by billing auditors and credit controllers to verify commercial document totals, tax breakdowns, and serial dispatches.</p>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-validity"><i class="icon-shield-check"></i> Scope & Validity</div>
+                                <p style="color: #334155; line-height: 1.5;">Aggregates line items by QuickBooks Invoice Number in LKR. Zero-value description rows are excluded.</p>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-calc"><i class="icon-calculator"></i> Calculation Method</div>
+                                <p style="margin-bottom: 4px;">• <strong>Base Net:</strong> <span class="formula-box">Σ total_amount / 1.18</span></p>
+                                <p style="margin-bottom: 4px;">• <strong>18% VAT:</strong> <span class="formula-box">Σ total_amount - base_value</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table Preview below -->
+                    <div class="dummy-table-preview">
+                        <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">Invoices Data Table (Immediately at the Top!)</div>
+                        <div class="dummy-row"><span>AS010245 &bull; Avian Technologies</span><strong>LKR 450,000.00</strong></div>
+                        <div class="dummy-row"><span>AS010244 &bull; Barclays Computers</span><strong>LKR 1,280,000.00</strong></div>
+                    </div>
+                </div>
+
+                <div class="action-box" style="background: #faf5ff; border-color: #ddd6fe; color: #5b21b6;">
+                    <span><strong>UX Benefit:</strong> Leaves the entire report body 100% unobstructed. Unifies report export tools with the methodology reference tool.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             CONCEPT C: SLIDE-OVER DRAWER (ZERO VERTICAL PAGE SHIFT)
+             ======================================================== -->
+        <div class="concept-card" id="card-concept-c">
+            <div class="concept-header">
+                <div class="concept-meta">
+                    <div class="concept-num">C</div>
+                    <div>
+                        <div class="concept-title">Concept C: Slide-Over Reference Drawer</div>
+                        <div style="font-size: 11.5px; color: #64748b;">Slides in from the right &bull; Never shifts or jumps the underlying table data</div>
+                    </div>
+                </div>
+                <span class="concept-badge badge-alternative">Zero Page Jumps</span>
+                <div class="concept-stats">
+                    <span>Default Height: <span class="stat-val" style="color: #059669;">0px</span></span>
+                    <span>Scroll Lock: <span class="stat-val">Zero Jump</span></span>
+                </div>
+            </div>
+            <div class="concept-body">
+                <p class="concept-desc">
+                    Clicking the <code>[ ℹ️ Methodology ]</code> button opens a sleek 420px sliding side drawer on the right. Because it opens as an overlay, <strong>the data table never moves or jumps vertically</strong>, allowing the user to cross-reference formulas while keeping their exact scroll position and eyes on the table.
+                </p>
+
+                <div class="stage-box" style="overflow: hidden;">
+                    <div class="stage-banner">
+                        <span>Live Interactive Stage &bull; Click "View Methodology Drawer"</span>
+                        <span style="color: #2563eb; font-weight: 700;">Zero layout shift</span>
+                    </div>
+
+                    <!-- Dummy Command Bar -->
+                    <div class="dummy-cmd-bar">
+                        <div class="dummy-title-group">
+                            <i class="icon-file-text" style="color: #2563eb;"></i>
+                            <span class="dummy-report-title">Commercial Invoices & Sales Audit</span>
+                            <span class="dummy-tag">FY 2026</span>
+                        </div>
+                        <div class="dummy-btn-group">
+                            <!-- Concept C Trigger Button -->
+                            <button class="dummy-btn" onclick="openConceptCDrawer()" style="background: #eff6ff; border-color: #93c5fd; color: #1d4ed8;">
+                                <i class="icon-book-open"></i> Methodology Drawer
+                            </button>
+                            <button class="dummy-btn"><i class="icon-printer"></i> Print</button>
+                            <button class="dummy-btn dummy-btn-primary"><i class="icon-file-text"></i> PDF</button>
+                        </div>
+                    </div>
+
+                    <!-- Data Table Preview below -->
+                    <div class="dummy-table-preview">
+                        <div style="font-weight: 700; color: #0f172a; margin-bottom: 2px;">Invoices Data Table (Completely Stable & Stationary)</div>
+                        <div class="dummy-row"><span>AS010245 &bull; Avian Technologies</span><strong>LKR 450,000.00</strong></div>
+                        <div class="dummy-row"><span>AS010244 &bull; Barclays Computers</span><strong>LKR 1,280,000.00</strong></div>
+                        <div class="dummy-row"><span>AS010243 &bull; ABC Computers</span><strong>LKR 890,000.00</strong></div>
+                    </div>
+
+                    <!-- Slide-Over Drawer Components -->
+                    <div id="drawerBackdrop" class="side-drawer-backdrop" onclick="closeConceptCDrawer()"></div>
+                    <div id="sideDrawer" class="side-drawer">
+                        <div class="drawer-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="icon-calculator" style="color: #2563eb;"></i>
+                                <strong style="font-size: 13px; color: #0f172a;">Methodology & Formula Guide</strong>
+                            </div>
+                            <button onclick="closeConceptCDrawer()" class="dummy-btn" style="padding: 2px 6px;">✕</button>
+                        </div>
+                        <div class="drawer-body">
+                            <div>
+                                <span class="methodology-badge-current" style="margin-left: 0;">Document Audit • Tax Invoice Integrity</span>
+                                <h3 style="font-size: 15px; font-weight: 800; margin-top: 6px; color: #0f172a;">Commercial Invoices Audit</h3>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-usage"><i class="icon-target"></i> Business Usage</div>
+                                <p style="color: #334155;">Used by billing auditors, credit controllers, and sales managers to verify commercial invoice document totals and tax breakdowns.</p>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-validity"><i class="icon-shield-check"></i> Scope & Validity</div>
+                                <p style="color: #334155;">Scope covers verified finalized commercial invoices in Sri Lanka Rupees (LKR) with statutory 18% VAT reconciliation.</p>
+                            </div>
+                            <div class="methodology-col-demo">
+                                <div class="methodology-col-label-demo col-calc"><i class="icon-calculator"></i> Calculation Formulas</div>
+                                <p style="margin-bottom: 6px;">• <strong>Base Net:</strong><br><span class="formula-box">total_amount / 1.18</span></p>
+                                <p style="margin-bottom: 6px;">• <strong>18% VAT:</strong><br><span class="formula-box">total_amount - base_value</span></p>
+                                <p>• <strong>Gross Claim:</strong><br><span class="formula-box">total_amount (Inc. 18% VAT)</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-box" style="background: #f0fdf4; border-color: #bbf7d0; color: #166534;">
+                    <span><strong>UX Benefit:</strong> No page jumping. Auditors can scroll through 100 rows of invoices while keeping the drawer open on the side for reference.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             COMPARISON MATRIX
+             ======================================================== -->
+        <div class="concept-card">
+            <div class="concept-header">
+                <div class="concept-title">Comprehensive Architectural Comparison Matrix</div>
+                <span class="concept-badge badge-recommended">Decision Framework</span>
+            </div>
+            <div class="concept-body">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Pattern / Concept</th>
+                            <th>Default Height</th>
+                            <th>Vertical Space Saved</th>
+                            <th>Table Stability</th>
+                            <th>Ease of Discovery</th>
+                            <th>Recommendation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Current Baseline (Full Card Header)</strong></td>
+                            <td>78px</td>
+                            <td>0% (Baseline)</td>
+                            <td>Stable</td>
+                            <td>High (Always visible)</td>
+                            <td><span style="color: #dc2626; font-weight: 700;">Needs Fix</span></td>
+                        </tr>
+                        <tr style="background: #eff6ff;">
+                            <td><strong>Concept A: Inline Action Pill Button</strong></td>
+                            <td>28px</td>
+                            <td><strong>64% saved</strong></td>
+                            <td>Smooth pushdown</td>
+                            <td><span class="star-rating">★★★★★</span> (Directly in content flow)</td>
+                            <td><strong style="color: #2563eb;">(Recommended)</strong> Intuitive & compact</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Concept B: Command Bar Action Button</strong></td>
+                            <td>0px</td>
+                            <td><strong>100% saved</strong></td>
+                            <td>Smooth pushdown</td>
+                            <td><span class="star-rating">★★★★☆</span> (With Print/PDF/CSV)</td>
+                            <td><strong>Strong Alternative</strong> Maximizes table rows</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Concept C: Slide-Over Reference Drawer</strong></td>
+                            <td>0px</td>
+                            <td><strong>100% saved</strong></td>
+                            <td><strong>100% Zero Jump</strong></td>
+                            <td><span class="star-rating">★★★★☆</span> (Button trigger)</td>
+                            <td><strong>High-End Modern</strong> Best for side-by-side audit</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Baseline Toggle
+        function toggleBaselineDemo() {
+            const body = document.getElementById('baselineBody');
+            const text = document.getElementById('baselineToggleText');
+            const icon = document.getElementById('baselineToggleIcon');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                text.innerText = 'Hide Logic & Formulas';
+                icon.innerText = '▼';
+            } else {
+                body.style.display = 'none';
+                text.innerText = 'Show Logic & Formulas';
+                icon.innerText = '▶';
+            }
+        }
+
+        // Concept A Toggle
+        function toggleConceptA() {
+            const content = document.getElementById('contentConceptA');
+            const btn = document.getElementById('btnConceptA');
+            const label = document.getElementById('labelConceptA');
+            const arrow = document.getElementById('arrowConceptA');
+            
+            const isShown = content.classList.contains('show');
+            if (isShown) {
+                content.classList.remove('show');
+                btn.classList.remove('active');
+                label.innerText = 'View Report Methodology & Formulas';
+                arrow.innerText = '▾';
+            } else {
+                content.classList.add('show');
+                btn.classList.add('active');
+                label.innerText = 'Hide Methodology & Formulas';
+                arrow.innerText = '▴';
+            }
+        }
+
+        // Concept B Toggle
+        function toggleConceptB() {
+            const content = document.getElementById('contentConceptB');
+            const btn = document.getElementById('btnConceptB');
+            const arrow = document.getElementById('arrowConceptB');
+            
+            const isShown = content.classList.contains('show');
+            if (isShown) {
+                content.classList.remove('show');
+                btn.classList.remove('active');
+                arrow.innerText = '▾';
+            } else {
+                content.classList.add('show');
+                btn.classList.add('active');
+                arrow.innerText = '▴';
+            }
+        }
+
+        // Concept C Drawer
+        function openConceptCDrawer() {
+            document.getElementById('sideDrawer').classList.add('show');
+            document.getElementById('drawerBackdrop').classList.add('show');
+        }
+        function closeConceptCDrawer() {
+            document.getElementById('sideDrawer').classList.remove('show');
+            document.getElementById('drawerBackdrop').classList.remove('show');
+        }
+    </script>
+</body>
+</html>

@@ -204,6 +204,32 @@ class Database {
                 )
             ");
 
+            // Master Brands Registry
+            $this->execute("
+                CREATE TABLE IF NOT EXISTS master_brands (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    code TEXT,
+                    color TEXT DEFAULT '#2563eb',
+                    description TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
+            // Master Categories Registry
+            $this->execute("
+                CREATE TABLE IF NOT EXISTS master_categories (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    code TEXT,
+                    color TEXT DEFAULT '#059669',
+                    description TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ");
+
             // Product Mappings & Rule Engine table
             $this->execute("
                 CREATE TABLE IF NOT EXISTS product_mappings (
@@ -228,10 +254,13 @@ class Database {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     invoice_number TEXT NOT NULL,
                     customer_name TEXT NOT NULL,
+                    end_customer TEXT,
                     invoice_date DATE NOT NULL,
                     product_type TEXT NOT NULL, -- 'HARDWARE', 'SOFTWARE_LICENSE', 'SAAS_SUBSCRIPTION', 'SERVICE_AMC', 'ACCESSORY_OTHER'
                     clean_product_name TEXT NOT NULL,
                     brand_category TEXT,
+                    brand TEXT,
+                    category TEXT,
                     quantity REAL DEFAULT 1,
                     unit_price DECIMAL(12,2),
                     base_value DECIMAL(12,2),
@@ -250,6 +279,7 @@ class Database {
                     invoice_number TEXT NOT NULL,
                     invoice_item_id INTEGER,
                     customer_name TEXT NOT NULL,
+                    end_customer TEXT,
                     product_name TEXT NOT NULL,
                     brand TEXT,
                     model_sku TEXT,
@@ -273,6 +303,7 @@ class Database {
                     invoice_number TEXT NOT NULL,
                     invoice_item_id INTEGER,
                     customer_name TEXT NOT NULL,
+                    end_customer TEXT,
                     software_name TEXT NOT NULL,
                     edition_tier TEXT,
                     license_seats INTEGER DEFAULT 1,
@@ -284,6 +315,37 @@ class Database {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (invoice_item_id) REFERENCES invoice_items(id)
                 )
+            ");
+
+            // Contract Periods View (SLA & Maintenance Pipeline)
+            $this->execute("
+                CREATE VIEW IF NOT EXISTS contract_periods AS
+                SELECT 
+                    ss.id,
+                    ss.software_name as contract_reference,
+                    ss.customer_name,
+                    ss.invoice_number,
+                    COALESCE(ss.edition_tier, 'Annual Maintenance') as service_type,
+                    COALESCE(ss.period_start_date, date(ii.invoice_date)) as start_date,
+                    COALESCE(ss.period_end_date, date(ii.invoice_date, '+1 year')) as end_date,
+                    COALESCE(ss.renewal_opportunity_value, ii.total_amount, 0) as contract_value,
+                    'Service / Software Agreement' as notes
+                FROM software_subscriptions ss
+                LEFT JOIN invoice_items ii ON ss.invoice_item_id = ii.id
+                UNION ALL
+                SELECT 
+                    ii.id + 1000000 as id,
+                    ii.clean_product_name as contract_reference,
+                    ii.customer_name,
+                    ii.invoice_number,
+                    'AMC / Support Contract' as service_type,
+                    date(ii.invoice_date) as start_date,
+                    date(ii.invoice_date, '+1 year') as end_date,
+                    ii.total_amount as contract_value,
+                    'Annual Service Maintenance' as notes
+                FROM invoice_items ii
+                WHERE ii.product_type = 'SERVICE_AMC'
+                  AND NOT EXISTS (SELECT 1 FROM software_subscriptions ss2 WHERE ss2.invoice_item_id = ii.id)
             ");
 
             // AI Extraction Logs (Traceability & Prompt Auditing)
@@ -513,6 +575,7 @@ class Database {
                 'master_sku' => "ALTER TABLE product_mappings ADD COLUMN master_sku TEXT",
                 'canonical_name' => "ALTER TABLE product_mappings ADD COLUMN canonical_name TEXT",
                 'brand' => "ALTER TABLE product_mappings ADD COLUMN brand TEXT",
+                'category' => "ALTER TABLE product_mappings ADD COLUMN category TEXT",
                 'commercial_type' => "ALTER TABLE product_mappings ADD COLUMN commercial_type TEXT DEFAULT 'OUTRIGHT_SALE'",
                 'default_vat_treatment' => "ALTER TABLE product_mappings ADD COLUMN default_vat_treatment TEXT DEFAULT 'DEFAULT'",
                 'priority' => "ALTER TABLE product_mappings ADD COLUMN priority INTEGER DEFAULT 10",
@@ -524,6 +587,16 @@ class Database {
                 if (!in_array($col, $colNames)) {
                     $this->db->exec($sql);
                 }
+            }
+
+            // Also ensure invoice_items has brand and category columns
+            $iiCols = $this->db->query("PRAGMA table_info(invoice_items)")->fetchAll();
+            $iiColNames = array_column($iiCols, 'name');
+            if (!in_array('brand', $iiColNames)) {
+                $this->db->exec("ALTER TABLE invoice_items ADD COLUMN brand TEXT");
+            }
+            if (!in_array('category', $iiColNames)) {
+                $this->db->exec("ALTER TABLE invoice_items ADD COLUMN category TEXT");
             }
 
             // Also ensure hardware_assets has is_rental column
@@ -727,6 +800,11 @@ class Database {
             ORDER BY id ASC
         ");
         foreach ($rules as $r) {
+            // If the rule specifies date bounds, ensure the invoice date falls within them
+            if (!empty($date)) {
+                if (!empty($r['effective_from']) && $date < $r['effective_from']) continue;
+                if (!empty($r['effective_to']) && $date > $r['effective_to']) continue;
+            }
             if ($this->matchesInvoiceRange($invoiceNumber, $r['invoice_range_start'], $r['invoice_range_end'])) {
                 return [
                     'rate' => floatval($r['tax_rate']),
@@ -819,14 +897,21 @@ class Database {
             $count = $this->fetch("SELECT COUNT(*) as c FROM tax_rules")['c'] ?? 0;
             if ($count == 0) {
                 $defaultRules = [
+                    ['Legacy 12% VAT (2009-2013)', 0.12, '2009-01-01', '2013-12-31', 'AS000001', 'AS004000', 1, 'Historical statutory 12% VAT (Old Seq AS000001-AS004000)'],
                     ['Legacy 12% VAT', 0.12, null, null, 'AS004001', 'AS005147', 1, 'Historical statutory 12% VAT'],
                     ['Legacy 0% Exempt', 0.00, null, null, 'AS005148', 'AS006560', 0, 'Historical VAT exempt period'],
                     ['Legacy 15% VAT', 0.15, null, null, 'AS006561', 'AS008154', 1, 'Historical statutory 15% VAT'],
                     ['Legacy 8% VAT', 0.08, null, null, 'AS008155', 'AS008211', 1, 'Historical statutory 8% VAT'],
                     ['Exempt 0% VAT', 0.00, null, null, 'AS008212', 'AS010020', 0, 'VAT exempt era (2021-2023)'],
                     ['18% Statutory VAT', 0.18, '2024-01-01', '2026-06-30', 'AS010021', 'AS011260', 1, '18% VAT Regime (Old Seq)'],
-                    ['New Seq ASN 18% VAT', 0.18, '2026-07-01', null, 'ASN000001', 'ASN000102', 1, '18% VAT Regime (New Seq ASN)'],
+                    ['New Seq ASN 18% VAT', 0.18, '2026-07-01', null, 'ASN000001', 'ASN999999', 1, '18% VAT Regime (New Seq ASN)'],
                     ['New Seq AS 18% VAT', 0.18, '2026-07-01', null, 'AS000001', 'AS000102', 1, '18% VAT Regime (New Seq AS)'],
+                    ['Historical Date 12% VAT', 0.12, '2009-01-01', '2014-12-31', null, null, 1, 'Statutory 12% VAT date fallback (2009-2014)'],
+                    ['Historical Date 0% VAT', 0.00, '2015-01-01', '2016-10-31', null, null, 0, 'Statutory exempt date fallback (2015-2016)'],
+                    ['Historical Date 15% VAT', 0.15, '2016-11-01', '2019-11-30', null, null, 1, 'Statutory 15% VAT date fallback (2016-2019)'],
+                    ['Historical Date 8% VAT', 0.08, '2019-12-01', '2022-05-31', null, null, 1, 'Statutory 8% VAT date fallback (2019-2022)'],
+                    ['Historical Date 12% VAT', 0.12, '2022-06-01', '2022-08-31', null, null, 1, 'Statutory 12% VAT date fallback (mid-2022)'],
+                    ['Historical Date 15% VAT', 0.15, '2022-09-01', '2023-12-31', null, null, 1, 'Statutory 15% VAT date fallback (late 2022-2023)'],
                     ['Future 18% Statutory Default', 0.18, '2024-01-01', null, null, null, 1, 'Default fallback rate for recent/future invoices']
                 ];
 
@@ -845,6 +930,7 @@ class Database {
 
     /**
      * TAX: Recalculate historical VAT for all sales lines based on sequence rules & inclusivity
+     * Converts VAT-inclusive invoices into +VAT invoices for system purposes with extracted VAT component
      */
     public function recalculateHistoricalVat() {
         $this->syncSchema();
@@ -885,7 +971,7 @@ class Database {
         try {
             foreach ($sales as $row) {
                 $date = $row['invoice_date'];
-                $rawAmt = floatval(($row['qb_amount'] ?? 0) > 0 ? $row['qb_amount'] : $row['total_amount']);
+                $rawAmt = floatval(($row['qb_amount'] ?? 0) != 0 ? $row['qb_amount'] : $row['total_amount']);
                 $invNum = trim($row['invoice_number']);
                 $desc = trim($row['item_description'] ?? '');
                 $custName = trim($row['customer_name'] ?? '');
@@ -895,7 +981,15 @@ class Database {
                 $rule = $this->getTaxRuleForInvoice($invNum, $date);
                 $rate = $rule['rate'];
 
-                if ($rate <= 0 || $rawAmt == 0 || stripos($taxCode, 'Non') !== false || stripos($taxCode, 'Zero') !== false || stripos($taxCode, 'Exempt') !== false) {
+                if ($rawAmt == 0) {
+                    // Informational, warranty, or empty line item
+                    $appliedRate = 0.00;
+                    $base = 0.00;
+                    $vat = 0.00;
+                    $total = 0.00;
+                    $treatment = 'VAT_EXEMPT';
+                } elseif ($rate <= 0) {
+                    // Statutory 0% VAT exempt period (e.g. 2015-2016)
                     $appliedRate = 0.00;
                     $base = $rawAmt;
                     $vat = 0.00;
@@ -906,19 +1000,18 @@ class Database {
                     $isVatLineItself = (bool)preg_match('/^(VAT|Value Added Tax|\d+%\s*VAT)/i', $desc);
 
                     if ($hasSepVatLine) {
-                        $treatment = 'VAT_EXCLUSIVE_BREAKUP';
+                        $treatment = 'PLUS_VAT';
+                        $appliedRate = $rate;
                         if ($isVatLineItself) {
-                            $appliedRate = $rate;
                             $base = 0.00;
                             $vat = $rawAmt;
                             $total = $rawAmt;
                         } else {
-                            $appliedRate = $rate;
                             $base = $rawAmt;
                             $vat = 0.00;
                             $total = $rawAmt;
                         }
-                    } elseif ($isVatReg == 1) {
+                    } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
                         // Customer IS VAT-Registered: Line amount is Net Base, VAT is added on top (+18%)
                         $treatment = 'PLUS_VAT';
                         $appliedRate = $rate;
@@ -926,8 +1019,10 @@ class Database {
                         $vat = round($rawAmt * $rate, 2);
                         $total = round($base + $vat, 2);
                     } else {
-                        // Customer is NOT VAT-Registered: Under IRD law, invoice is issued VAT-inclusive (no separate breakdown)
-                        $treatment = 'VAT_INCLUSIVE';
+                        // VAT-INCLUSIVE INVOICE:
+                        // Under government regulations, VAT is included in price but not shown on customer invoice.
+                        // Converted to +VAT invoice for system purposes with +VAT tag.
+                        $treatment = 'PLUS_VAT';
                         $appliedRate = $rate;
                         $total = $rawAmt;
                         $base = round($rawAmt / (1 + $rate), 2);
@@ -938,6 +1033,41 @@ class Database {
                 $stmt->execute([$appliedRate, $base, $vat, $total, $treatment, $row['id']]);
                 $updated++;
             }
+
+            // 3. Synchronize invoice_items with the extracted VAT and PLUS_VAT treatment
+            $stmtItem = $this->db->prepare("
+                UPDATE invoice_items 
+                SET base_value = ?, vat_component = ?, vat_treatment = ?
+                WHERE id = ?
+            ");
+            $invItems = $this->fetchAll("SELECT id, invoice_number, invoice_date, customer_name, total_amount, base_value, vat_component FROM invoice_items");
+            foreach ($invItems as $item) {
+                $invNum = trim($item['invoice_number']);
+                $date = $item['invoice_date'];
+                $total = floatval($item['total_amount']);
+                $custName = trim($item['customer_name'] ?? '');
+                $isVatReg = $custVatMap[$custName] ?? 0;
+
+                $rule = $this->getTaxRuleForInvoice($invNum, $date);
+                $rate = $rule['rate'];
+
+                if ($total == 0 || $rate <= 0) {
+                    $base = $total;
+                    $vat = 0.00;
+                    $treatment = 'VAT_EXEMPT';
+                } else {
+                    $treatment = 'PLUS_VAT';
+                    if ($item['base_value'] > 0 && $item['vat_component'] > 0 && abs(($item['base_value'] + $item['vat_component']) - $total) < 0.05) {
+                        $base = $item['base_value'];
+                        $vat = $item['vat_component'];
+                    } else {
+                        $base = round($total / (1 + $rate), 2);
+                        $vat = round($total - $base, 2);
+                    }
+                }
+                $stmtItem->execute([$base, $vat, $treatment, $item['id']]);
+            }
+
             $this->db->commit();
             return $updated;
         } catch (Exception $e) {
@@ -1091,7 +1221,8 @@ class Database {
                 'due_date' => "ALTER TABLE sales ADD COLUMN due_date DATE",
                 'ship_date' => "ALTER TABLE sales ADD COLUMN ship_date DATE",
                 'terms' => "ALTER TABLE sales ADD COLUMN terms TEXT",
-                'unit_price' => "ALTER TABLE sales ADD COLUMN unit_price REAL DEFAULT 0"
+                'unit_price' => "ALTER TABLE sales ADD COLUMN unit_price REAL DEFAULT 0",
+                'end_customer' => "ALTER TABLE sales ADD COLUMN end_customer TEXT"
             ];
 
             foreach ($needed as $col => $sql) {
@@ -1141,6 +1272,31 @@ class Database {
                 if (!in_array('vat_treatment', $itemColNames)) {
                     $this->db->exec("ALTER TABLE invoice_items ADD COLUMN vat_treatment TEXT DEFAULT 'VAT_INCLUSIVE'");
                 }
+                if (!in_array('end_customer', $itemColNames)) {
+                    $this->db->exec("ALTER TABLE invoice_items ADD COLUMN end_customer TEXT");
+                }
+            } catch (Exception $e) {
+                // Table created in createTablesIfNotExists
+            }
+
+            // Check for columns in hardware_assets table
+            try {
+                $hwCols = $this->db->query("PRAGMA table_info(hardware_assets)")->fetchAll();
+                $hwColNames = array_column($hwCols, 'name');
+                if (!in_array('end_customer', $hwColNames)) {
+                    $this->db->exec("ALTER TABLE hardware_assets ADD COLUMN end_customer TEXT");
+                }
+            } catch (Exception $e) {
+                // Table created in createTablesIfNotExists
+            }
+
+            // Check for columns in software_subscriptions table
+            try {
+                $subCols = $this->db->query("PRAGMA table_info(software_subscriptions)")->fetchAll();
+                $subColNames = array_column($subCols, 'name');
+                if (!in_array('end_customer', $subColNames)) {
+                    $this->db->exec("ALTER TABLE software_subscriptions ADD COLUMN end_customer TEXT");
+                }
             } catch (Exception $e) {
                 // Table created in createTablesIfNotExists
             }
@@ -1159,9 +1315,12 @@ class Database {
                 CREATE INDEX IF NOT EXISTS idx_sales_tax_code ON sales(tax_code);
                 CREATE INDEX IF NOT EXISTS idx_sales_product_category ON sales(product_category);
                 CREATE INDEX IF NOT EXISTS idx_sales_rep_code ON sales(sales_rep_code);
+                CREATE INDEX IF NOT EXISTS idx_sales_end_customer ON sales(end_customer);
+                CREATE INDEX IF NOT EXISTS idx_sales_invoice_type ON sales(invoice_type);
                 CREATE INDEX IF NOT EXISTS idx_payments_invoice_num ON payments(invoice_num);
                 CREATE INDEX IF NOT EXISTS idx_payments_customer_name ON payments(customer_name);
                 CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);
+                CREATE INDEX IF NOT EXISTS idx_hw_end_customer ON hardware_assets(end_customer);
             ");
             
             // Check for customer_profiles table
@@ -1310,5 +1469,336 @@ class Database {
     public function deleteProductMapping($id) {
         return $this->execute("DELETE FROM product_mappings WHERE id = ?", [$id]);
     }
+
+    /**
+     * Master Brands Management
+     */
+    public function getBrands($activeOnly = false) {
+        $where = $activeOnly ? "WHERE is_active = 1" : "";
+        return $this->fetchAll("
+            SELECT b.*, 
+                   COUNT(ii.id) as assigned_product_count,
+                   COALESCE(SUM(ii.total_amount), 0) as lifetime_revenue
+            FROM master_brands b
+            LEFT JOIN invoice_items ii ON ii.brand = b.name
+            $where
+            GROUP BY b.id
+            ORDER BY b.name ASC
+        ");
+    }
+
+    public function getBrandById($id) {
+        return $this->fetch("SELECT * FROM master_brands WHERE id = ?", [$id]);
+    }
+
+    public function saveBrand($data) {
+        $id = !empty($data['id']) ? (int)$data['id'] : null;
+        $name = trim($data['name'] ?? '');
+        $code = strtoupper(trim($data['code'] ?? ''));
+        $color = trim($data['color'] ?? '#2563eb');
+        $description = trim($data['description'] ?? '');
+        $isActive = isset($data['is_active']) ? (int)$data['is_active'] : 1;
+
+        if (empty($name)) {
+            throw new InvalidArgumentException('Brand name is required');
+        }
+
+        if ($id) {
+            // Get old name for cascading update
+            $old = $this->getBrandById($id);
+            $this->execute("
+                UPDATE master_brands 
+                SET name = ?, code = ?, color = ?, description = ?, is_active = ?
+                WHERE id = ?
+            ", [$name, $code, $color, $description, $isActive, $id]);
+
+            if ($old && $old['name'] !== $name) {
+                // Cascade update to invoice_items and product_mappings
+                $this->execute("UPDATE invoice_items SET brand = ? WHERE brand = ?", [$name, $old['name']]);
+                $this->execute("UPDATE product_mappings SET brand = ? WHERE brand = ?", [$name, $old['name']]);
+            }
+            return $id;
+        } else {
+            $this->execute("
+                INSERT INTO master_brands (name, code, color, description, is_active)
+                VALUES (?, ?, ?, ?, ?)
+            ", [$name, $code, $color, $description, $isActive]);
+            return $this->getConnection()->lastInsertId();
+        }
+    }
+
+    public function deleteBrand($id) {
+        $brand = $this->getBrandById($id);
+        if (!$brand) return false;
+        // Unassign products tagged with this brand
+        $this->execute("UPDATE invoice_items SET brand = 'Other' WHERE brand = ?", [$brand['name']]);
+        return $this->execute("DELETE FROM master_brands WHERE id = ?", [$id]);
+    }
+
+    /**
+     * Master Categories Management
+     */
+    public function getCategories($activeOnly = false) {
+        $where = $activeOnly ? "WHERE is_active = 1" : "";
+        return $this->fetchAll("
+            SELECT c.*, 
+                   COUNT(ii.id) as assigned_product_count,
+                   COALESCE(SUM(ii.total_amount), 0) as lifetime_revenue
+            FROM master_categories c
+            LEFT JOIN invoice_items ii ON ii.category = c.name
+            $where
+            GROUP BY c.id
+            ORDER BY c.name ASC
+        ");
+    }
+
+    public function getCategoryById($id) {
+        return $this->fetch("SELECT * FROM master_categories WHERE id = ?", [$id]);
+    }
+
+    public function saveCategory($data) {
+        $id = !empty($data['id']) ? (int)$data['id'] : null;
+        $name = trim($data['name'] ?? '');
+        $code = strtoupper(trim($data['code'] ?? ''));
+        $color = trim($data['color'] ?? '#059669');
+        $description = trim($data['description'] ?? '');
+        $isActive = isset($data['is_active']) ? (int)$data['is_active'] : 1;
+
+        if (empty($name)) {
+            throw new InvalidArgumentException('Category name is required');
+        }
+
+        if ($id) {
+            $old = $this->getCategoryById($id);
+            $this->execute("
+                UPDATE master_categories 
+                SET name = ?, code = ?, color = ?, description = ?, is_active = ?
+                WHERE id = ?
+            ", [$name, $code, $color, $description, $isActive, $id]);
+
+            if ($old && $old['name'] !== $name) {
+                // Cascade update to invoice_items
+                $this->execute("UPDATE invoice_items SET category = ? WHERE category = ?", [$name, $old['name']]);
+            }
+            return $id;
+        } else {
+            $this->execute("
+                INSERT INTO master_categories (name, code, color, description, is_active)
+                VALUES (?, ?, ?, ?, ?)
+            ", [$name, $code, $color, $description, $isActive]);
+            return $this->getConnection()->lastInsertId();
+        }
+    }
+
+    public function deleteCategory($id) {
+        $cat = $this->getCategoryById($id);
+        if (!$cat) return false;
+        // Unassign products tagged with this category
+        $this->execute("UPDATE invoice_items SET category = 'Other / Unassigned' WHERE category = ?", [$cat['name']]);
+        return $this->execute("DELETE FROM master_categories WHERE id = ?", [$id]);
+    }
+
+    /**
+     * Update invoice header details (end_customer, sales_rep_code, po_number, vat_treatment, memo, paid_date)
+     */
+    public function updateInvoiceHeader($invoiceNumber, array $data) {
+        $inv = trim($invoiceNumber);
+        if (empty($inv)) return false;
+
+        $fields = [];
+        $params = [];
+
+        if (array_key_exists('end_customer', $data)) {
+            $fields[] = "end_customer = ?";
+            $params[] = trim($data['end_customer']);
+        }
+        if (array_key_exists('sales_rep_code', $data)) {
+            $fields[] = "sales_rep_code = ?";
+            $params[] = trim($data['sales_rep_code']);
+        }
+        if (array_key_exists('po_number', $data)) {
+            $fields[] = "po_number = ?";
+            $params[] = trim($data['po_number']);
+        }
+        if (array_key_exists('memo', $data)) {
+            $fields[] = "memo = ?";
+            $params[] = trim($data['memo']);
+        }
+        if (array_key_exists('paid_date', $data)) {
+            $fields[] = "paid_date = ?";
+            $params[] = !empty($data['paid_date']) ? trim($data['paid_date']) : null;
+        }
+
+        if (!empty($fields)) {
+            $params[] = $inv;
+            $this->execute("UPDATE sales SET " . implode(', ', $fields) . " WHERE invoice_number = ?", $params);
+        }
+
+        // Also update end_customer on invoice_items and assets if provided
+        if (array_key_exists('end_customer', $data)) {
+            $endCust = trim($data['end_customer']);
+            $this->execute("UPDATE invoice_items SET end_customer = ? WHERE invoice_number = ?", [$endCust, $inv]);
+            $this->execute("UPDATE hardware_assets SET end_customer = ? WHERE invoice_number = ?", [$endCust, $inv]);
+            $this->execute("UPDATE software_subscriptions SET end_customer = ? WHERE invoice_number = ?", [$endCust, $inv]);
+        }
+
+        // Handle VAT treatment changes & automatic recalculations
+        if (!empty($data['vat_treatment'])) {
+            $vatTreatment = trim($data['vat_treatment']);
+            $this->execute("UPDATE sales SET vat_treatment = ? WHERE invoice_number = ?", [$vatTreatment, $inv]);
+            $this->execute("UPDATE invoice_items SET vat_treatment = ? WHERE invoice_number = ?", [$vatTreatment, $inv]);
+
+            if (!empty($data['recalc_vat'])) {
+                if ($vatTreatment === 'VAT_EXEMPT' || $vatTreatment === 'NON_VAT') {
+                    $this->execute("
+                        UPDATE sales 
+                        SET base_value = total_amount, vat_component = 0, applied_tax_rate = 0
+                        WHERE invoice_number = ?
+                    ", [$inv]);
+                    $this->execute("
+                        UPDATE invoice_items 
+                        SET base_value = total_amount, vat_component = 0
+                        WHERE invoice_number = ?
+                    ", [$inv]);
+                } elseif ($vatTreatment === 'PLUS_VAT' || $vatTreatment === 'VAT_INCLUSIVE') {
+                    $this->execute("
+                        UPDATE sales 
+                        SET applied_tax_rate = 0.18,
+                            base_value = ROUND(total_amount / 1.18, 2),
+                            vat_component = ROUND(total_amount - (total_amount / 1.18), 2)
+                        WHERE invoice_number = ?
+                    ", [$inv]);
+                    $this->execute("
+                        UPDATE invoice_items 
+                        SET base_value = ROUND(total_amount / 1.18, 2),
+                            vat_component = ROUND(total_amount - (total_amount / 1.18), 2)
+                        WHERE invoice_number = ?
+                    ", [$inv]);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Update invoice item details (clean_product_name, brand, category, product_type, unit_cost, gross_profit, vat_treatment, end_customer)
+     */
+    public function updateInvoiceItemDetails($itemId, array $data) {
+        $id = (int)$itemId;
+        if ($id <= 0) return false;
+
+        $fields = [];
+        $params = [];
+
+        $allowed = ['clean_product_name', 'brand', 'category', 'product_type', 'unit_cost', 'gross_profit', 'vat_treatment', 'end_customer'];
+        foreach ($allowed as $f) {
+            if (array_key_exists($f, $data)) {
+                $fields[] = "$f = ?";
+                $params[] = $data[$f];
+            }
+        }
+
+        if (empty($fields)) return false;
+
+        $params[] = $id;
+        $this->execute("UPDATE invoice_items SET " . implode(', ', $fields) . " WHERE id = ?", $params);
+
+        // Also if gross_profit is provided, update the corresponding raw line in sales if linked
+        if (array_key_exists('gross_profit', $data)) {
+            $item = $this->fetch("SELECT invoice_number, raw_line_ids FROM invoice_items WHERE id = ?", [$id]);
+            if ($item && !empty($item['raw_line_ids'])) {
+                $rawIds = array_filter(array_map('intval', explode(',', $item['raw_line_ids'])));
+                if (!empty($rawIds)) {
+                    $inPlaceholders = implode(',', array_fill(0, count($rawIds), '?'));
+                    $gpPerLine = (float)$data['gross_profit'] / count($rawIds);
+                    $unitCost = isset($data['unit_cost']) ? (float)$data['unit_cost'] : null;
+                    $execParams = array_merge([$gpPerLine, $unitCost], $rawIds);
+                    $this->execute("UPDATE sales SET gross_profit = ?, unit_cost = ? WHERE id IN ($inPlaceholders)", $execParams);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Update hardware asset warranty details
+     */
+    public function updateHardwareAsset($assetId, array $data) {
+        $id = (int)$assetId;
+        if ($id <= 0) return false;
+
+        $fields = [];
+        $params = [];
+        $allowed = ['serial_number', 'model_sku', 'brand', 'warranty_type', 'warranty_months', 'warranty_start_date', 'warranty_expiry_date', 'warranty_status', 'parent_serial_number', 'notes', 'end_customer'];
+        foreach ($allowed as $f) {
+            if (array_key_exists($f, $data)) {
+                $fields[] = "$f = ?";
+                $params[] = $data[$f];
+            }
+        }
+
+        if (empty($fields)) return false;
+        $params[] = $id;
+        return $this->execute("UPDATE hardware_assets SET " . implode(', ', $fields) . " WHERE id = ?", $params);
+    }
+
+    /**
+     * Add a hardware asset to an invoice
+     */
+    public function addHardwareAsset(array $data) {
+        return $this->execute("
+            INSERT INTO hardware_assets (
+                invoice_number, customer_name, product_name, brand, model_sku,
+                serial_number, warranty_type, warranty_months, warranty_start_date,
+                warranty_expiry_date, warranty_status, parent_serial_number, notes, end_customer
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ", [
+            $data['invoice_number'] ?? '',
+            $data['customer_name'] ?? '',
+            $data['product_name'] ?? '',
+            $data['brand'] ?? 'Synology',
+            $data['model_sku'] ?? '',
+            $data['serial_number'] ?? '',
+            $data['warranty_type'] ?? 'Standard Hardware Warranty',
+            !empty($data['warranty_months']) ? (int)$data['warranty_months'] : 36,
+            $data['warranty_start_date'] ?? date('Y-m-d'),
+            $data['warranty_expiry_date'] ?? date('Y-m-d', strtotime('+3 years')),
+            $data['warranty_status'] ?? 'Active',
+            $data['parent_serial_number'] ?? '',
+            $data['notes'] ?? '',
+            $data['end_customer'] ?? ''
+        ]);
+    }
+
+    /**
+     * Delete hardware asset
+     */
+    public function deleteHardwareAsset($assetId) {
+        return $this->execute("DELETE FROM hardware_assets WHERE id = ?", [(int)$assetId]);
+    }
+
+    /**
+     * Update software subscription / recurring contract details
+     */
+    public function updateSoftwareSubscription($subId, array $data) {
+        $id = (int)$subId;
+        if ($id <= 0) return false;
+
+        $fields = [];
+        $params = [];
+        $allowed = ['software_name', 'edition_tier', 'license_seats', 'period_start_date', 'period_end_date', 'term_months', 'renewal_status', 'renewal_opportunity_value', 'end_customer'];
+        foreach ($allowed as $f) {
+            if (array_key_exists($f, $data)) {
+                $fields[] = "$f = ?";
+                $params[] = $data[$f];
+            }
+        }
+
+        if (empty($fields)) return false;
+        $params[] = $id;
+        return $this->execute("UPDATE software_subscriptions SET " . implode(', ', $fields) . " WHERE id = ?", $params);
+    }
 }
-?>
+

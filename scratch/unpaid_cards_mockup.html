@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockup: Unpaid Invoices Compact KPI Cards</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../layout.css">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 30px;
+            color: #0f172a;
+        }
+        .mockup-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .mockup-header {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-current { background: #fee2e2; color: #991b1b; }
+        .badge-proposed { background: #dcfce7; color: #166534; }
+        .badge-ref { background: #e0e7ff; color: #3730a3; }
+        .section-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* Demo table snippet to show context */
+        .preview-table-snippet {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+        .preview-th {
+            background: #f8fafc;
+            padding: 10px 14px;
+            font-weight: 700;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .preview-td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+    </style>
+</head>
+<body>
+
+<div class="mockup-container">
+    <div class="mockup-header">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h1 style="margin: 0; font-size: 22px; font-weight: 800; color: #0f172a;">
+                    Design Mockup: Unpaid Invoices Compact KPI Cards
+                </h1>
+                <p style="margin: 6px 0 0 0; color: #64748b; font-size: 13px;">
+                    Downsizing the 5 Unpaid Invoice cards to match the compact, high-density <code>.metrics-strip</code> format used on the Invoice Summary page.
+                </p>
+            </div>
+            <span class="badge badge-proposed">Interactive Preview</span>
+        </div>
+    </div>
+
+    <!-- 1. Reference: Invoices List Format -->
+    <div class="section-card">
+        <div class="section-title">
+            <span>Reference: Commercial Invoice List KPI Ribbon (Currently Active)</span>
+            <span class="badge badge-ref">Reference Standard</span>
+        </div>
+        <p style="color: #64748b; font-size: 12px; margin: 0 0 10px 0;">This is how the 5 cards look on <code>reports.php?type=invoices</code> with <code>.metrics-strip</code>:</p>
+        
+        <div class="metrics-strip">
+            <div class="metric-pill">
+                <span class="metric-pill-label">Total Invoices</span>
+                <span class="metric-pill-val">7,410</span>
+                <span class="metric-pill-sub">722 Unique Clients</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Gross Billed</span>
+                <span class="metric-pill-val">LKR 1,345,867,728</span>
+                <span class="metric-pill-sub">34,120 Units Dispatched</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Net Base (Pre-VAT)</span>
+                <span class="metric-pill-val">LKR 1,189,401,980</span>
+                <span class="metric-pill-sub">Core Recognized Sales</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Statutory 18% VAT</span>
+                <span class="metric-pill-val" style="color: var(--primary);">LKR 156,465,748</span>
+                <span class="metric-pill-sub">IRD Tax Liability</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Settlement Realization</span>
+                <span class="metric-pill-val" style="color: #15803d; font-size: 14px;">
+                    Settled: LKR 1,326,437,335
+                </span>
+                <span class="metric-pill-sub" style="color: #b91c1c; font-weight: 600;">
+                    Unpaid: LKR 19,430,393 (90 inv)
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Current Layout (Before) -->
+    <div class="section-card">
+        <div class="section-title">
+            <span style="color: #991b1b;">Current Unpaid Invoices Layout (Bulky <code>.metric-card</code> Grid)</span>
+            <span class="badge badge-current">Current (Tall / Takes too much space)</span>
+        </div>
+        <p style="color: #64748b; font-size: 12px; margin: 0 0 10px 0;">Height: ~105px | Padding: 16px | Font size: 22px | Margin bottom: 25px</p>
+        
+        <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 15px;">
+            <div class="metric-card">
+                <div class="metric-label">Total Receivables Due</div>
+                <div class="metric-value" style="color: #0f172a; font-size: 22px;">LKR 19,430,393.26</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">Active 2026 Receivables</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Unpaid Commercial Invoices</div>
+                <div class="metric-value" style="color: var(--primary);">90</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">Across 50 Debtor Accounts</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Debtor Accounts Count</div>
+                <div class="metric-value" style="color: #6366f1;">50</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">Customers with Balance Due</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Critical Overdue (> 90 Days)</div>
+                <div class="metric-value" style="color: #ef4444; font-size: 20px;">LKR 4,270,874</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">42 High-Risk Invoices</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Current / Normal (≤ 30 Days)</div>
+                <div class="metric-value" style="color: #10b981; font-size: 20px;">LKR 9,138,711</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">26 Invoices in Standard Cycle</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Proposed Layout (Option 1: Recommended) -->
+    <div class="section-card" style="border: 2px solid #22c55e;">
+        <div class="section-title">
+            <span style="color: #166534; font-size: 15px;">Proposed: Compact Unpaid Invoices Strip (Option A - Recommended)</span>
+            <span class="badge badge-proposed">Matches Invoice List Exactly</span>
+        </div>
+        <p style="color: #64748b; font-size: 12px; margin: 0 0 10px 0;">
+            Height: ~58px (45% space saved!) | Uses <code>.metrics-strip</code> & <code>.metric-pill</code> | Preserves risk colors for Overdue & Current
+        </p>
+
+        <!-- PROPOSED COMPACT STRIP -->
+        <div class="metrics-strip" style="margin-bottom: 15px;">
+            <div class="metric-pill">
+                <span class="metric-pill-label">Total Receivables Due</span>
+                <span class="metric-pill-val" style="color: #0f172a;">LKR 19,430,393</span>
+                <span class="metric-pill-sub">Active 2026 Receivables</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Unpaid Invoices</span>
+                <span class="metric-pill-val" style="color: var(--primary);">90</span>
+                <span class="metric-pill-sub">Across 50 Debtor Accounts</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Debtor Accounts</span>
+                <span class="metric-pill-val" style="color: #6366f1;">50</span>
+                <span class="metric-pill-sub">Clients with Open Balance</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Critical Overdue (>90d)</span>
+                <span class="metric-pill-val" style="color: #dc2626;">LKR 4,270,874</span>
+                <span class="metric-pill-sub" style="color: #dc2626; font-weight: 600;">42 High-Risk Invoices</span>
+            </div>
+            <div class="metric-pill">
+                <span class="metric-pill-label">Current Normal (≤30d)</span>
+                <span class="metric-pill-val" style="color: #16a34a;">LKR 9,138,711</span>
+                <span class="metric-pill-sub" style="color: #16a34a;">26 Standard Invoices</span>
+            </div>
+        </div>
+
+        <!-- Simulated surrounding page elements to demonstrate density -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 13px; font-weight: 700; color: #334155;">
+                <span style="color: #f59e0b;">⏱</span> Unpaid Invoices Ledger (Sorted by Customer) &bull; <span style="font-size: 11px; font-weight: 600; color: #64748b;">50 Accounts Total</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button style="padding: 4px 10px; font-size: 11px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px; font-weight: 600;">Method</button>
+                <button style="padding: 4px 10px; font-size: 11px; border: 1px solid #cbd5e1; background: #fff; border-radius: 4px;">Print</button>
+                <button style="padding: 4px 10px; font-size: 11px; border: 1px solid #2563eb; background: #2563eb; color: #fff; border-radius: 4px; font-weight: 600;">Export PDF</button>
+            </div>
+        </div>
+
+        <div class="preview-table-snippet">
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <div class="preview-th">Customer / Account</div>
+                <div class="preview-th">Open Invoices</div>
+                <div class="preview-th">Total Due</div>
+                <div class="preview-th">Oldest Due</div>
+                <div class="preview-th">Risk Tier</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr;">
+                <div class="preview-td" style="font-weight: 700;">Techtron Integrated Solutions</div>
+                <div class="preview-td">2 Invoices</div>
+                <div class="preview-td" style="font-weight: 700; color: #dc2626;">LKR 980,450.00</div>
+                <div class="preview-td">2026-02-14</div>
+                <div class="preview-td"><span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">Critical (>90d)</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

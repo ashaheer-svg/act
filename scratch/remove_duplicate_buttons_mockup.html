@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockup: Remove Duplicate Action Buttons</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../layout.css">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 24px;
+            color: #0f172a;
+        }
+        .mockup-wrapper {
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+        .banner {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tag {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .tag-danger { background: #fee2e2; color: #991b1b; }
+        .tag-success { background: #dcfce7; color: #166534; }
+        .tag-info { background: #e0e7ff; color: #3730a3; }
+        
+        .mock-window {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 28px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+        .mock-window-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .mock-body {
+            padding: 20px;
+        }
+        .highlight-box-red {
+            border: 2px dashed #ef4444;
+            background: rgba(239, 68, 68, 0.05);
+            border-radius: 8px;
+            padding: 6px;
+            position: relative;
+        }
+        .highlight-label-red {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .highlight-box-green {
+            border: 2px solid #22c55e;
+            background: rgba(34, 197, 94, 0.03);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="mockup-wrapper">
+    <!-- Header banner -->
+    <div class="banner">
+        <div>
+            <h1 style="margin: 0; font-size: 20px; font-weight: 800;">
+                UI Simplification Mockup: Remove Redundant Action Buttons
+            </h1>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">
+                The <code>[Method] [Print] [Export PDF] [Export CSV]</code> buttons inside the report cards are completely duplicated in the top unified command bar.
+            </p>
+        </div>
+        <span class="tag tag-info">Design Proposal</span>
+    </div>
+
+    <!-- 1. The Global Command Bar at Top -->
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span>Persistent Top Command Bar (Active on every report page header)</span>
+            <span style="color: #059669; font-weight: 800;">✓ Always Visible at Top</span>
+        </div>
+        <div class="command-bar" style="margin: 0;">
+            <div class="cmd-left">
+                <div class="cmd-group">
+                    <span class="cmd-label"><i class="icon-sliders" style="font-size: 11px;"></i> View:</span>
+                    <select class="cmd-select cmd-select-report" style="width: 170px;">
+                        <option selected>Unpaid Invoices</option>
+                    </select>
+                </div>
+            </div>
+            <div class="cmd-right">
+                <button type="button" class="cmd-btn" style="border: 2px solid #059669; background: #ecfdf5; color: #065f46; font-weight: 700;">
+                    <i class="icon-calculator"></i> Method
+                </button>
+                <button type="button" class="cmd-btn" style="border: 2px solid #059669; background: #ecfdf5; color: #065f46; font-weight: 700;">
+                    <i class="icon-printer"></i> Print
+                </button>
+                <button type="button" class="cmd-btn cmd-btn-primary" style="font-weight: 700;">
+                    <i class="icon-file-text"></i> PDF
+                </button>
+                <button type="button" class="cmd-btn" style="border: 2px solid #059669; background: #ecfdf5; color: #065f46; font-weight: 700;">
+                    <i class="icon-download"></i> CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. CURRENT STATE: SHOWING REDUNDANCY -->
+    <div class="mock-window" style="border: 2px solid #fca5a5;">
+        <div class="mock-window-header">
+            <div>
+                <strong style="color: #991b1b; font-size: 13px;">CURRENT STATE: Redundant Duplicate Section Inside Card</strong>
+                <span style="font-size: 11px; color: #64748b; margin-left: 8px;">(Clutters the report title & takes up horizontal room)</span>
+            </div>
+            <span class="tag tag-danger">Current (Duplicated)</span>
+        </div>
+        <div class="mock-body">
+            <!-- Compact KPI Ribbon -->
+            <div class="metrics-strip" style="margin-bottom: 15px;">
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Total Receivables Due</span>
+                    <span class="metric-pill-val">LKR 19,430,393</span>
+                    <span class="metric-pill-sub">Active Receivables Balance</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Unpaid Invoices</span>
+                    <span class="metric-pill-val" style="color: var(--primary);">90</span>
+                    <span class="metric-pill-sub">Across 50 Debtor Accounts</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Debtor Accounts</span>
+                    <span class="metric-pill-val" style="color: #6366f1;">50</span>
+                    <span class="metric-pill-sub">Clients with Open Balance</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Critical Overdue (&gt; 90d)</span>
+                    <span class="metric-pill-val" style="color: #dc2626;">LKR 4,270,874</span>
+                    <span class="metric-pill-sub" style="color: #dc2626; font-weight: 600;">42 High-Risk Invoices</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Current Normal (&le; 30d)</span>
+                    <span class="metric-pill-val" style="color: #16a34a;">LKR 9,138,711</span>
+                    <span class="metric-pill-sub" style="color: #16a34a;">26 Standard Invoices</span>
+                </div>
+            </div>
+
+            <!-- Card with redundant buttons -->
+            <div class="card" style="margin: 0; background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-main);">
+                                <i class="icon-clock" style="color: #f59e0b;"></i> Unpaid Invoices Ledger (Sorted by Customer)
+                            </h2>
+                            <span class="sb-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 11px; padding: 2px 8px;">Post-2021 Receivables</span>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 12.5px; margin: 4px 0 0 0;">
+                            Commercial receivables from 2022 onwards, grouped and sorted by customer account with risk aging tiers, individual invoice breakdowns, and line-item auditing.
+                        </p>
+                    </div>
+                    
+                    <!-- REDUNDANT DUPLICATE BUTTONS BOX -->
+                    <div class="highlight-box-red">
+                        <span class="highlight-label-red">Remove This Duplicate Section</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button type="button" class="btn-view" style="padding: 6px 12px; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; font-size: 12px; font-weight: 600;">
+                                <i class="icon-calculator"></i> Method
+                            </button>
+                            <button type="button" class="btn-view" style="padding: 6px 12px; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px;">
+                                <i class="icon-printer"></i> Print
+                            </button>
+                            <button type="button" class="btn-view" style="padding: 6px 12px; background: #2563eb; border: 1px solid #2563eb; color: #ffffff !important; font-size: 12px; font-weight: 600;">
+                                <i class="icon-file-text"></i> Export PDF
+                            </button>
+                            <button type="button" class="btn-view" style="padding: 6px 12px; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 12px;">
+                                <i class="icon-download"></i> Export CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Controls Form -->
+                <div style="display: flex; gap: 10px; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+                    <input type="text" placeholder="Search customer or invoice #..." style="flex: 1; height: 34px; padding: 0 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <select style="height: 34px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px;"><option>All Aging Periods</option></select>
+                    <select style="height: 34px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px;"><option>Sort: Customer Name</option></select>
+                    <button style="height: 34px; padding: 0 14px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700;">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. PROPOSED CLEAN STATE: REDUNDANCY REMOVED -->
+    <div class="mock-window" style="border: 2px solid #22c55e;">
+        <div class="mock-window-header" style="background: #f0fdf4;">
+            <div>
+                <strong style="color: #166534; font-size: 13px;">PROPOSED CLEAN STATE: Duplicate Section Removed</strong>
+                <span style="font-size: 11px; color: #166534; margin-left: 8px;">(Cleaner layout, no duplicate buttons, actions cleanly accessed from persistent command bar)</span>
+            </div>
+            <span class="tag tag-success">Proposed (Clean & Streamlined)</span>
+        </div>
+        <div class="mock-body">
+            <!-- Compact KPI Ribbon -->
+            <div class="metrics-strip" style="margin-bottom: 15px;">
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Total Receivables Due</span>
+                    <span class="metric-pill-val">LKR 19,430,393</span>
+                    <span class="metric-pill-sub">Active Receivables Balance</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Unpaid Invoices</span>
+                    <span class="metric-pill-val" style="color: var(--primary);">90</span>
+                    <span class="metric-pill-sub">Across 50 Debtor Accounts</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Debtor Accounts</span>
+                    <span class="metric-pill-val" style="color: #6366f1;">50</span>
+                    <span class="metric-pill-sub">Clients with Open Balance</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Critical Overdue (&gt; 90d)</span>
+                    <span class="metric-pill-val" style="color: #dc2626;">LKR 4,270,874</span>
+                    <span class="metric-pill-sub" style="color: #dc2626; font-weight: 600;">42 High-Risk Invoices</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="metric-pill-label">Current Normal (&le; 30d)</span>
+                    <span class="metric-pill-val" style="color: #16a34a;">LKR 9,138,711</span>
+                    <span class="metric-pill-sub" style="color: #16a34a;">26 Standard Invoices</span>
+                </div>
+            </div>
+
+            <!-- Card with duplicate buttons removed -->
+            <div class="card" style="margin: 0; background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px;">
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h2 style="margin: 0; font-size: 18px; font-weight: 800; color: var(--text-main);">
+                            <i class="icon-clock" style="color: #f59e0b;"></i> Unpaid Invoices Ledger (Sorted by Customer)
+                        </h2>
+                        <span class="sb-badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 11px; padding: 2px 8px;">Post-2021 Receivables</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 12.5px; margin: 4px 0 0 0;">
+                        Commercial receivables from 2022 onwards, grouped and sorted by customer account with risk aging tiers, individual invoice breakdowns, and line-item auditing.
+                    </p>
+                </div>
+
+                <!-- Filter Controls Form -->
+                <div style="display: flex; gap: 10px; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+                    <input type="text" placeholder="Search customer or invoice #..." style="flex: 1; height: 34px; padding: 0 10px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <select style="height: 34px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px;"><option>All Aging Periods</option></select>
+                    <select style="height: 34px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px;"><option>Sort: Customer Name</option></select>
+                    <button style="height: 34px; padding: 0 14px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 700;">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

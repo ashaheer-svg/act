@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Pagination UI/UX Mockup Lab - Activity Sales BI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../docs/lucide-font/lucide.css">
+    <style>
+        :root {
+            --bg-canvas: #f1f5f9;
+            --surface-card: #ffffff;
+            --surface-subtle: #f8fafc;
+            --border-card: #cbd5e1;
+            --border-subtle: #e2e8f0;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-canvas);
+            color: var(--text-main);
+            font-size: 12.5px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: 60px;
+        }
+
+        /* Top Header */
+        .lab-header {
+            background: #090d16;
+            color: white;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1e293b;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .lab-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .lab-badge {
+            background: rgba(37, 99, 235, 0.25);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.4);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .lab-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 24px auto;
+            padding: 0 24px;
+        }
+
+        /* Design Selector Tabs */
+        .selector-strip {
+            background: white;
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        .selector-tabs {
+            display: flex;
+            gap: 8px;
+        }
+        .tab-btn {
+            background: var(--surface-subtle);
+            border: 1px solid var(--border-card);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+        .tab-btn:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+        }
+        .tab-btn .rec-badge {
+            background: #10b981;
+            color: white;
+            font-size: 9.5px;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        /* Control Panel */
+        .lab-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+        .lab-input {
+            border: 1px solid var(--border-card);
+            background: white;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            width: 70px;
+            font-weight: 600;
+            color: var(--text-main);
+            text-align: center;
+        }
+
+        /* Concept Card Wrapper */
+        .concept-showcase {
+            background: white;
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        .concept-header {
+            padding: 16px 20px;
+            background: var(--surface-subtle);
+            border-bottom: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .concept-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .concept-tag {
+            background: #1e293b;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .concept-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .concept-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Mock Table */
+        .table-wrap {
+            overflow-x: auto;
+        }
+        .mock-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .mock-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10.5px;
+            letter-spacing: 0.04em;
+            padding: 9px 16px;
+            border-bottom: 1px solid var(--border-card);
+            text-align: left;
+        }
+        .mock-table th.text-right, .mock-table td.text-right {
+            text-align: right;
+        }
+        .mock-table th.text-center, .mock-table td.text-center {
+            text-align: center;
+        }
+        .mock-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-main);
+        }
+        .mock-table tr:hover td {
+            background: #f8fafc;
+        }
+        .doc-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+        .badge-paid { background: #dcfce7; color: #15803d; }
+        .badge-unpaid { background: #fee2e2; color: #b91c1c; }
+
+        /* ==========================================================================
+           PAGINATION DESIGNS
+           ========================================================================== */
+
+        /* -------------------------------------------------------------
+           CONCEPT B: Modern Floating Action Rail (RECOMMENDED)
+           Separate compact rounded buttons with Lucide icon glyphs
+           ------------------------------------------------------------- */
+        .pagination-rail {
+            padding: 12px 20px;
+            background: #ffffff;
+            border-top: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .pg-summary {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pg-summary strong {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+        .pg-summary .pg-total-badge {
+            background: #f1f5f9;
+            color: #334155;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .pg-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Generic Pagination Button */
+        .pg-btn {
+            height: 28px;
+            min-width: 28px;
+            padding: 0 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.12s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+        .pg-btn:hover:not(.disabled):not(.active) {
+            background: #f8fafc;
+            color: var(--text-main);
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+        .pg-btn:active:not(.disabled) {
+            transform: translateY(0);
+        }
+        .pg-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+            font-weight: 700;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+            cursor: default;
+        }
+        .pg-btn.disabled {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.55;
+            box-shadow: none;
+        }
+        /* Minimized Icon Button */
+        .pg-btn-icon {
+            width: 28px;
+            padding: 0;
+        }
+        .pg-btn-icon i {
+            font-size: 13px;
+            line-height: 1;
+        }
+        .pg-ellipsis {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 28px;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            user-select: none;
+        }
+
+        /* Quick Jump Box */
+        .pg-jump-area {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding-left: 8px;
+            border-left: 1px solid var(--border-subtle);
+            margin-left: 6px;
+        }
+        .pg-jump-text {
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+        .pg-jump-input {
+            width: 44px;
+            height: 28px;
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-main);
+            background: #ffffff;
+            outline: none;
+        }
+        .pg-jump-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+        .pg-jump-btn {
+            height: 28px;
+            padding: 0 8px;
+            background: #f1f5f9;
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .pg-jump-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* -------------------------------------------------------------
+           CONCEPT A: Executive Segmented Micro-Dock
+           Single unified border group with zero gap
+           ------------------------------------------------------------- */
+        .pagination-dock {
+            padding: 12px 20px;
+            background: #ffffff;
+            border-top: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .pg-dock-group {
+            display: inline-flex;
+            border: 1px solid var(--border-card);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            background: white;
+        }
+        .pg-dock-btn {
+            height: 28px;
+            min-width: 30px;
+            padding: 0 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: none;
+            border-right: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.1s, color 0.1s;
+        }
+        .pg-dock-btn:last-child {
+            border-right: none;
+        }
+        .pg-dock-btn:hover:not(.disabled):not(.active) {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+        .pg-dock-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 700;
+            cursor: default;
+        }
+        .pg-dock-btn.disabled {
+            background: #f8fafc;
+            color: #cbd5e1;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        .pg-dock-ellipsis {
+            height: 28px;
+            width: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid var(--border-subtle);
+            color: #94a3b8;
+            font-size: 11px;
+            background: #f8fafc;
+        }
+
+        /* -------------------------------------------------------------
+           CONCEPT C: Ultra-Dense Minimalist Toolbar Pager
+           Minimal footprint, ideal for split drawers or customer cards
+           ------------------------------------------------------------- */
+        .pagination-minimal {
+            padding: 10px 18px;
+            background: #ffffff;
+            border-top: 1px solid var(--border-card);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .pg-minimal-pills {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .pg-mini-btn {
+            width: 26px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.12s;
+        }
+        .pg-mini-btn:hover:not(.disabled) {
+            background: #e2e8f0;
+            color: var(--text-main);
+            border-color: #cbd5e1;
+        }
+        .pg-mini-btn.disabled {
+            color: #cbd5e1;
+            cursor: not-allowed;
+        }
+        .pg-mini-indicator {
+            padding: 3px 10px;
+            background: #f1f5f9;
+            border: 1px solid var(--border-card);
+            border-radius: 5px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .pg-mini-input {
+            width: 32px;
+            height: 20px;
+            border: 1px solid #cbd5e1;
+            border-radius: 3px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 11px;
+            color: var(--primary);
+            background: white;
+            outline: none;
+        }
+
+        /* Comparison Feature Matrix */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-top: 24px;
+        }
+        .matrix-card {
+            background: white;
+            border: 1px solid var(--border-card);
+            border-radius: 10px;
+            padding: 18px;
+            box-shadow: var(--shadow-sm);
+            position: relative;
+        }
+        .matrix-card.featured {
+            border: 2px solid var(--primary);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+        }
+        .matrix-badge {
+            position: absolute;
+            top: -10px;
+            right: 16px;
+            background: var(--primary);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 10px;
+            letter-spacing: 0.05em;
+        }
+        .matrix-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .matrix-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            line-height: 1.4;
+        }
+        .matrix-list {
+            list-style: none;
+            font-size: 11.5px;
+            color: var(--text-secondary);
+        }
+        .matrix-list li {
+            padding: 4px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        .matrix-list li i {
+            color: #10b981;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .matrix-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <header class="lab-header">
+        <div class="lab-brand">
+            <span class="lab-badge">UI/UX Mockup Lab</span>
+            <span class="lab-title">Report Pagination Modernization & Minimized Icons</span>
+        </div>
+        <div style="font-size: 11.5px; color: #94a3b8;">
+            Targeting: Invoices, Unpaid Debtor Cards, EOL, Churn, LTV, Tax Audit, SLAs, Rentals
+        </div>
+    </header>
+
+    <div class="container">
+
+        <!-- Selector Strip -->
+        <div class="selector-strip">
+            <div class="selector-tabs">
+                <button type="button" class="tab-btn active" onclick="switchConcept('concept-b')">
+                    <i class="icon-layout-grid"></i>
+                    <span>Concept B: Modern Floating Rail</span>
+                    <span class="rec-badge">Recommended</span>
+                </button>
+                <button type="button" class="tab-btn" onclick="switchConcept('concept-a')">
+                    <i class="icon-layers"></i>
+                    <span>Concept A: Executive Segmented Dock</span>
+                </button>
+                <button type="button" class="tab-btn" onclick="switchConcept('concept-c')">
+                    <i class="icon-sliders"></i>
+                    <span>Concept C: Ultra-Dense Micro Pager</span>
+                </button>
+            </div>
+            
+            <div class="lab-controls">
+                <span>Simulate Page:</span>
+                <button type="button" class="tab-btn" style="padding: 4px 8px;" onclick="setMockPage(1)">1 (Start)</button>
+                <button type="button" class="tab-btn" style="padding: 4px 8px;" onclick="setMockPage(15)">15 (Mid)</button>
+                <button type="button" class="tab-btn" style="padding: 4px 8px;" onclick="setMockPage(497)">497 (End)</button>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+             MOCKUP CONTAINER
+             ========================================================================= -->
+        <div class="concept-showcase">
+            <div class="concept-header">
+                <div class="concept-title-group">
+                    <span class="concept-tag" id="currentConceptTag">CONCEPT B</span>
+                    <div>
+                        <div class="concept-title" id="currentConceptTitle">Modern Floating Rail with Minimized Chevrons</div>
+                        <div class="concept-desc" id="currentConceptDesc">Individual 28px rounded buttons with Lucide minimized icons for First, Prev, Next, Last, plus intelligent numerical page chips and direct page jump.</div>
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: #64748b; font-weight: 600;">
+                    Live Interactive Demonstration
+                </div>
+            </div>
+
+            <!-- Table Preview (Invoices Context) -->
+            <div class="table-wrap">
+                <table class="mock-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Date</th>
+                            <th style="width: 110px;">Invoice #</th>
+                            <th>Customer Name</th>
+                            <th>Key Equipment / Services Billed</th>
+                            <th class="text-right" style="width: 110px;">Net Base</th>
+                            <th class="text-right" style="width: 90px;">18% VAT</th>
+                            <th class="text-right" style="width: 120px;">Gross Total</th>
+                            <th class="text-center" style="width: 95px;">Status</th>
+                            <th class="text-center" style="width: 70px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mockTableBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- DYNAMIC PAGINATION SLOTS -->
+
+            <!-- 1. CONCEPT B (DEFAULT / RECOMMENDED) -->
+            <div id="slot-concept-b" class="pagination-rail">
+                <div class="pg-summary">
+                    Showing <strong id="b-range-start">1</strong>–<strong id="b-range-end">25</strong> of <strong id="b-range-total">12,410</strong> invoices
+                    <span class="pg-total-badge">Page <span id="b-curr-page">1</span> of 497</span>
+                </div>
+
+                <div style="display: flex; align-items: center;">
+                    <div class="pg-controls" id="b-controls">
+                        <!-- Rendered by JS -->
+                    </div>
+
+                    <div class="pg-jump-area">
+                        <span class="pg-jump-text">Go to:</span>
+                        <input type="number" min="1" max="497" class="pg-jump-input" id="b-jump-val" value="1" onkeydown="if(event.key==='Enter') jumpPage('b')">
+                        <button type="button" class="pg-jump-btn" onclick="jumpPage('b')">Go</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. CONCEPT A (SEGMENTED DOCK) -->
+            <div id="slot-concept-a" class="pagination-dock" style="display: none;">
+                <div class="pg-summary">
+                    Showing <strong id="a-range-start">1</strong>–<strong id="a-range-end">25</strong> of <strong id="a-range-total">12,410</strong> invoices
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="pg-dock-group" id="a-controls">
+                        <!-- Rendered by JS -->
+                    </div>
+
+                    <div class="pg-jump-area" style="border-left: none; margin-left: 0; padding-left: 0;">
+                        <span class="pg-jump-text">Jump:</span>
+                        <input type="number" min="1" max="497" class="pg-jump-input" id="a-jump-val" value="1" onkeydown="if(event.key==='Enter') jumpPage('a')">
+                        <button type="button" class="pg-jump-btn" onclick="jumpPage('a')">Go</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. CONCEPT C (MINIMALIST TOOLBAR) -->
+            <div id="slot-concept-c" class="pagination-minimal" style="display: none;">
+                <div class="pg-summary">
+                    Showing <strong id="c-range-start">1</strong>–<strong id="c-range-end">25</strong> of <strong id="c-range-total">12,410</strong> items
+                </div>
+
+                <div class="pg-minimal-pills">
+                    <button type="button" class="pg-mini-btn" id="c-first-btn" onclick="changePage(1)" title="First Page"><i class="icon-chevrons-left"></i></button>
+                    <button type="button" class="pg-mini-btn" id="c-prev-btn" onclick="changePage(currentPage - 1)" title="Previous Page"><i class="icon-chevron-left"></i></button>
+                    
+                    <div class="pg-mini-indicator">
+                        Page 
+                        <input type="text" class="pg-mini-input" id="c-jump-val" value="1" onchange="jumpPage('c')" onkeydown="if(event.key==='Enter') jumpPage('c')"> 
+                        of 497
+                    </div>
+
+                    <button type="button" class="pg-mini-btn" id="c-next-btn" onclick="changePage(currentPage + 1)" title="Next Page"><i class="icon-chevron-right"></i></button>
+                    <button type="button" class="pg-mini-btn" id="c-last-btn" onclick="changePage(497)" title="Last Page"><i class="icon-chevrons-right"></i></button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- =========================================================================
+             DESIGN COMPARISON & SPECIFICATIONS
+             ========================================================================= -->
+        <h3 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+            <i class="icon-layers" style="color: var(--primary);"></i>
+            Architectural Comparison of Pagination Designs
+        </h3>
+
+        <div class="matrix-grid">
+            
+            <!-- Card B: Recommended -->
+            <div class="matrix-card featured">
+                <span class="matrix-badge">Recommended Choice</span>
+                <div class="matrix-title">
+                    <span style="color: var(--primary); font-weight: 800;">Concept B:</span> Modern Floating Rail
+                </div>
+                <div class="matrix-desc">
+                    Individual 28px square icon buttons paired with numerical page pills. Provides highest visual affordance, distinct hit targets, and clear active state.
+                </div>
+                <ul class="matrix-list">
+                    <li><i class="icon-check"></i> <strong>Minimized Lucide Icons</strong>: Dedicated First (<code>««</code>), Prev (<code>‹</code>), Next (<code>›</code>), and Last (<code>»»</code>) icons.</li>
+                    <li><i class="icon-check"></i> <strong>28px Compact Height</strong>: Perfect fit for high-density enterprise tables without blowing up vertical space.</li>
+                    <li><i class="icon-check"></i> <strong>Intelligent Number Truncation</strong>: Shows <code>1 ... 14 [15] 16 ... 497</code> so wide page sets never overflow.</li>
+                    <li><i class="icon-check"></i> <strong>Integrated Direct Jump</strong>: Type page number and hit Enter to jump instantly across 10,000+ records.</li>
+                    <li><i class="icon-check"></i> <strong>Universal Application</strong>: Cleanly drops into Invoices, EOL, Churn, LTV, Tax Audit, and Unpaid Debtors.</li>
+                </ul>
+            </div>
+
+            <!-- Card A: Segmented Dock -->
+            <div class="matrix-card">
+                <div class="matrix-title">
+                    <span style="color: #475569; font-weight: 800;">Concept A:</span> Segmented Micro-Dock
+                </div>
+                <div class="matrix-desc">
+                    All controls fused into a single continuous border pill. Extremely compact horizontal profile, zero gaps between buttons.
+                </div>
+                <ul class="matrix-list">
+                    <li><i class="icon-check"></i> <strong>Zero Margin Waste</strong>: Buttons share common interior divider borders.</li>
+                    <li><i class="icon-check"></i> <strong>Clean Sleek Boundary</strong>: Enclosed in a single 1px Slate-300 perimeter.</li>
+                    <li><i class="icon-check"></i> <strong>Minimized Icon Set</strong>: Same chevron glyphs embedded seamlessly.</li>
+                    <li><i class="icon-minus" style="color: #94a3b8;"></i> Slightly smaller individual tap targets than Concept B.</li>
+                </ul>
+            </div>
+
+            <!-- Card C: Ultra-Dense Micro Pager -->
+            <div class="matrix-card">
+                <div class="matrix-title">
+                    <span style="color: #475569; font-weight: 800;">Concept C:</span> Ultra-Dense Micro Pager
+                </div>
+                <div class="matrix-desc">
+                    Minimalist toolbar layout featuring ghost icon chevrons surrounding an editable inline page input pill.
+                </div>
+                <ul class="matrix-list">
+                    <li><i class="icon-check"></i> <strong>Smallest Footprint</strong>: Under 250px total width.</li>
+                    <li><i class="icon-check"></i> <strong>Ideal for Narrow Panels</strong>: Perfect for the split drawer inspector or mobile screens.</li>
+                    <li><i class="icon-check"></i> <strong>Direct Inline Editing</strong>: Click the page number directly to edit and press enter.</li>
+                    <li><i class="icon-minus" style="color: #94a3b8;"></i> No direct sibling page number buttons (1, 2, 3) to click sequentially.</li>
+                </ul>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Live Simulation JavaScript -->
+    <script>
+        let currentPage = 1;
+        const totalPages = 497;
+        const totalRecords = 12410;
+        const pageSize = 25;
+        let activeConcept = 'concept-b';
+
+        // Sample Data Generator
+        const customers = [
+            'Commercial Bank of Ceylon PLC', 'Dialog Axiata PLC', 'John Keells Holdings', 
+            'MAS Holdings (Pvt) Ltd', 'Brandix Apparel Limited', 'Hayleys PLC',
+            'Hatton National Bank', 'Sampath Bank PLC', 'Aitken Spence PLC', 
+            'DFCC Bank PLC', 'National Development Bank', 'Standard Chartered Bank'
+        ];
+        const items = [
+            'Synology RackStation RS3621RPxs 12-Bay + 64GB RAM',
+            'Synology DiskStation DS1821+ 8-Bay AMD Ryzen Quad-Core',
+            'Seagate Enterprise Exos X18 18TB SATA 7.2K 512e HDD',
+            'Acronis Cyber Protect Backup & Cloud Disaster Recovery Tier-3',
+            'APC Smart-UPS RT 5000VA 230V High-Density On-Line Rackmount',
+            'Synology MailPlus 25-User Permanent Client License Key',
+            'Synology Surveillance Station 8-Camera Enterprise License Pack'
+        ];
+
+        function renderMockTable(page) {
+            const tbody = document.getElementById('mockTableBody');
+            tbody.innerHTML = '';
+            
+            for (let i = 0; i < 5; i++) {
+                const invIdx = (page - 1) * pageSize + i + 1;
+                const invNum = 'ASN' + String(10000 + invIdx).padStart(6, '0');
+                const cust = customers[(invIdx * 3) % customers.length];
+                const item = items[(invIdx * 5) % items.length];
+                const net = 250000 + (invIdx * 17350) % 850000;
+                const vat = net * 0.18;
+                const gross = net + vat;
+                const isPaid = (invIdx % 3 !== 0);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color: #64748b; font-size: 11.5px;">2026-03-${String((invIdx % 28) + 1).padStart(2, '0')}</td>
+                    <td><span class="doc-num">${invNum}</span></td>
+                    <td style="font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cust}</td>
+                    <td style="color: #475569; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item}</td>
+                    <td class="text-right" style="font-family: monospace; font-weight: 600;">${net.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-right" style="font-family: monospace; color: #64748b;">${vat.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-right" style="font-family: monospace; font-weight: 700; color: #0f172a;">${gross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="text-center">
+                        <span class="badge-status ${isPaid ? 'badge-paid' : 'badge-unpaid'}">
+                            ${isPaid ? 'Settled' : 'Unpaid'}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="pg-btn" style="height: 22px; padding: 0 6px; font-size: 11px;">Audit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Render Pagination Controls for Concept B
+        function renderConceptB(p) {
+            const start = (p - 1) * pageSize + 1;
+            const end = Math.min(totalRecords, p * pageSize);
+            document.getElementById('b-range-start').textContent = start.toLocaleString();
+            document.getElementById('b-range-end').textContent = end.toLocaleString();
+            document.getElementById('b-range-total').textContent = totalRecords.toLocaleString();
+            document.getElementById('b-curr-page').textContent = p;
+            document.getElementById('b-jump-val').value = p;
+
+            const c = document.getElementById('b-controls');
+            c.innerHTML = '';
+
+            // First & Prev Buttons
+            const isFirst = (p <= 1);
+            c.innerHTML += `<button type="button" class="pg-btn pg-btn-icon ${isFirst ? 'disabled' : ''}" onclick="changePage(1)" title="First Page (Page 1)"><i class="icon-chevrons-left"></i></button>`;
+            c.innerHTML += `<button type="button" class="pg-btn pg-btn-icon ${isFirst ? 'disabled' : ''}" onclick="changePage(${p - 1})" title="Previous Page"><i class="icon-chevron-left"></i></button>`;
+
+            // Numerical Chips with Smart Truncation
+            const pagesToShow = getPageNumbers(p, totalPages);
+            pagesToShow.forEach(item => {
+                if (item === '...') {
+                    c.innerHTML += `<span class="pg-ellipsis">…</span>`;
+                } else {
+                    const isActive = (item === p);
+                    c.innerHTML += `<button type="button" class="pg-btn ${isActive ? 'active' : ''}" onclick="changePage(${item})">${item}</button>`;
+                }
+            });
+
+            // Next & Last Buttons
+            const isLast = (p >= totalPages);
+            c.innerHTML += `<button type="button" class="pg-btn pg-btn-icon ${isLast ? 'disabled' : ''}" onclick="changePage(${p + 1})" title="Next Page"><i class="icon-chevron-right"></i></button>`;
+            c.innerHTML += `<button type="button" class="pg-btn pg-btn-icon ${isLast ? 'disabled' : ''}" onclick="changePage(${totalPages})" title="Last Page (Page ${totalPages})"><i class="icon-chevrons-right"></i></button>`;
+        }
+
+        // Render Pagination Controls for Concept A
+        function renderConceptA(p) {
+            const start = (p - 1) * pageSize + 1;
+            const end = Math.min(totalRecords, p * pageSize);
+            document.getElementById('a-range-start').textContent = start.toLocaleString();
+            document.getElementById('a-range-end').textContent = end.toLocaleString();
+            document.getElementById('a-range-total').textContent = totalRecords.toLocaleString();
+            document.getElementById('a-jump-val').value = p;
+
+            const c = document.getElementById('a-controls');
+            c.innerHTML = '';
+
+            const isFirst = (p <= 1);
+            c.innerHTML += `<button type="button" class="pg-dock-btn ${isFirst ? 'disabled' : ''}" onclick="changePage(1)" title="First Page"><i class="icon-chevrons-left"></i></button>`;
+            c.innerHTML += `<button type="button" class="pg-dock-btn ${isFirst ? 'disabled' : ''}" onclick="changePage(${p - 1})" title="Previous Page"><i class="icon-chevron-left"></i></button>`;
+
+            const pagesToShow = getPageNumbers(p, totalPages);
+            pagesToShow.forEach(item => {
+                if (item === '...') {
+                    c.innerHTML += `<span class="pg-dock-ellipsis">…</span>`;
+                } else {
+                    const isActive = (item === p);
+                    c.innerHTML += `<button type="button" class="pg-dock-btn ${isActive ? 'active' : ''}" onclick="changePage(${item})">${item}</button>`;
+                }
+            });
+
+            const isLast = (p >= totalPages);
+            c.innerHTML += `<button type="button" class="pg-dock-btn ${isLast ? 'disabled' : ''}" onclick="changePage(${p + 1})" title="Next Page"><i class="icon-chevron-right"></i></button>`;
+            c.innerHTML += `<button type="button" class="pg-dock-btn ${isLast ? 'disabled' : ''}" onclick="changePage(${totalPages})" title="Last Page"><i class="icon-chevrons-right"></i></button>`;
+        }
+
+        // Render Pagination Controls for Concept C
+        function renderConceptC(p) {
+            const start = (p - 1) * pageSize + 1;
+            const end = Math.min(totalRecords, p * pageSize);
+            document.getElementById('c-range-start').textContent = start.toLocaleString();
+            document.getElementById('c-range-end').textContent = end.toLocaleString();
+            document.getElementById('c-range-total').textContent = totalRecords.toLocaleString();
+            document.getElementById('c-jump-val').value = p;
+
+            const isFirst = (p <= 1);
+            const isLast = (p >= totalPages);
+
+            const f = document.getElementById('c-first-btn');
+            const pr = document.getElementById('c-prev-btn');
+            const nx = document.getElementById('c-next-btn');
+            const ls = document.getElementById('c-last-btn');
+
+            f.className = 'pg-mini-btn ' + (isFirst ? 'disabled' : '');
+            pr.className = 'pg-mini-btn ' + (isFirst ? 'disabled' : '');
+            nx.className = 'pg-mini-btn ' + (isLast ? 'disabled' : '');
+            ls.className = 'pg-mini-btn ' + (isLast ? 'disabled' : '');
+        }
+
+        // Intelligent Page Window (e.g. 1 ... 14 15 16 ... 497)
+        function getPageNumbers(current, total) {
+            if (total <= 7) {
+                return Array.from({length: total}, (_, i) => i + 1);
+            }
+            if (current <= 4) {
+                return [1, 2, 3, 4, 5, '...', total];
+            }
+            if (current >= total - 3) {
+                return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+            }
+            return [1, '...', current - 1, current, current + 1, '...', total];
+        }
+
+        function changePage(newPage) {
+            newPage = Math.max(1, Math.min(totalPages, parseInt(newPage)));
+            currentPage = newPage;
+            renderMockTable(currentPage);
+            renderConceptB(currentPage);
+            renderConceptA(currentPage);
+            renderConceptC(currentPage);
+        }
+
+        function setMockPage(p) {
+            changePage(p);
+        }
+
+        function jumpPage(prefix) {
+            const val = parseInt(document.getElementById(prefix + '-jump-val').value);
+            if (!isNaN(val)) {
+                changePage(val);
+            }
+        }
+
+        function switchConcept(conceptId) {
+            activeConcept = conceptId;
+            document.querySelectorAll('.selector-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            document.getElementById('slot-concept-a').style.display = 'none';
+            document.getElementById('slot-concept-b').style.display = 'none';
+            document.getElementById('slot-concept-c').style.display = 'none';
+            document.getElementById('slot-' + conceptId).style.display = 'flex';
+
+            const tag = document.getElementById('currentConceptTag');
+            const title = document.getElementById('currentConceptTitle');
+            const desc = document.getElementById('currentConceptDesc');
+
+            if (conceptId === 'concept-b') {
+                tag.textContent = 'CONCEPT B';
+                title.textContent = 'Modern Floating Rail with Minimized Chevrons (Recommended)';
+                desc.textContent = 'Individual 28px rounded buttons with Lucide minimized icons for First, Prev, Next, Last, plus intelligent numerical page chips and direct page jump.';
+            } else if (conceptId === 'concept-a') {
+                tag.textContent = 'CONCEPT A';
+                title.textContent = 'Executive Segmented Micro-Dock';
+                desc.textContent = 'Unified continuous border group enclosing all chevrons and page numbers with zero gap between controls for high-density tables.';
+            } else if (conceptId === 'concept-c') {
+                tag.textContent = 'CONCEPT C';
+                title.textContent = 'Ultra-Dense Minimalist Toolbar Pager';
+                desc.textContent = 'Micro-footprint toolbar featuring compact ghost chevron buttons and an interactive editable inline page input pill.';
+            }
+        }
+
+        // Initialize
+        changePage(1);
+    </script>
+</body>
+</html>

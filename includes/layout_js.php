@@ -34,17 +34,31 @@ function toggleSidebar() {
     const sidebar = document.getElementById('mainSidebar');
     if (!sidebar) return;
     const collapsed = sidebar.classList.toggle('collapsed');
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    const appContainer = document.querySelector('.app-container');
+    if (appContainer) appContainer.classList.toggle('sidebar-collapsed', collapsed);
     localStorage.setItem('sidebarCollapsed', collapsed ? 'true' : 'false');
     updateSidebarIcon(collapsed);
 }
 
 /* ── Nav group (accordion) toggle ── */
 function toggleNavGroup(btn) {
+    const sidebar = document.getElementById('mainSidebar');
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+        toggleSidebar();
+    }
     const group = btn.closest('.nav-group');
-    const isOpen = group.classList.toggle('open');
-    // Persist state per group (use button text as key)
-    const key = 'navGroup_' + (btn.querySelector('span')?.textContent ?? '');
-    localStorage.setItem(key, isOpen);
+    if (!group) return;
+    const willOpen = !group.classList.contains('open');
+
+    // Close all other groups so sidebar never vertically stacks or scrolls
+    document.querySelectorAll('.sidebar .nav-group').forEach(function (g) {
+        if (g !== group) {
+            g.classList.remove('open');
+        }
+    });
+
+    group.classList.toggle('open', willOpen);
 }
 
 /* ── Restore sidebar collapse state on load ── */
@@ -53,6 +67,9 @@ function toggleNavGroup(btn) {
     const sidebar = document.getElementById('mainSidebar');
     if (sidebar && isCollapsed) {
         sidebar.classList.add('collapsed');
+        document.body.classList.add('sidebar-collapsed');
+        const appContainer = document.querySelector('.app-container');
+        if (appContainer) appContainer.classList.add('sidebar-collapsed');
         updateSidebarIcon(true);
     }
 })();

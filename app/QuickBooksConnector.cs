@@ -93,9 +93,9 @@ public class QuickBooksConnector
     }
 
     /// <summary>
-    /// Extracts full invoices, payment records, and customer directory in 100% read-only mode using QBXML queries.
+    /// Extracts full invoices, credit memos, payment records, and customer directory in 100% read-only mode using QBXML queries.
     /// </summary>
-    public (List<InvoiceRecord> Invoices, List<PaymentRecord> Payments, List<CustomerRecord> Customers, string? Error) ExtractData(
+    public (List<InvoiceRecord> Invoices, List<CreditMemoRecord> CreditMemos, List<PaymentRecord> Payments, List<CustomerRecord> Customers, string? Error) ExtractData(
         string companyFile = "",
         string? fromModifiedDate = null,
         bool includeSerialNumbers = true,
@@ -107,6 +107,7 @@ public class QuickBooksConnector
         string ticket = "";
 
         var invoices = new List<InvoiceRecord>();
+        var creditMemos = new List<CreditMemoRecord>();
         var payments = new List<PaymentRecord>();
         var customers = new List<CustomerRecord>();
 
@@ -117,13 +118,13 @@ public class QuickBooksConnector
                         ?? Type.GetTypeFromProgID("QBXMLRP2e.RequestProcessor");
             if (qbType == null)
             {
-                return (invoices, payments, customers, "QuickBooks Desktop Request Processor (QBXMLRP2) is not registered. Ensure QuickBooks Desktop is installed and QBXMLRP2.dll is registered.");
+                return (invoices, creditMemos, payments, customers, "QuickBooks Desktop Request Processor (QBXMLRP2) is not registered. Ensure QuickBooks Desktop is installed and QBXMLRP2.dll is registered.");
             }
 
             rp = Activator.CreateInstance(qbType);
             if (rp == null)
             {
-                return (invoices, payments, customers, "Could not instantiate QBXMLRP2 COM object.");
+                return (invoices, creditMemos, payments, customers, "Could not instantiate QBXMLRP2 COM object.");
             }
 
             rp.OpenConnection2(AppId, AppName, 1);
@@ -151,7 +152,26 @@ public class QuickBooksConnector
             invoices = ParseInvoiceResponse(invoiceResponseXml, includeSerialNumbers);
             progressCallback?.Invoke("invoices_done", $"Extracted {invoices.Count} invoice line items.");
 
-            // 2. Query Payments (Read-Only)
+            // 2. Query Credit Memos (Read-Only)
+            progressCallback?.Invoke("credit_memos_query", "Querying QuickBooks Credit Memos / Returns (QBXML)...");
+            string creditMemoQueryXml = BuildCreditMemoQueryXml(qbXmlVersion, fromModifiedDate, fromTxnDate, toTxnDate, includeOwnerId: true);
+            string creditMemoResponseXml;
+            try
+            {
+                creditMemoResponseXml = rp.ProcessRequest(ticket, creditMemoQueryXml);
+            }
+            catch (COMException ex) when ((uint)ex.ErrorCode == 0x80040400)
+            {
+                // Fallback: Retry without OwnerID if current QuickBooks version doesn't support OwnerID tag
+                creditMemoQueryXml = BuildCreditMemoQueryXml(qbXmlVersion, fromModifiedDate, fromTxnDate, toTxnDate, includeOwnerId: false);
+                creditMemoResponseXml = rp.ProcessRequest(ticket, creditMemoQueryXml);
+            }
+
+            progressCallback?.Invoke("credit_memos_parse", "Parsing credit memos and return serials...");
+            creditMemos = ParseCreditMemoResponse(creditMemoResponseXml, includeSerialNumbers);
+            progressCallback?.Invoke("credit_memos_done", $"Extracted {creditMemos.Count} credit memo line items.");
+
+            // 3. Query Payments (Read-Only)
             progressCallback?.Invoke("payments_query", "Querying QuickBooks Received Payments (QBXML)...");
             string paymentQueryXml = BuildPaymentQueryXml(qbXmlVersion, fromModifiedDate, fromTxnDate, toTxnDate);
             string paymentResponseXml = rp.ProcessRequest(ticket, paymentQueryXml);
@@ -160,7 +180,7 @@ public class QuickBooksConnector
             payments = ParsePaymentResponse(paymentResponseXml);
             progressCallback?.Invoke("payments_done", $"Extracted {payments.Count} payment records.");
 
-            // 3. Query Customers (Read-Only)
+            // 4. Query Customers (Read-Only)
             progressCallback?.Invoke("customers_query", "Querying QuickBooks Customer Directory (QBXML)...");
             string customerQueryXml = BuildCustomerQueryXml(qbXmlVersion);
             string customerResponseXml = rp.ProcessRequest(ticket, customerQueryXml);
@@ -169,15 +189,15 @@ public class QuickBooksConnector
             customers = ParseCustomerResponse(customerResponseXml);
             progressCallback?.Invoke("customers_done", $"Extracted {customers.Count} customer profiles.");
 
-            return (invoices, payments, customers, null);
+            return (invoices, creditMemos, payments, customers, null);
         }
         catch (COMException ex)
         {
-            return (invoices, payments, customers, InterpretComError(ex.ErrorCode, ex.Message));
+            return (invoices, creditMemos, payments, customers, InterpretComError(ex.ErrorCode, ex.Message));
         }
         catch (Exception ex)
         {
-            return (invoices, payments, customers, $"Extraction error: {ex.Message}");
+            return (invoices, creditMemos, payments, customers, $"Extraction error: {ex.Message}");
         }
         finally
         {
@@ -319,6 +339,53 @@ public class QuickBooksConnector
         return sb.ToString();
     }
 
+    private string BuildCreditMemoQueryXml(string qbXmlVersion, string? fromModifiedDate, string? fromTxnDate = null, string? toTxnDate = null, bool includeOwnerId = true)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+        sb.AppendLine($"<?qbxml version=\"{qbXmlVersion}\"?>");
+        sb.AppendLine("<QBXML>");
+        sb.AppendLine("  <QBXMLMsgsRq onError=\"continueOnError\">");
+        sb.AppendLine("    <CreditMemoQueryRq requestID=\"2\">");
+
+        // 1. FILTERS MUST PRECEDE IncludeLineItems according to qbXML DTD
+        if (!string.IsNullOrWhiteSpace(fromTxnDate) || !string.IsNullOrWhiteSpace(toTxnDate))
+        {
+            sb.AppendLine("      <TxnDateRangeFilter>");
+            if (!string.IsNullOrWhiteSpace(fromTxnDate) && DateTime.TryParse(fromTxnDate, out var dtFrom))
+            {
+                sb.AppendLine($"        <FromTxnDate>{dtFrom:yyyy-MM-dd}</FromTxnDate>");
+            }
+            if (!string.IsNullOrWhiteSpace(toTxnDate) && DateTime.TryParse(toTxnDate, out var dtTo))
+            {
+                sb.AppendLine($"        <ToTxnDate>{dtTo:yyyy-MM-dd}</ToTxnDate>");
+            }
+            sb.AppendLine("      </TxnDateRangeFilter>");
+        }
+        else if (!string.IsNullOrWhiteSpace(fromModifiedDate) && DateTime.TryParse(fromModifiedDate, out var dt))
+        {
+            sb.AppendLine("      <ModifiedDateRangeFilter>");
+            sb.AppendLine($"        <FromModifiedDate>{dt:yyyy-MM-ddTHH:mm:ss}</FromModifiedDate>");
+            sb.AppendLine("      </ModifiedDateRangeFilter>");
+        }
+
+        // 2. INCLUDE FLAGS
+        sb.AppendLine("      <IncludeLineItems>true</IncludeLineItems>");
+        sb.AppendLine("      <IncludeLinkedTxns>true</IncludeLinkedTxns>");
+
+        // 3. OWNERID (CUSTOM FIELDS / SERIALS)
+        if (includeOwnerId)
+        {
+            sb.AppendLine("      <OwnerID>0</OwnerID>");
+        }
+
+        sb.AppendLine("    </CreditMemoQueryRq>");
+        sb.AppendLine("  </QBXMLMsgsRq>");
+        sb.AppendLine("</QBXML>");
+
+        return sb.ToString();
+    }
+
     private List<InvoiceRecord> ParseInvoiceResponse(string xml, bool includeSerialNumbers)
     {
         var records = new List<InvoiceRecord>();
@@ -327,6 +394,8 @@ public class QuickBooksConnector
 
         var doc = XDocument.Parse(xml);
         var invoiceNodes = doc.Descendants("InvoiceRet");
+
+        var endCustomerRegex = new System.Text.RegularExpressions.Regex(@"^\(?\s*End\s+Customers?\s*[:\-\s]\s*(.*?)\)?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         foreach (var inv in invoiceNodes)
         {
@@ -365,6 +434,18 @@ public class QuickBooksConnector
             }
 
             var lineNodes = inv.Elements("InvoiceLineRet");
+            string detectedEndCustomer = "";
+            foreach (var line in lineNodes)
+            {
+                string desc = line.Element("Desc")?.Value ?? "";
+                var m = endCustomerRegex.Match(desc.Trim());
+                if (m.Success)
+                {
+                    detectedEndCustomer = m.Groups[1].Value.Trim().Trim('(', ')', '"', '\'');
+                    break;
+                }
+            }
+
             if (!lineNodes.Any())
             {
                 // Invoice with no distinct lines: create single record
@@ -393,7 +474,8 @@ public class QuickBooksConnector
                     DueDate = dueDate,
                     ShipDate = shipDate,
                     Terms = terms,
-                    UnitPrice = subtotal
+                    UnitPrice = subtotal,
+                    EndCustomer = detectedEndCustomer
                 });
                 continue;
             }
@@ -431,10 +513,12 @@ public class QuickBooksConnector
                     {
                         extraDetails.Add($"S/N: {serialNumber}");
                     }
+
                     if (!string.IsNullOrWhiteSpace(lotNumber) && !desc.Contains(lotNumber, StringComparison.OrdinalIgnoreCase))
                     {
                         extraDetails.Add($"Lot: {lotNumber}");
                     }
+
                     foreach (var s in lineCustomSerials)
                     {
                         if (!desc.Contains(s, StringComparison.OrdinalIgnoreCase))
@@ -493,7 +577,154 @@ public class QuickBooksConnector
                     DueDate = dueDate,
                     ShipDate = shipDate,
                     Terms = terms,
-                    UnitPrice = unitPrice
+                    UnitPrice = unitPrice,
+                    EndCustomer = detectedEndCustomer
+                });
+            }
+        }
+
+        return records;
+    }
+
+    private List<CreditMemoRecord> ParseCreditMemoResponse(string xml, bool includeSerialNumbers)
+    {
+        var records = new List<CreditMemoRecord>();
+
+        if (string.IsNullOrWhiteSpace(xml)) return records;
+
+        var doc = XDocument.Parse(xml);
+        var memoNodes = doc.Descendants("CreditMemoRet");
+
+        foreach (var cm in memoNodes)
+        {
+            string txnId = cm.Element("TxnID")?.Value ?? "";
+            string date = cm.Element("TxnDate")?.Value ?? "";
+            string refNum = cm.Element("RefNumber")?.Value ?? "";
+            string customer = cm.Element("CustomerRef")?.Element("FullName")?.Value ?? "";
+            string rep = cm.Element("SalesRepRef")?.Element("FullName")?.Value ?? "";
+            string po = cm.Element("PONumber")?.Value ?? "";
+            string memo = cm.Element("Memo")?.Value ?? "";
+
+            decimal subtotal = ParseDecimal(cm.Element("Subtotal")?.Value);
+            decimal salesTaxTotal = ParseDecimal(cm.Element("SalesTaxTotal")?.Value);
+            decimal salesTaxRate = ParseDecimal(cm.Element("SalesTaxPercentage")?.Value);
+            decimal totalAmount = ParseDecimal(cm.Element("TotalAmount")?.Value);
+            decimal creditRemaining = ParseDecimal(cm.Element("CreditRemaining")?.Value);
+
+            // Linked transactions (applied to invoice)
+            var linkedTxns = new List<LinkedTxnRecord>();
+            string primaryAppliedInvoice = "";
+            decimal primaryAppliedAmount = 0;
+
+            foreach (var lk in cm.Descendants("LinkedTxn"))
+            {
+                var lkRec = new LinkedTxnRecord
+                {
+                    TxnID = lk.Element("TxnID")?.Value ?? "",
+                    TxnType = lk.Element("TxnType")?.Value ?? "",
+                    TxnDate = lk.Element("TxnDate")?.Value ?? "",
+                    RefNumber = lk.Element("RefNumber")?.Value ?? "",
+                    LinkType = lk.Element("LinkType")?.Value ?? "",
+                    Amount = ParseDecimal(lk.Element("Amount")?.Value)
+                };
+                linkedTxns.Add(lkRec);
+
+                if (string.IsNullOrEmpty(primaryAppliedInvoice) && !string.IsNullOrEmpty(lkRec.RefNumber))
+                {
+                    primaryAppliedInvoice = lkRec.RefNumber;
+                    primaryAppliedAmount = lkRec.Amount;
+                }
+            }
+
+            var lineNodes = cm.Elements("CreditMemoLineRet");
+            if (!lineNodes.Any())
+            {
+                records.Add(new CreditMemoRecord
+                {
+                    Type = "Credit Memo",
+                    Date = date,
+                    Num = refNum,
+                    Name = customer,
+                    Item = "Credit Memo Summary",
+                    Description = memo,
+                    Amount = totalAmount > 0 ? totalAmount : subtotal,
+                    Rep = rep,
+                    PONumber = po,
+                    Memo = memo,
+                    QBTxnID = txnId,
+                    Subtotal = subtotal,
+                    SalesTaxTotal = salesTaxTotal,
+                    SalesTaxRate = salesTaxRate,
+                    TotalAmount = totalAmount,
+                    CreditRemaining = creditRemaining,
+                    AppliedToInvoice = primaryAppliedInvoice,
+                    AppliedAmount = primaryAppliedAmount,
+                    UnitPrice = totalAmount > 0 ? totalAmount : subtotal,
+                    LinkedTxns = linkedTxns
+                });
+                continue;
+            }
+
+            foreach (var line in lineNodes)
+            {
+                string itemName = line.Element("ItemRef")?.Element("FullName")?.Value ?? "Item";
+                string desc = line.Element("Desc")?.Value ?? itemName;
+                decimal qty = ParseDecimal(line.Element("Quantity")?.Value, 1);
+                decimal amount = ParseDecimal(line.Element("Amount")?.Value);
+                decimal unitPrice = ParseDecimal(line.Element("Rate")?.Value, qty > 0 ? (amount / qty) : amount);
+                string taxCode = line.Element("SalesTaxCodeRef")?.Element("FullName")?.Value ?? "Taxable Sales";
+
+                string lotNumber = line.Element("LotNumber")?.Value ?? "";
+                string serialNumber = line.Element("SerialNumber")?.Value ?? "";
+
+                if (includeSerialNumbers)
+                {
+                    var extraDetails = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(serialNumber) && !desc.Contains(serialNumber, StringComparison.OrdinalIgnoreCase))
+                    {
+                        extraDetails.Add($"S/N: {serialNumber}");
+                    }
+                    if (!string.IsNullOrWhiteSpace(lotNumber) && !desc.Contains(lotNumber, StringComparison.OrdinalIgnoreCase))
+                    {
+                        extraDetails.Add($"Lot: {lotNumber}");
+                    }
+                    if (extraDetails.Count > 0)
+                    {
+                        desc = $"{desc} [{string.Join(" | ", extraDetails)}]";
+                    }
+                }
+
+                string category = "";
+                if (itemName.Contains(':'))
+                {
+                    category = itemName.Split(':')[0].Trim();
+                }
+
+                records.Add(new CreditMemoRecord
+                {
+                    Type = "Credit Memo",
+                    Date = date,
+                    Num = refNum,
+                    Name = customer,
+                    Item = itemName,
+                    Description = desc,
+                    SalesTaxCode = taxCode,
+                    Qty = qty,
+                    Amount = amount,
+                    ProductCategory = category,
+                    Rep = rep,
+                    PONumber = po,
+                    Memo = memo,
+                    QBTxnID = txnId,
+                    Subtotal = subtotal,
+                    SalesTaxTotal = salesTaxTotal,
+                    SalesTaxRate = salesTaxRate,
+                    TotalAmount = totalAmount,
+                    CreditRemaining = creditRemaining,
+                    AppliedToInvoice = primaryAppliedInvoice,
+                    AppliedAmount = primaryAppliedAmount,
+                    UnitPrice = unitPrice,
+                    LinkedTxns = linkedTxns
                 });
             }
         }
@@ -853,9 +1084,9 @@ public class QuickBooksConnector
     }
 
     /// <summary>
-    /// Generates realistic mock data including invoice line items, payments, and customer profiles for testing.
+    /// Generates realistic mock data including invoice line items, credit memos, payments, and customer profiles for testing.
     /// </summary>
-    public static (List<InvoiceRecord> Invoices, List<PaymentRecord> Payments, List<CustomerRecord> Customers) GetMockData()
+    public static (List<InvoiceRecord> Invoices, List<CreditMemoRecord> CreditMemos, List<PaymentRecord> Payments, List<CustomerRecord> Customers) GetMockData()
     {
         var invoices = new List<InvoiceRecord>
         {
@@ -873,7 +1104,8 @@ public class QuickBooksConnector
                 ProductCategory = "Hardware",
                 Rep = "JS",
                 PONumber = "PO-APEX-4491",
-                Memo = "Primary data center deployment"
+                Memo = "Primary data center deployment",
+                EndCustomer = "Lanka Hospital"
             },
             new()
             {
@@ -889,7 +1121,8 @@ public class QuickBooksConnector
                 ProductCategory = "Hardware",
                 Rep = "MR",
                 PONumber = "PO-MAT-8812",
-                Memo = "Branch network upgrade"
+                Memo = "Branch network upgrade",
+                EndCustomer = "Singer (Sri Lanka) PLC"
             },
             new()
             {
@@ -909,6 +1142,44 @@ public class QuickBooksConnector
             }
         };
 
+        var creditMemos = new List<CreditMemoRecord>
+        {
+            new()
+            {
+                Type = "Credit Memo",
+                Date = DateTime.Now.AddDays(-3).ToString("yyyy-MM-dd"),
+                Num = "CM-9012",
+                Name = "Apex Global Technologies",
+                Item = "Servers:Rackmount",
+                Description = "Returned chassis replacement [S/N: PE-99482-SN10294]",
+                SalesTaxCode = "Taxable Sales",
+                Qty = 1,
+                Amount = 1500.00m,
+                ProductCategory = "Hardware",
+                Rep = "JS",
+                Memo = "Warranty credit adjustment",
+                QBTxnID = "CM-TXN-9012",
+                Subtotal = 1500.00m,
+                TotalAmount = 1500.00m,
+                CreditRemaining = 0.00m,
+                AppliedToInvoice = invoices[0].Num,
+                AppliedAmount = 1500.00m,
+                UnitPrice = 1500.00m,
+                LinkedTxns = new List<LinkedTxnRecord>
+                {
+                    new()
+                    {
+                        TxnID = "TXN-INV-001",
+                        TxnType = "Invoice",
+                        TxnDate = invoices[0].Date,
+                        RefNumber = invoices[0].Num,
+                        LinkType = "AppliedToTxn",
+                        Amount = 1500.00m
+                    }
+                }
+            }
+        };
+
         var payments = new List<PaymentRecord>
         {
             new()
@@ -917,7 +1188,7 @@ public class QuickBooksConnector
                 InvoiceNum = invoices[0].Num,
                 PaymentDate = DateTime.Now.AddDays(-2).ToString("yyyy-MM-dd"),
                 ReferenceNum = "ACH-772910",
-                Amount = 5900.00m
+                Amount = 4400.00m
             }
         };
 
@@ -1003,6 +1274,6 @@ public class QuickBooksConnector
             }
         };
 
-        return (invoices, payments, customers);
+        return (invoices, creditMemos, payments, customers);
     }
 }

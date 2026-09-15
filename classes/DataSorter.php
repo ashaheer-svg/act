@@ -49,7 +49,7 @@ class DataSorter {
         $lines = $this->db->fetchAll("
             SELECT id, invoice_type, invoice_date, invoice_number, customer_name,
                    item_description, tax_code, quantity, total_amount, base_value,
-                   vat_component, applied_tax_rate, vat_treatment, product_category
+                   vat_component, applied_tax_rate, vat_treatment, product_category, end_customer
             FROM sales
             WHERE invoice_number = ?
             ORDER BY id ASC
@@ -76,6 +76,23 @@ class DataSorter {
             $totalGross += floatval($l['total_amount']);
         }
 
+        // 0. Detect End Customer if present in invoice lines
+        $endCustomer = '';
+        foreach ($lines as $l) {
+            if (!empty($l['end_customer'])) {
+                $endCustomer = trim($l['end_customer']);
+                break;
+            }
+            $desc = trim($l['item_description'] ?? '');
+            if (preg_match('/\(?\s*End\s+Customers?\s*[:\-\s]\s*(.*?)\)?$/i', $desc, $m)) {
+                $extracted = trim($m[1], " \t\n\r\0\x0B()\"'-:;");
+                if (!empty($extracted)) {
+                    $endCustomer = $extracted;
+                    break;
+                }
+            }
+        }
+
         // 1. Filter out QuickBooks "Item" placeholders and separate commercial items from zero-dollar metadata lines
         $cleanLines = [];
         foreach ($lines as $l) {
@@ -89,6 +106,11 @@ class DataSorter {
 
             // Ignore bank remit notes
             if ($amt == 0 && (stripos($desc, 'Please Remit to') !== false || stripos($desc, 'Account no') !== false || stripos($desc, 'Beneficiary') !== false)) {
+                continue;
+            }
+
+            // Ignore zero-dollar End Customer metadata lines (captured at invoice level)
+            if ($amt == 0 && preg_match('/^\(?\s*End\s+Customers?\b/i', $desc)) {
                 continue;
             }
 
@@ -189,13 +211,15 @@ class DataSorter {
                 'raw_line_ids' => $rawLineIds,
                 'serials' => $serials,
                 'warranty' => $warranty,
-                'subscription' => $subscription
+                'subscription' => $subscription,
+                'end_customer' => $endCustomer
             ];
         }
 
         return [
             'invoice_number' => $invNum,
             'customer_name' => $customer,
+            'end_customer' => $endCustomer,
             'invoice_date' => $invDate,
             'total_gross' => $totalGross,
             'products' => $products
@@ -289,7 +313,7 @@ class DataSorter {
         }
 
         // 3. Hardware (NAS, HDD, Switches, RAM, Server, etc.)
-        if (preg_match('/(?:synology|qnap|diskstation|rackstation|\bnas\b|hard\s*drive|hdd|ssd|seagate|ironwolf|barracuda|skyhawk|toshiba|western\s*digital|\bwd\b|bdcom|switch|draytek|router|vigor|innodisk|\bram\b|ecc|memory|transceiver|rail\s*kit)/i', $lower)) {
+        if (preg_match('/(?:s[yi]nology|qnap|diskstation|rackstation|\bnas\b|hard\s*drive|hdd|ssd|seagate|ironwolf|barracuda|skyhawk|toshiba|western\s*digital|\bwd\b|bdcom|switch|draytek|router|vigor|innodisk|\bram\b|ecc|memory|transceiver|rail\s*kit)/i', $lower)) {
             return [
                 'type' => 'HARDWARE',
                 'brand' => $this->detectBrand($allText),
@@ -327,10 +351,10 @@ class DataSorter {
      */
     private function detectBrand(string $text): string {
         $brands = [
-            'Synology' => '/synology/i',
-            'Seagate' => '/seagate|ironwolf|barracuda|skyhawk/i',
+            'Synology' => '/s[yi]nology|diskstation|rackstation|plus\s*hdd|hat33|hat53|sat52|has53/i',
+            'Seagate' => '/seagate|ironwolf|barracuda|skyhawk|exos/i',
             'Toshiba' => '/toshiba/i',
-            'Western Digital' => '/western\s*digital|\bwd\b/i',
+            'Western Digital' => '/western\s*digital|\bwd\b|ultrastar/i',
             'BDCOM' => '/bdcom/i',
             'DrayTek' => '/draytek|vigor/i',
             'Acronis' => '/acronis/i',
@@ -339,7 +363,8 @@ class DataSorter {
             'Microsoft' => '/microsoft|office\s*365/i',
             'MailStore' => '/mailstore/i',
             'QNAP' => '/qnap/i',
-            'Redstor' => '/redstor/i'
+            'Redstor' => '/redstor/i',
+            'Active Solutions' => '/maintenance\s+agreement|hospital\s+network|annual\s+maintenance|\bAMC\b/i'
         ];
 
         foreach ($brands as $name => $pattern) {
@@ -603,6 +628,11 @@ class DataSorter {
         // Strip warranty clause if embedded in parenthesis e.g. "(warranty 01 Year)"
         $clean = preg_replace('/\((?:warranty|agreement)[^\)]*\)/is', '', $clean);
 
+        // Normalise Sinology -> Synology and associated common typos
+        $clean = preg_replace('/\bsinology\b/i', 'Synology', $clean);
+        $clean = preg_replace('/\bNASA\b/', 'NAS', $clean);
+        $clean = preg_replace('/\bRecitation\b/i', 'RackStation', $clean);
+
         // Strip multiple newlines/tabs
         $clean = trim(preg_replace('/\s+/', ' ', $clean));
 
@@ -618,6 +648,7 @@ class DataSorter {
     public function persistSortedData(array $sorted): array {
         $invNum = $sorted['invoice_number'];
         $customer = $sorted['customer_name'];
+        $endCustomer = $sorted['end_customer'] ?? '';
         $date = $sorted['invoice_date'];
         $products = $sorted['products'];
 
@@ -633,28 +664,28 @@ class DataSorter {
 
             $insertItemStmt = $this->db->getConnection()->prepare("
                 INSERT INTO invoice_items (
-                    invoice_number, customer_name, invoice_date, product_type,
-                    clean_product_name, brand_category, quantity, unit_price,
+                    invoice_number, customer_name, end_customer, invoice_date, product_type,
+                    clean_product_name, brand_category, brand, category, quantity, unit_price,
                     base_value, vat_component, total_amount, raw_line_ids,
                     confidence_score, vat_treatment
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $insertAssetStmt = $this->db->getConnection()->prepare("
                 INSERT INTO hardware_assets (
-                    invoice_number, invoice_item_id, customer_name, product_name,
+                    invoice_number, invoice_item_id, customer_name, end_customer, product_name,
                     brand, model_sku, serial_number, warranty_type,
                     warranty_months, warranty_start_date, warranty_expiry_date,
                     warranty_status, parent_serial_number, notes, is_rental
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $insertSubStmt = $this->db->getConnection()->prepare("
                 INSERT INTO software_subscriptions (
-                    invoice_number, invoice_item_id, customer_name, software_name,
+                    invoice_number, invoice_item_id, customer_name, end_customer, software_name,
                     edition_tier, license_seats, period_start_date, period_end_date,
                     term_months, renewal_status, renewal_opportunity_value
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $itemsCreated = 0;
@@ -686,7 +717,7 @@ class DataSorter {
                 $baseVal = isset($p['base_value']) ? floatval($p['base_value']) : 0.0;
                 $vatVal = isset($p['vat_component']) ? floatval($p['vat_component']) : 0.0;
                 $finalLineTotal = isset($p['total_amount']) ? floatval($p['total_amount']) : 0.0;
-                $treatment = $p['vat_treatment'] ?? ($isVatRegistered == 1 ? 'PLUS_VAT' : 'VAT_INCLUSIVE');
+                $treatment = $p['vat_treatment'] ?? 'PLUS_VAT';
 
                 // Fallback only if product did not carry pre-computed financial fields
                 if ($baseVal == 0 && $vatVal == 0 && $finalLineTotal > 0) {
@@ -702,7 +733,7 @@ class DataSorter {
                         $vatVal = round($finalLineTotal * $rate, 2);
                         $finalLineTotal = round($baseVal + $vatVal, 2);
                     } else {
-                        $treatment = 'VAT_INCLUSIVE';
+                        $treatment = 'PLUS_VAT';
                         $baseVal = round($finalLineTotal / (1 + $rate), 2);
                         $vatVal = round($finalLineTotal - $baseVal, 2);
                     }
@@ -711,9 +742,37 @@ class DataSorter {
                 $rawLineIds = json_encode($p['raw_line_ids']);
                 $confidence = 95; // Deterministic high confidence
 
+                // Infer default category
+                $category = 'Other / Unassigned';
+                $nameLower = strtolower($pName);
+
+                if ($pType === 'RENTAL') {
+                    $category = 'Hardware Rental Fleet';
+                } elseif ($pType === 'MAINTENANCE' || preg_match('/(?:maintenance|amc|sla|annual maintenance)/i', $nameLower)) {
+                    $category = 'SLA & Maintenance Contracts';
+                } elseif (preg_match('/(?:hdd|hard drive|enterprise sata|plus hdd|sata hdd|nas hard drive)/i', $nameLower) || in_array($brand, ['Seagate', 'Toshiba', 'Western Digital'])) {
+                    $category = 'Enterprise Hard Drives';
+                } elseif (preg_match('/(?:nas|bay|diskstation|rackstation|expansion unit|expansion|ds\d+|rs\d+|rc\d+|fs\d+)/i', $nameLower) || $brand === 'Synology') {
+                    $category = 'NAS & Storage Servers';
+                } elseif (preg_match('/(?:switch|router|access point|poe|vigor)/i', $nameLower) || in_array($brand, ['BDCOM', 'DrayTek'])) {
+                    $category = 'Network Switches & Routers';
+                } elseif ($brand === 'Acronis') {
+                    $category = 'Cloud Backup & Cyber Protect';
+                } elseif ($brand === 'ESET') {
+                    $category = 'Antivirus & Endpoint Security';
+                } elseif ($pType === 'SERVICE' || preg_match('/(?:service|installation|configuration|troubleshooting|cpanel|hosting)/i', $nameLower)) {
+                    $category = 'Professional Services & Deployments';
+                } elseif ($pType === 'SOFTWARE' || preg_match('/(?:license|licence|subscription)/i', $nameLower)) {
+                    $category = 'Software Licenses & SaaS';
+                } elseif ($pType === 'ACCESSORY' || preg_match('/(?:ram|cable|cord|adapter|rail kit|bracket|transceiver)/i', $nameLower)) {
+                    $category = 'Accessories & Peripherals';
+                } elseif (in_array($pType, ['TAX_LEVY', 'DISCOUNT'])) {
+                    $category = 'Commercial Adjustments & Levies';
+                }
+
                 $insertItemStmt->execute([
-                    $invNum, $customer, $date, $pType,
-                    $pName, $brand, $qty, $unitPrice,
+                    $invNum, $customer, $endCustomer, $date, $pType,
+                    $pName, $brand, $brand, $category, $qty, $unitPrice,
                     $baseVal, $vatVal, $finalLineTotal, $rawLineIds,
                     $confidence, $treatment
                 ]);
@@ -746,7 +805,7 @@ class DataSorter {
                     if (!empty($serials)) {
                         foreach ($serials as $sn) {
                             $insertAssetStmt->execute([
-                                $invNum, $itemId, $customer, $pName,
+                                $invNum, $itemId, $customer, $endCustomer, $pName,
                                 $brand, $modelSku, $sn, $wType,
                                 $wMonths, $wStart, $wExpiry,
                                 $status, null, $wNotes, $isRental
@@ -757,7 +816,7 @@ class DataSorter {
                         // Single or multi unit without serials
                         for ($u = 1; $u <= min(10, (int)$qty); $u++) {
                             $insertAssetStmt->execute([
-                                $invNum, $itemId, $customer, $pName,
+                                $invNum, $itemId, $customer, $endCustomer, $pName,
                                 $brand, $modelSku, 'UNASSIGNED', $wType,
                                 $wMonths, $wStart, $wExpiry,
                                 $status, null, $wNotes, $isRental
@@ -776,7 +835,7 @@ class DataSorter {
                     elseif ((strtotime($subEnd) - strtotime($today)) / 86400 <= 60) $subStatus = 'DUE_SOON';
 
                     $insertSubStmt->execute([
-                        $invNum, $itemId, $customer, $sub['software_name'],
+                        $invNum, $itemId, $customer, $endCustomer, $sub['software_name'],
                         $sub['edition_tier'], $sub['license_seats'], $sub['period_start_date'],
                         $subEnd, $sub['term_months'], $subStatus, $sub['renewal_opportunity_value']
                     ]);
