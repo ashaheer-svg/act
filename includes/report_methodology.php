@@ -131,7 +131,7 @@ function renderReportMethodology($type, $currency = 'LKR ') {
                 'Total Tax Invoice Claim' => 'Σ total_amount'
             ]
         ],
-        'monthly' => [
+        'monthly_overview' => [
             'title' => 'Executive Monthly Column-Wise Sales Performance Matrix Methodology',
             'badge' => 'Financial Cadence • Multi-Month Single-Page Matrix',
             'usage' => 'Enables C-level executives, sales directors, and financial controllers to review monthly revenue trajectory, invoicing cadence, units volume, and collection rates side-by-side across all 12 months on a single screen.',
@@ -144,26 +144,42 @@ function renderReportMethodology($type, $currency = 'LKR ') {
                 'MoM Growth' => '((Current Month Gross - Prior Month Gross) / Prior Month Gross) × 100%'
             ]
         ],
-        'renewals' => [
-            'title' => 'Software License & SaaS Subscription Pipeline Methodology',
-            'badge' => 'Recurring Revenue • SaaS Renewal Pipeline',
-            'usage' => 'Manages recurring license renewals (Acronis Cyber Protect, ESET, Microsoft SaaS) and service contracts to eliminate missed subscription renewals and forecast recurring revenue.',
-            'validity' => 'Derived from normalized line items with service coverage periods (start date → end date) and contracted seat tiers.',
+        'monthly_customer' => [
+            'title' => 'Customer Monthly Sales Matrix & Account Run-Rate Methodology',
+            'badge' => 'Account Retention • 12-Month Customer Revenue Trajectory',
+            'usage' => 'Allows key account managers and sales leaders to track customer purchase cadence, identify seasonal demand surges, spot declining purchasing volume, and audit monthly spend across all active enterprise accounts on a single page.',
+            'validity' => 'Aggregates verified QuickBooks commercial invoices grouped by customer across 12 discrete months. Zero-value memo rows are excluded. Supports filtering by customer type (Partner vs End Customer) and product brand.',
             'calc' => [
-                'Renewal Opportunity Value' => 'Historical contracted software gross amount or annual subscription rate',
-                'Renewal Due Soon' => 'Subscription period ending within 60 days',
-                'Monthly Pipeline' => 'Σ opportunity value grouped by expiration calendar month'
+                'Monthly Account Billing' => 'Σ total_amount billed to customer per month',
+                'Period Total' => 'Σ total_amount across active 12-month window',
+                'Monthly Run-Rate Benchmark' => 'Period Total / 12 months',
+                'Portfolio Revenue Share' => '(Customer Period Total / Grand Portfolio Total) × 100%'
+            ]
+        ],
+        'monthly_rep' => [
+            'title' => 'Sales Representative Monthly Performance & Client Reach Methodology',
+            'badge' => 'Sales Governance • 12-Month Rep Revenue & Quota Cadence',
+            'usage' => 'Empowers sales managers to analyze individual sales executive monthly revenue contribution, active customer reach, deal count, and sales stability across the 12-month fiscal timeline.',
+            'validity' => 'Invoices mapped via sales rep initials/code linked with verified team roster. Unmapped transactions grouped under \'Unassigned / Direct\'. Supports brand and customer type filtering.',
+            'calc' => [
+                'Monthly Rep Billing' => 'Σ total_amount closed by sales representative per month',
+                'Period Total' => 'Σ total_amount closed across active 12-month window',
+                'Monthly Average Run-Rate' => 'Period Total / 12 months',
+                'Active Customer Reach' => 'COUNT(DISTINCT customer_name) transacted in period',
+                'Team Contribution %' => '(Rep Period Total / Total Sales Team Gross) × 100%'
             ]
         ],
         'monthly' => [
-            'title' => 'Monthly Sales Performance Methodology',
-            'badge' => 'Tactical Trading • IRD Tax Reconciliation',
-            'usage' => 'Tracks short-term sales velocity, operational revenue targets, and Inland Revenue Department (IRD) monthly VAT commitments for statutory tax reporting.',
-            'validity' => 'Scope covers all finalized commercial invoices within the selected calendar month in Sri Lanka Rupees (LKR). QuickBooks placeholder rows ("Item", zero-value memos) are excluded.',
+            'title' => 'Executive Monthly Column-Wise Sales Performance Matrix Methodology',
+            'badge' => 'Financial Cadence • Multi-Month Single-Page Matrix',
+            'usage' => 'Enables C-level executives, sales directors, and financial controllers to review monthly revenue trajectory, invoicing cadence, units volume, and collection rates side-by-side across all 12 months on a single screen.',
+            'validity' => 'Aggregates verified transactions in sales ledger by calendar month (YYYY-MM). Supports rolling 12 months or selectable calendar years (Jan–Dec).',
             'calc' => [
-                'Base Net Revenue' => 'Σ base_value = total_amount / (1 + 0.18)',
-                'Statutory 18% VAT' => 'Σ vat_component = total_amount - base_value',
-                'Gross Invoiced' => 'Σ total_amount (total legal claim)'
+                'Gross Invoiced' => 'Σ total_amount billed in month',
+                'Net Base' => 'Σ base_value recognized revenue before statutory tax',
+                '18% VAT' => 'Σ vat_component statutory tax portion',
+                'Collection Rate' => '(Σ Collected / Σ Gross) × 100%',
+                'MoM Growth' => '((Current Month Gross - Prior Month Gross) / Prior Month Gross) × 100%'
             ]
         ],
         'quarterly' => [
@@ -272,10 +288,22 @@ function renderReportMethodology($type, $currency = 'LKR ') {
         ]
     ];
 
-    $guide = $guides[$type] ?? null;
+    $typeKey = $type;
+    if ($type === 'monthly') {
+        $view = $_GET['view'] ?? 'overview';
+        if ($view === 'customer') {
+            $typeKey = 'monthly_customer';
+        } elseif ($view === 'rep') {
+            $typeKey = 'monthly_rep';
+        } else {
+            $typeKey = 'monthly_overview';
+        }
+    }
+
+    $guide = $guides[$typeKey] ?? $guides[$type] ?? null;
     if (!$guide) return;
 
-    $cardId = 'methodology_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $type);
+    $cardId = 'methodology_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $typeKey);
     ?>
     <!-- Concept B: Minimized by Default Methodology Panel (0px vertical space until triggered by 'Method' button) -->
     <style>

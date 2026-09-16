@@ -1140,7 +1140,7 @@ class Database {
     }
 
     /**
-     * PROFIT: Get sales with profit data for entry
+     * PROFIT: Get sales with profit data for entry (Legacy raw-line method)
      */
     public function getSalesForProfitEntry($year, $month) {
         $monthStr = str_pad($month, 2, '0', STR_PAD_LEFT);
@@ -1150,6 +1150,330 @@ class Database {
             AND strftime('%m', invoice_date) = ?
             ORDER BY invoice_date DESC, invoice_number DESC
         ", [$year, $monthStr]);
+    }
+
+    /**
+     * Ensure profit columns exist in invoice_items and sales
+     */
+    public function ensureProfitColumnsExist() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        try {
+            // Check invoice_items
+            $itemCols = array_column($this->db->query("PRAGMA table_info(invoice_items)")->fetchAll(), 'name');
+            if (!empty($itemCols)) {
+                if (!in_array('unit_cost', $itemCols)) {
+                    $this->db->exec("ALTER TABLE invoice_items ADD COLUMN unit_cost DECIMAL(12,2)");
+                }
+                if (!in_array('gross_profit', $itemCols)) {
+                    $this->db->exec("ALTER TABLE invoice_items ADD COLUMN gross_profit DECIMAL(12,2)");
+                }
+                if (!in_array('brand', $itemCols)) {
+                    $this->db->exec("ALTER TABLE invoice_items ADD COLUMN brand TEXT");
+                }
+                if (!in_array('category', $itemCols)) {
+                    $this->db->exec("ALTER TABLE invoice_items ADD COLUMN category TEXT");
+                }
+            }
+
+            // Check sales
+            $salesCols = array_column($this->db->query("PRAGMA table_info(sales)")->fetchAll(), 'name');
+            if (!empty($salesCols)) {
+                if (!in_array('unit_cost', $salesCols)) {
+                    $this->db->exec("ALTER TABLE sales ADD COLUMN unit_cost DECIMAL(12,2)");
+                }
+                if (!in_array('gross_profit', $salesCols)) {
+                    $this->db->exec("ALTER TABLE sales ADD COLUMN gross_profit DECIMAL(12,2) DEFAULT 0");
+                }
+            }
+        } catch (Throwable $e) {
+            // Suppress if already exists
+        }
+    }
+
+    /**
+     * PROFIT: Get invoices aggregated for profit entry
+     * Returns one row per commercial invoice with net base revenue, current GP, cost, and margin
+     */
+    public function getInvoicesForProfitEntry($year, $month, array $filters = []) {
+        $this->ensureProfitColumnsExist();
+        $monthStr = str_pad($month, 2, '0', STR_PAD_LEFT);
+        $where = "strftime('%Y', s.invoice_date) = ? AND strftime('%m', s.invoice_date) = ? AND s.invoice_type = 'Invoice'";
+        $params = [$year, $monthStr];
+
+        if (!empty($filters['customer_type'])) {
+            $where .= " AND p.customer_type = ?";
+            $params[] = $filters['customer_type'];
+        }
+
+        if (!empty($filters['rep_code'])) {
+            $where .= " AND s.sales_rep_code = ?";
+            $params[] = $filters['rep_code'];
+        }
+
+        if (!empty($filters['search'])) {
+            $term = '%' . trim($filters['search']) . '%';
+            $where .= " AND (s.invoice_number LIKE ? OR s.customer_name LIKE ?)";
+            $params[] = $term;
+            $params[] = $term;
+        }
+
+        $sql = "
+            SELECT 
+                s.invoice_number,
+                MAX(s.invoice_date) as invoice_date,
+                s.customer_name,
+                COALESCE(p.customer_type, 'End Customer') as customer_type,
+                s.sales_rep_code,
+                COALESCE(m.rep_name, s.sales_rep_code) as rep_name,
+                COUNT(s.id) as raw_lines_count,
+                ROUND(SUM(s.base_value), 2) as base_value,
+                ROUND(SUM(s.vat_component), 2) as vat_component,
+                ROUND(SUM(s.total_amount), 2) as total_amount,
+                (SELECT COUNT(*) FROM invoice_items ii WHERE ii.invoice_number = s.invoice_number) as items_count,
+                (SELECT GROUP_CONCAT(DISTINCT COALESCE(NULLIF(ii.brand, ''), NULLIF(ii.clean_product_name, ''))) 
+                 FROM (SELECT * FROM invoice_items WHERE invoice_number = s.invoice_number LIMIT 2) ii) as brands_preview,
+                COALESCE(
+                    (SELECT SUM(ii.gross_profit) FROM invoice_items ii WHERE ii.invoice_number = s.invoice_number),
+                    SUM(s.gross_profit)
+                ) as gross_profit,
+                COALESCE(
+                    (SELECT SUM(ii.unit_cost * ii.quantity) FROM invoice_items ii WHERE ii.invoice_number = s.invoice_number),
+                    SUM(s.unit_cost * s.quantity)
+                ) as total_cost,
+                (SELECT MAX(CASE WHEN ii.gross_profit IS NOT NULL AND ii.gross_profit != 0 THEN 1 ELSE 0 END) 
+                 FROM invoice_items ii WHERE ii.invoice_number = s.invoice_number) as has_item_gp,
+                MAX(CASE WHEN s.gross_profit IS NOT NULL AND s.gross_profit != 0 THEN 1 ELSE 0 END) as has_sales_gp
+            FROM sales s
+            LEFT JOIN customer_profiles p ON s.customer_name = p.customer_name
+            LEFT JOIN sales_rep_mapping m ON s.sales_rep_code = m.rep_code
+            WHERE $where
+            GROUP BY s.invoice_number
+            ORDER BY s.invoice_date DESC, s.invoice_number DESC
+        ";
+
+        $rows = $this->fetchAll($sql, $params);
+
+        $results = [];
+        $statusFilter = $filters['status'] ?? 'all';
+
+        foreach ($rows as $r) {
+            $baseVal = (float)$r['base_value'];
+            $hasGp = ($r['has_item_gp'] == 1 || $r['has_sales_gp'] == 1 || ($r['gross_profit'] !== null && $r['gross_profit'] != 0));
+            
+            $gp = $hasGp ? (float)$r['gross_profit'] : null;
+            $cost = ($r['total_cost'] !== null && $r['total_cost'] != 0) 
+                ? (float)$r['total_cost'] 
+                : ($gp !== null ? ($baseVal - $gp) : null);
+
+            $marginPct = ($baseVal > 0 && $gp !== null) ? round(($gp / $baseVal) * 100, 1) : 0.0;
+
+            $r['is_entered'] = $hasGp ? 1 : 0;
+            $r['calc_gp'] = $gp;
+            $r['calc_cost'] = $cost;
+            $r['margin_pct'] = $marginPct;
+
+            if ($statusFilter === 'pending' && $hasGp) {
+                continue;
+            }
+            if ($statusFilter === 'completed' && !$hasGp) {
+                continue;
+            }
+
+            $results[] = $r;
+        }
+
+        return $results;
+    }
+
+    /**
+     * PROFIT: Get high-level summary KPIs for selected year and month
+     */
+    public function getProfitEntrySummary($year, $month) {
+        $invoices = $this->getInvoicesForProfitEntry($year, $month, ['status' => 'all']);
+
+        $totalCount = count($invoices);
+        $completedCount = 0;
+        $pendingCount = 0;
+        $totalBase = 0;
+        $totalGp = 0;
+        $totalCost = 0;
+
+        foreach ($invoices as $inv) {
+            $totalBase += (float)$inv['base_value'];
+            if ($inv['is_entered']) {
+                $completedCount++;
+                $totalGp += (float)$inv['calc_gp'];
+                $totalCost += (float)$inv['calc_cost'];
+            } else {
+                $pendingCount++;
+            }
+        }
+
+        $overallMargin = ($totalBase > 0 && $totalGp > 0) ? round(($totalGp / $totalBase) * 100, 1) : 0.0;
+
+        return [
+            'total_invoices' => $totalCount,
+            'completed_count' => $completedCount,
+            'pending_count' => $pendingCount,
+            'total_base_revenue' => $totalBase,
+            'total_gross_profit' => $totalGp,
+            'total_cost' => $totalCost,
+            'overall_margin_pct' => $overallMargin
+        ];
+    }
+
+    /**
+     * PROFIT: Update gross profit and cost for an entire commercial invoice
+     * Values are strictly EXCLUDING 18% VAT (Base Net basis).
+     * Distributes pro-rata across normalized invoice_items and syncs with sales raw lines.
+     */
+    public function updateInvoiceGrossProfit($invoiceNumber, $gp, $totalCost = null) {
+        $this->ensureProfitColumnsExist();
+        $inv = trim($invoiceNumber);
+        if (empty($inv)) return ['success' => false, 'error' => 'Invoice number required'];
+
+        // 1. Fetch invoice header totals
+        $header = $this->fetch("
+            SELECT invoice_number, SUM(base_value) as base_value, SUM(total_amount) as total_amount
+            FROM sales
+            WHERE invoice_number = ?
+            GROUP BY invoice_number
+        ", [$inv]);
+
+        if (!$header) return ['success' => false, 'error' => "Invoice $inv not found"];
+
+        $baseVal = (float)$header['base_value'];
+
+        // If both are null/empty, clear GP and Cost
+        if (($gp === null || $gp === '') && ($totalCost === null || $totalCost === '')) {
+            $this->execute("UPDATE invoice_items SET gross_profit = NULL, unit_cost = NULL WHERE invoice_number = ?", [$inv]);
+            $this->execute("UPDATE sales SET gross_profit = 0, unit_cost = NULL WHERE invoice_number = ?", [$inv]);
+            return [
+                'success' => true,
+                'invoice_number' => $inv,
+                'base_value' => $baseVal,
+                'gross_profit' => null,
+                'total_cost' => null,
+                'margin_pct' => 0.0
+            ];
+        }
+
+        // If one is given and the other is null, compute the complement
+        if ($gp === null && $totalCost !== null) {
+            $gp = $baseVal - (float)$totalCost;
+        } elseif ($gp !== null && $totalCost === null) {
+            $totalCost = $baseVal - (float)$gp;
+        }
+
+        $gp = round((float)$gp, 2);
+        $totalCost = round((float)$totalCost, 2);
+
+        // 2. Fetch normalized invoice items
+        $items = $this->fetchAll("
+            SELECT id, quantity, base_value, raw_line_ids
+            FROM invoice_items
+            WHERE invoice_number = ?
+            ORDER BY id ASC
+        ", [$inv]);
+
+        $totalItemBase = array_sum(array_column($items, 'base_value'));
+        $itemCount = count($items);
+
+        if ($itemCount > 0) {
+            $runningGp = 0;
+            $runningCost = 0;
+
+            for ($i = 0; $i < $itemCount; $i++) {
+                $item = $items[$i];
+                $itemQty = max(1, (float)($item['quantity'] ?? 1));
+                $itemBase = (float)($item['base_value'] ?? 0);
+
+                if ($i === $itemCount - 1) {
+                    // Last item takes remaining to prevent 1-cent rounding drift
+                    $itemGp = round($gp - $runningGp, 2);
+                    $itemCost = round($totalCost - $runningCost, 2);
+                } else {
+                    $ratio = ($totalItemBase > 0) ? ($itemBase / $totalItemBase) : (1 / $itemCount);
+                    $itemGp = round($gp * $ratio, 2);
+                    $itemCost = round($totalCost * $ratio, 2);
+                    $runningGp += $itemGp;
+                    $runningCost += $itemCost;
+                }
+
+                $unitCost = round($itemCost / $itemQty, 2);
+
+                $this->execute(
+                    "UPDATE invoice_items SET gross_profit = ?, unit_cost = ? WHERE id = ?",
+                    [$itemGp, $unitCost, $item['id']]
+                );
+
+                // If linked raw line IDs exist in sales table, update them
+                if (!empty($item['raw_line_ids'])) {
+                    $rawIds = array_filter(array_map('intval', explode(',', $item['raw_line_ids'])));
+                    if (!empty($rawIds)) {
+                        $rawCount = count($rawIds);
+                        $rawGp = round($itemGp / $rawCount, 2);
+                        $inPlaceholders = implode(',', array_fill(0, $rawCount, '?'));
+                        $execParams = array_merge([$rawGp, $unitCost], $rawIds);
+                        $this->execute("UPDATE sales SET gross_profit = ?, unit_cost = ? WHERE id IN ($inPlaceholders)", $execParams);
+                    }
+                }
+            }
+        }
+
+        // 3. Also synchronize raw sales table directly for lines of this invoice
+        $salesRows = $this->fetchAll("
+            SELECT id, base_value, quantity
+            FROM sales
+            WHERE invoice_number = ?
+            ORDER BY id ASC
+        ", [$inv]);
+
+        $salesCount = count($salesRows);
+        $totalSalesBase = array_sum(array_column($salesRows, 'base_value'));
+
+        if ($salesCount > 0) {
+            $runningSalesGp = 0;
+            $runningSalesCost = 0;
+
+            for ($s = 0; $s < $salesCount; $s++) {
+                $sRow = $salesRows[$s];
+                $sBase = (float)($sRow['base_value'] ?? 0);
+                $sQty = max(1, (float)($sRow['quantity'] ?? 1));
+
+                // If row has 0 base value (e.g. memo/header row), set GP = 0 and Cost = 0
+                if ($totalSalesBase > 0 && $sBase <= 0) {
+                    $this->execute("UPDATE sales SET gross_profit = 0, unit_cost = 0 WHERE id = ?", [$sRow['id']]);
+                    continue;
+                }
+
+                if ($s === $salesCount - 1) {
+                    $sGp = round($gp - $runningSalesGp, 2);
+                    $sCost = round($totalCost - $runningSalesCost, 2);
+                } else {
+                    $ratio = ($totalSalesBase > 0) ? ($sBase / $totalSalesBase) : (1 / $salesCount);
+                    $sGp = round($gp * $ratio, 2);
+                    $sCost = round($totalCost * $ratio, 2);
+                    $runningSalesGp += $sGp;
+                    $runningSalesCost += $sCost;
+                }
+
+                $sUnitCost = round($sCost / $sQty, 2);
+                $this->execute("UPDATE sales SET gross_profit = ?, unit_cost = ? WHERE id = ?", [$sGp, $sUnitCost, $sRow['id']]);
+            }
+        }
+
+        return [
+            'success' => true,
+            'invoice_number' => $inv,
+            'base_value' => $baseVal,
+            'gross_profit' => $gp,
+            'total_cost' => $totalCost,
+            'margin_pct' => ($baseVal > 0) ? round(($gp / $baseVal) * 100, 1) : 0.0
+        ];
     }
 
     /**

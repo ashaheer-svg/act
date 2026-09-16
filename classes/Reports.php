@@ -416,6 +416,328 @@ class Reports {
         ];
     }
 
+    /**
+     * Executive Customer Monthly Sales Performance Matrix
+     * Generates a 12-month column-wise pivot per customer (Rolling 12M or Calendar Year).
+     */
+    public function getCustomerMonthlyMatrix($mode = 'rolling', $selectedYear = null, $filters = []) {
+        $limitSql = $this->getLimitSql('s.invoice_date');
+        $latestRow = $this->db->fetch("
+            SELECT MAX(invoice_date) as max_date 
+            FROM sales 
+            WHERE invoice_date IS NOT NULL AND invoice_date != '' " . $this->getLimitSql('invoice_date') . "
+        ");
+        $maxDate = $latestRow['max_date'] ?? date('Y-m-d');
+        $latestYear = (int)date('Y', strtotime($maxDate));
+        $latestYm = date('Y-m', strtotime($maxDate));
+        $currentYm = date('Y-m');
+
+        $availableYears = $this->getAvailableYears();
+        if (empty($availableYears)) {
+            $availableYears = [(string)$latestYear];
+        }
+
+        if ($mode === 'calendar') {
+            if (!$selectedYear || !in_array((string)$selectedYear, $availableYears)) {
+                $selectedYear = (string)$latestYear;
+            }
+            $monthKeys = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $monthKeys[] = sprintf('%04d-%02d', (int)$selectedYear, $m);
+            }
+            $periodTitle = "Calendar Year " . $selectedYear;
+        } else {
+            $mode = 'rolling';
+            $selectedYear = (string)$latestYear;
+            $monthKeys = [];
+            $ts = strtotime($latestYm . '-01');
+            for ($i = 11; $i >= 0; $i--) {
+                $monthKeys[] = date('Y-m', strtotime("-$i month", $ts));
+            }
+            $firstLabel = date('M Y', strtotime($monthKeys[0] . '-01'));
+            $lastLabel = date('M Y', strtotime($monthKeys[11] . '-01'));
+            $periodTitle = "Rolling 12 Months ($firstLabel – $lastLabel)";
+        }
+
+        // Build month headers
+        $months = [];
+        $monthSqlParts = [];
+        $idx = 0;
+        foreach ($monthKeys as $ym) {
+            $idx++;
+            $dt = strtotime($ym . '-01');
+            $months[] = [
+                'key' => $ym,
+                'label' => date('M Y', $dt),
+                'short_label' => date("M 'y", $dt),
+                'col_key' => 'm_' . $idx,
+                'is_current' => ($ym === $currentYm),
+                'is_future' => ($ym > $latestYm)
+            ];
+            $monthSqlParts[] = "SUM(CASE WHEN strftime('%Y-%m', s.invoice_date) = '$ym' THEN s.total_amount ELSE 0 END) as m_$idx";
+        }
+        $monthSelectSql = implode(",\n                    ", $monthSqlParts);
+
+        // Build WHERE clauses and parameters
+        $where = ["s.invoice_type = 'Invoice'"];
+        $placeholders = implode(',', array_fill(0, count($monthKeys), '?'));
+        $where[] = "strftime('%Y-%m', s.invoice_date) IN ($placeholders)";
+        $params = $monthKeys;
+
+        if (!empty($filters['search'])) {
+            $where[] = "s.customer_name LIKE ?";
+            $params[] = '%' . trim($filters['search']) . '%';
+        }
+
+        if (!empty($filters['customer_type'])) {
+            $where[] = "p.customer_type = ?";
+            $params[] = trim($filters['customer_type']);
+        }
+
+        if (!empty($filters['brand'])) {
+            $where[] = "(s.product_category = ? OR s.product_category LIKE ?)";
+            $params[] = trim($filters['brand']);
+            $params[] = trim($filters['brand']) . ':%';
+        }
+
+        if (!empty($filters['rep_code'])) {
+            $where[] = "s.sales_rep_code = ?";
+            $params[] = trim($filters['rep_code']);
+        }
+
+        $whereSql = implode(" AND ", $where);
+
+        $sql = "
+            SELECT 
+                s.customer_name,
+                COALESCE(p.customer_type, 'End Customer') as customer_type,
+                COUNT(DISTINCT s.invoice_number) as total_invoices,
+                SUM(s.quantity) as total_units,
+                SUM(s.total_amount) as total_revenue,
+                SUM(s.base_value) as total_net_base,
+                (SELECT 
+                    CASE WHEN INSTR(s2.product_category, ':') > 0 THEN SUBSTR(s2.product_category, 1, INSTR(s2.product_category, ':') - 1) ELSE s2.product_category END 
+                 FROM sales s2 WHERE s2.customer_name = s.customer_name GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 1) as top_brand,
+                $monthSelectSql
+            FROM sales s
+            LEFT JOIN customer_profiles p ON s.customer_name = p.customer_name
+            WHERE $whereSql
+              $limitSql
+            GROUP BY s.customer_name
+            ORDER BY total_revenue DESC
+        ";
+
+        $rows = $this->db->fetchAll($sql, $params);
+
+        // Compute summary metrics and averages across rows
+        $summary = [
+            'total_customers' => count($rows),
+            'total_invoices' => 0,
+            'total_units' => 0,
+            'total_revenue' => 0,
+            'total_net_base' => 0,
+            'monthly_totals' => array_fill(1, 12, 0.0),
+            'monthly_average' => 0,
+            'top_customer' => !empty($rows) ? $rows[0]['customer_name'] : '-',
+            'top_customer_revenue' => !empty($rows) ? (float)$rows[0]['total_revenue'] : 0
+        ];
+
+        $activeMonths = 0;
+        foreach ($months as $m) {
+            if (!$m['is_future']) {
+                $activeMonths++;
+            }
+        }
+        $div = max(1, $activeMonths);
+
+        foreach ($rows as &$row) {
+            $summary['total_invoices'] += (int)$row['total_invoices'];
+            $summary['total_units'] += (float)$row['total_units'];
+            $summary['total_revenue'] += (float)$row['total_revenue'];
+            $summary['total_net_base'] += (float)$row['total_net_base'];
+            $row['monthly_avg'] = (float)$row['total_revenue'] / $div;
+
+            for ($i = 1; $i <= 12; $i++) {
+                $mVal = (float)($row['m_' . $i] ?? 0);
+                $summary['monthly_totals'][$i] += $mVal;
+            }
+        }
+        unset($row);
+
+        $summary['monthly_average'] = $summary['total_revenue'] / $div;
+
+        return [
+            'mode' => $mode,
+            'selected_year' => $selectedYear,
+            'available_years' => $availableYears,
+            'period_title' => $periodTitle,
+            'months' => $months,
+            'rows' => $rows,
+            'summary' => $summary,
+            'filters' => $filters
+        ];
+    }
+
+    /**
+     * Executive Sales Rep Monthly Sales Performance Matrix
+     * Generates a 12-month column-wise pivot per sales rep (Rolling 12M or Calendar Year).
+     */
+    public function getSalesRepMonthlyMatrix($mode = 'rolling', $selectedYear = null, $filters = []) {
+        $limitSql = $this->getLimitSql('s.invoice_date');
+        $latestRow = $this->db->fetch("
+            SELECT MAX(invoice_date) as max_date 
+            FROM sales 
+            WHERE invoice_date IS NOT NULL AND invoice_date != '' " . $this->getLimitSql('invoice_date') . "
+        ");
+        $maxDate = $latestRow['max_date'] ?? date('Y-m-d');
+        $latestYear = (int)date('Y', strtotime($maxDate));
+        $latestYm = date('Y-m', strtotime($maxDate));
+        $currentYm = date('Y-m');
+
+        $availableYears = $this->getAvailableYears();
+        if (empty($availableYears)) {
+            $availableYears = [(string)$latestYear];
+        }
+
+        if ($mode === 'calendar') {
+            if (!$selectedYear || !in_array((string)$selectedYear, $availableYears)) {
+                $selectedYear = (string)$latestYear;
+            }
+            $monthKeys = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $monthKeys[] = sprintf('%04d-%02d', (int)$selectedYear, $m);
+            }
+            $periodTitle = "Calendar Year " . $selectedYear;
+        } else {
+            $mode = 'rolling';
+            $selectedYear = (string)$latestYear;
+            $monthKeys = [];
+            $ts = strtotime($latestYm . '-01');
+            for ($i = 11; $i >= 0; $i--) {
+                $monthKeys[] = date('Y-m', strtotime("-$i month", $ts));
+            }
+            $firstLabel = date('M Y', strtotime($monthKeys[0] . '-01'));
+            $lastLabel = date('M Y', strtotime($monthKeys[11] . '-01'));
+            $periodTitle = "Rolling 12 Months ($firstLabel – $lastLabel)";
+        }
+
+        // Build month headers
+        $months = [];
+        $monthSqlParts = [];
+        $idx = 0;
+        foreach ($monthKeys as $ym) {
+            $idx++;
+            $dt = strtotime($ym . '-01');
+            $months[] = [
+                'key' => $ym,
+                'label' => date('M Y', $dt),
+                'short_label' => date("M 'y", $dt),
+                'col_key' => 'm_' . $idx,
+                'is_current' => ($ym === $currentYm),
+                'is_future' => ($ym > $latestYm)
+            ];
+            $monthSqlParts[] = "SUM(CASE WHEN strftime('%Y-%m', s.invoice_date) = '$ym' THEN s.total_amount ELSE 0 END) as m_$idx";
+        }
+        $monthSelectSql = implode(",\n                    ", $monthSqlParts);
+
+        // Build WHERE clauses and parameters
+        $where = ["s.invoice_type = 'Invoice'"];
+        $placeholders = implode(',', array_fill(0, count($monthKeys), '?'));
+        $where[] = "strftime('%Y-%m', s.invoice_date) IN ($placeholders)";
+        $params = $monthKeys;
+
+        if (!empty($filters['search'])) {
+            $searchTerm = '%' . trim($filters['search']) . '%';
+            $where[] = "(s.sales_rep_code LIKE ? OR m.rep_name LIKE ?)";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (!empty($filters['brand'])) {
+            $where[] = "(s.product_category = ? OR s.product_category LIKE ?)";
+            $params[] = trim($filters['brand']);
+            $params[] = trim($filters['brand']) . ':%';
+        }
+
+        $whereSql = implode(" AND ", $where);
+
+        $sql = "
+            SELECT 
+                COALESCE(NULLIF(s.sales_rep_code, ''), 'UNASSIGNED') as rep_code,
+                COALESCE(m.rep_name, CASE WHEN s.sales_rep_code IS NOT NULL AND s.sales_rep_code != '' THEN 'Sales Rep ' || s.sales_rep_code ELSE 'Direct / Unassigned' END) as rep_name,
+                COUNT(DISTINCT s.customer_name) as customer_reach,
+                COUNT(DISTINCT s.invoice_number) as total_invoices,
+                SUM(s.quantity) as total_units,
+                SUM(s.total_amount) as total_revenue,
+                SUM(s.base_value) as total_net_base,
+                $monthSelectSql
+            FROM sales s
+            LEFT JOIN sales_rep_mapping m ON s.sales_rep_code = m.rep_code
+            WHERE $whereSql
+              $limitSql
+            GROUP BY rep_code
+            ORDER BY total_revenue DESC
+        ";
+
+        $rows = $this->db->fetchAll($sql, $params);
+
+        $summary = [
+            'total_reps' => count($rows),
+            'total_reach' => 0,
+            'total_invoices' => 0,
+            'total_units' => 0,
+            'total_revenue' => 0,
+            'total_net_base' => 0,
+            'monthly_totals' => array_fill(1, 12, 0.0),
+            'monthly_average' => 0,
+            'top_rep' => !empty($rows) ? $rows[0]['rep_name'] : '-',
+            'top_rep_revenue' => !empty($rows) ? (float)$rows[0]['total_revenue'] : 0
+        ];
+
+        $activeMonths = 0;
+        foreach ($months as $m) {
+            if (!$m['is_future']) {
+                $activeMonths++;
+            }
+        }
+        $div = max(1, $activeMonths);
+
+        foreach ($rows as &$row) {
+            $summary['total_invoices'] += (int)$row['total_invoices'];
+            $summary['total_units'] += (float)$row['total_units'];
+            $summary['total_revenue'] += (float)$row['total_revenue'];
+            $summary['total_net_base'] += (float)$row['total_net_base'];
+            $row['monthly_avg'] = (float)$row['total_revenue'] / $div;
+
+            for ($i = 1; $i <= 12; $i++) {
+                $mVal = (float)($row['m_' . $i] ?? 0);
+                $summary['monthly_totals'][$i] += $mVal;
+            }
+        }
+        unset($row);
+
+        // Overall distinct customer reach across sales team
+        $distinctReachRow = $this->db->fetch("
+            SELECT COUNT(DISTINCT s.customer_name) as distinct_clients
+            FROM sales s
+            LEFT JOIN sales_rep_mapping m ON s.sales_rep_code = m.rep_code
+            WHERE $whereSql $limitSql
+        ", $params);
+        $summary['total_reach'] = (int)($distinctReachRow['distinct_clients'] ?? 0);
+        $summary['monthly_average'] = $summary['total_revenue'] / $div;
+
+        return [
+            'mode' => $mode,
+            'selected_year' => $selectedYear,
+            'available_years' => $availableYears,
+            'period_title' => $periodTitle,
+            'months' => $months,
+            'rows' => $rows,
+            'summary' => $summary,
+            'filters' => $filters
+        ];
+    }
+
 
     /**
      * Quarterly sales report

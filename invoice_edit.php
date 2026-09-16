@@ -469,6 +469,26 @@ $title = "Edit Commercial Invoice: " . htmlspecialchars($inv);
                                 No normalized extracted products found. Showing QuickBooks raw lines below.
                             </div>
                         <?php else: ?>
+                            <!-- Invoice-Level Quick Profit / Cost Setter -->
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; flex-wrap: wrap;">
+                                    <span style="font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 5px;">
+                                        <i class="icon-zap" style="color: #f59e0b;"></i> Quick-Set Invoice Profit:
+                                    </span>
+                                    <select id="quickProfitMode" class="table-edit-select" style="width: auto; padding: 4px 8px; font-weight: 600; background: #ffffff;">
+                                        <option value="cost">Enter Total Cost Price (excl. VAT)</option>
+                                        <option value="gp">Enter Total Gross Profit (excl. VAT)</option>
+                                    </select>
+                                    <input type="number" step="0.01" id="quickProfitInput" class="table-edit-input" placeholder="0.00" style="width: 140px; padding: 4px 8px; font-weight: 700; background: #ffffff; text-align: right;">
+                                    <button type="button" class="cmd-btn" onclick="applyQuickInvoiceProfit()" style="background: #0f172a; color: #ffffff; border: none; font-weight: 600; padding: 4px 12px; font-size: 11.5px; border-radius: 5px; cursor: pointer;">
+                                        Apply Pro-Rata to Items
+                                    </button>
+                                </div>
+                                <div style="font-size: 11px; color: #64748b;">
+                                    Values strictly <strong>excluding 18% VAT</strong> &bull; Pro-rata allocated across items by Base Net share
+                                </div>
+                            </div>
+
                             <div style="overflow-x: auto;">
                                 <table class="rational-table" id="itemsEditTable" style="margin-bottom: 4px;">
                                     <thead>
@@ -746,6 +766,69 @@ $title = "Edit Commercial Invoice: " . htmlspecialchars($inv);
         const INVOICE_NUMBER = <?= json_encode($inv); ?>;
         const CURRENCY = <?= json_encode($currency); ?>;
         const deletedAssetIds = [];
+
+        // ── Quick Set Invoice-Level Profit (Excl. VAT) ──
+        function applyQuickInvoiceProfit() {
+            const mode = document.getElementById('quickProfitMode')?.value || 'cost';
+            const valInput = document.getElementById('quickProfitInput');
+            const val = parseFloat(valInput?.value);
+
+            if (isNaN(val) || val < 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+
+            const rows = document.querySelectorAll('#itemsEditTable tbody tr.item-row');
+            if (rows.length === 0) {
+                alert('No commercial items available to distribute profit.');
+                return;
+            }
+
+            let totalBase = 0;
+            rows.forEach(r => {
+                totalBase += parseFloat(r.querySelector('.item-base-value').getAttribute('data-base')) || 0;
+            });
+
+            let totalCost = 0;
+            let totalGp = 0;
+            if (mode === 'cost') {
+                totalCost = val;
+                totalGp = totalBase - totalCost;
+            } else {
+                totalGp = val;
+                totalCost = totalBase - totalGp;
+            }
+
+            let runningGp = 0;
+            let runningCost = 0;
+
+            rows.forEach((r, idx) => {
+                const qty = parseFloat(r.querySelector('.item-qty').getAttribute('data-qty')) || 1;
+                const itemBase = parseFloat(r.querySelector('.item-base-value').getAttribute('data-base')) || 0;
+
+                let itemGp, itemCost;
+                if (idx === rows.length - 1) {
+                    itemGp = totalGp - runningGp;
+                    itemCost = totalCost - runningCost;
+                } else {
+                    const ratio = totalBase > 0 ? (itemBase / totalBase) : (1 / rows.length);
+                    itemGp = totalGp * ratio;
+                    itemCost = totalCost * ratio;
+                    runningGp += itemGp;
+                    runningCost += itemCost;
+                }
+
+                const unitCost = qty > 0 ? (itemCost / qty) : 0;
+                const margin = itemBase > 0 ? ((itemGp / itemBase) * 100) : 0;
+
+                r.querySelector('.item-unit-cost').value = unitCost > 0 ? unitCost.toFixed(2) : '0.00';
+                r.querySelector('.item-gp').value = itemGp.toFixed(2);
+                r.querySelector('.item-margin').value = margin.toFixed(1);
+            });
+
+            recalculateSummaryRibbon();
+            showToast('✓ Pro-rata distributed ' + (mode === 'cost' ? 'cost' : 'gross profit') + ' across ' + rows.length + ' item(s)');
+        }
 
         // ── Profit & Cost 3-Way Calculators ──
         function onCostChange(input) {

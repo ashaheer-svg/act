@@ -59,8 +59,30 @@ ob_start();
                         ?>
                     </td>
                 <?php endforeach; ?>
-                <td><?php echo number_format($matrixData['totals'][$k], 0); ?></td>
-                <td><?php echo number_format($matrixData['averages'][$k], 0); ?></td>
+                <td>
+                    <?php 
+                    $totVal = $matrixData['totals'][$k];
+                    if ($row['format'] === 'growth_rate') {
+                        echo '-';
+                    } elseif ($row['format'] === 'percentage') {
+                        echo number_format((float)$totVal, 1) . '%';
+                    } else {
+                        echo number_format((float)$totVal, 0);
+                    }
+                    ?>
+                </td>
+                <td>
+                    <?php 
+                    $avgVal = $matrixData['averages'][$k];
+                    if ($row['format'] === 'growth_rate') {
+                        echo sprintf('%+.1f%%', (float)$avgVal);
+                    } elseif ($row['format'] === 'percentage') {
+                        echo number_format((float)$avgVal, 1) . '%';
+                    } else {
+                        echo number_format((float)$avgVal, 0);
+                    }
+                    ?>
+                </td>
             </tr>
             <?php endforeach; ?>
         </tbody>

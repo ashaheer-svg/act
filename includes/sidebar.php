@@ -8,6 +8,7 @@
 
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentType = $_GET['type'] ?? '';
+$currentView = $_GET['view'] ?? 'overview';
 
 $isInvoiceReport = ($currentPage === 'reports.php' && in_array($currentType, ['invoices', '']));
 $isUnpaidReport = ($currentPage === 'reports.php' && $currentType === 'unpaid_invoices');
@@ -29,32 +30,37 @@ $archivesOpen = ($currentPage === 'reports.php' && in_array($currentType, $archi
 $settingsOpen = ($currentPage === 'settings.php');
 ?>
 <aside class="sidebar" id="mainSidebar">
-    <div class="sidebar-header">
-        <a href="reports.php?type=invoices" class="logo-container" title="Activity Sales BI">
-            <div class="logo-icon"><i class="icon-activity"></i></div>
-            <span>ACTIVITY | BI</span>
-        </a>
-        <button type="button" class="sidebar-collapse-toggle" id="sidebarCollapseBtn" onclick="toggleSidebar()" title="Toggle Sidebar (180px / 50px)">
-            <i class="icon-chevrons-left" id="sidebarToggleIcon"></i>
+    <!-- Activity Brand Header with Collapsible Toggle Trigger -->
+    <div class="sidebar-brand">
+        <div class="brand-info">
+            <i class="icon-activity brand-icon"></i>
+            <span class="brand-text">ACTIVITY</span>
+            <span class="brand-badge">BI</span>
+        </div>
+        <button type="button" class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebar()" title="Collapse navigation rail (Ctrl+B)">
+            <i class="icon-chevrons-left"></i>
         </button>
     </div>
 
-    <nav class="sidebar-nav">
-        <!-- Core Daily Ledgers (Direct 1-Click Access) -->
+    <!-- Direct Core Actions -->
+    <div class="sidebar-nav">
+        <!-- Direct Primary Reports (Single Click) -->
         <a href="reports.php?type=invoices" class="nav-item <?= $isInvoiceReport ? 'active' : '' ?>" data-title="Invoices">
             <i class="icon-file-text"></i>
             <span>Invoices</span>
             <span class="sb-badge">12.4k</span>
         </a>
+
         <a href="reports.php?type=unpaid_invoices" class="nav-item <?= $isUnpaidReport ? 'active' : '' ?>" data-title="Unpaid Invoices">
             <i class="icon-alert-circle"></i>
             <span>Unpaid Invoices</span>
-            <span class="sb-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">76</span>
+            <span class="sb-badge red">76</span>
         </a>
+
         <a href="reports.php?type=warranties" class="nav-item <?= $isWarrantyReport ? 'active' : '' ?>" data-title="Warranty Lookup">
             <i class="icon-shield"></i>
             <span>Warranty Lookup</span>
-            <span class="sb-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">12.3k</span>
+            <span class="sb-badge">12.3k</span>
         </a>
 
         <div class="sb-divider"></div>
@@ -64,13 +70,21 @@ $settingsOpen = ($currentPage === 'settings.php');
             <button class="nav-item nav-group-toggle" onclick="toggleNavGroup(this)" type="button" data-title="Analytics & BI">
                 <i class="icon-bar-chart-3"></i>
                 <span>Analytics & BI</span>
-                <span class="sb-badge">9</span>
+                <span class="sb-badge">11</span>
                 <i class="icon-chevron-right nav-group-arrow"></i>
             </button>
             <div class="sub-nav">
-                <a href="reports.php?type=monthly" class="sub-nav-item <?= ($currentPage === 'reports.php' && $currentType === 'monthly') ? 'active' : '' ?>" data-title="Monthly Sales Matrix">
+                <a href="reports.php?type=monthly&view=overview" class="sub-nav-item <?= ($currentPage === 'reports.php' && $currentType === 'monthly' && ($currentView ?? 'overview') === 'overview') ? 'active' : '' ?>" data-title="Monthly Sales Matrix">
                     <i class="icon-calendar"></i>
                     <span>Monthly Matrix</span>
+                </a>
+                <a href="reports.php?type=monthly&view=customer" class="sub-nav-item <?= ($currentPage === 'reports.php' && $currentType === 'monthly' && ($currentView ?? '') === 'customer') ? 'active' : '' ?>" data-title="Customer Monthly Matrix">
+                    <i class="icon-users"></i>
+                    <span>Customer Matrix</span>
+                </a>
+                <a href="reports.php?type=monthly&view=rep" class="sub-nav-item <?= ($currentPage === 'reports.php' && $currentType === 'monthly' && ($currentView ?? '') === 'rep') ? 'active' : '' ?>" data-title="Sales Rep Monthly Matrix">
+                    <i class="icon-award"></i>
+                    <span>Sales Rep Matrix</span>
                 </a>
                 <a href="reports.php?type=ltv" class="sub-nav-item <?= ($currentPage === 'reports.php' && $currentType === 'ltv') ? 'active' : '' ?>" data-title="Customer LTV">
                     <i class="icon-award"></i>
