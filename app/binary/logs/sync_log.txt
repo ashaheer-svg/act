@@ -3,3 +3,5 @@
 [2026-09-07 16:46:45] [SUCCESS] [DRY RUN] Completed. Extracted: 3 Invoices, 1 Payments, 3 Customers. Duration: 0.40s.
 [2026-09-07 17:43:52] [SUCCESS] [DRY RUN] Completed. Extracted: 3 Invoices, 1 Payments, 3 Customers. Duration: 0.42s.
 [2026-09-07 17:44:13] [SUCCESS] [DRY RUN] Completed. Extracted: 3 Invoices, 1 Payments, 3 Customers. Duration: 0.41s.
+[2026-09-17 10:44:18] [SUCCESS] Sync completed successfully! Extracted & Transferred: 3 Invoices, 1 Credit Memos, 1 Payments, 3 Customers in 1.95s.
+[2026-09-17 12:13:07] [SUCCESS] Sync completed successfully! Extracted & Transferred: 3 Invoices, 1 Credit Memos, 1 Payments, 3 Customers in 1.90s.

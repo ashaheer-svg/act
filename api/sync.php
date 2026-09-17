@@ -554,10 +554,19 @@ try {
                 continue;
             }
 
-            $db->execute(
-                "INSERT INTO payments (customer_name, payment_date, reference_num, amount, invoice_num, payment_method, deposit_account, memo, unused_payment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [$customer, $payDate, $ref, $amount, $invoiceNum, $payMethod, $depositAccount, $payMemo, $unusedPay]
+            // Check if payment record already exists (prevents duplicate payment records on full/repeated syncs)
+            $existingPay = $db->fetch(
+                "SELECT id FROM payments WHERE customer_name = ? AND payment_date = ? AND reference_num = ? AND abs(amount - ?) < 0.01 AND invoice_num = ? LIMIT 1",
+                [$customer, $payDate, $ref, $amount, $invoiceNum]
             );
+
+            if (!$existingPay) {
+                $db->execute(
+                    "INSERT INTO payments (customer_name, payment_date, reference_num, amount, invoice_num, payment_method, deposit_account, memo, unused_payment) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [$customer, $payDate, $ref, $amount, $invoiceNum, $payMethod, $depositAccount, $payMemo, $unusedPay]
+                );
+                $paymentsImported++;
+            }
 
             // If matched to an invoice, compute days to pay and mark settled
             if (!empty($invoiceNum)) {
@@ -578,8 +587,6 @@ try {
                     );
                 }
             }
-
-            $paymentsImported++;
         }
     }
 
