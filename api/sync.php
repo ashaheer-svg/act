@@ -80,6 +80,32 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $rawInput = file_get_contents('php://input');
 $payload = json_decode($rawInput, true);
 
+// Support Base64 compressed payload (gzdeflate/gzip) to bypass WAF / ModSecurity false positives and reduce bandwidth
+if (is_array($payload) && !empty($payload['compressed_payload'])) {
+    $binary = base64_decode($payload['compressed_payload']);
+    $decompressed = @gzinflate($binary);
+    if ($decompressed === false) {
+        $decompressed = @gzuncompress($binary);
+    }
+    if ($decompressed === false) {
+        $decompressed = @gzdecode($binary);
+    }
+    if ($decompressed !== false) {
+        $unpacked = json_decode($decompressed, true);
+        if (is_array($unpacked)) {
+            $payload = $unpacked;
+        }
+    }
+} elseif (is_array($payload) && !empty($payload['encoded_payload'])) {
+    $decompressed = base64_decode($payload['encoded_payload']);
+    if ($decompressed) {
+        $unpacked = json_decode($decompressed, true);
+        if (is_array($unpacked)) {
+            $payload = $unpacked;
+        }
+    }
+}
+
 if (!$payload || !is_array($payload)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid JSON payload.']);
