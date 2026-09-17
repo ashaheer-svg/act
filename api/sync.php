@@ -244,7 +244,7 @@ try {
         }
 
         $insertInvoiceStmt = "
-            INSERT INTO sales (
+            INSERT OR IGNORE INTO sales (
                 invoice_type, invoice_date, invoice_number, customer_name,
                 item_description, tax_code, quantity, qb_amount,
                 base_value, vat_component, applied_tax_rate, total_amount,
@@ -424,7 +424,7 @@ try {
     $creditMemosImported = 0;
     if (!empty($creditMemos)) {
         $insertCreditMemoStmt = "
-            INSERT INTO sales (
+            INSERT OR IGNORE INTO sales (
                 invoice_type, invoice_date, invoice_number, customer_name,
                 item_description, tax_code, quantity, qb_amount,
                 base_value, vat_component, applied_tax_rate, total_amount,
@@ -493,11 +493,15 @@ try {
                 $salesTaxRate = floatval($cm['sales_tax_rate'] ?? 0);
                 $unitPrice = floatval($cm['unit_price'] ?? abs($cleanAmount));
 
-                $db->execute($insertCreditMemoStmt, [
-                    $date, $num, $customer, $itemDesc, $taxCode, $qty, $signedAmount,
-                    $base, $vat, $appliedRate, $total, $category, $rep, $poNumber, $memo,
-                    $txnId, $vatTreatment, $subtotal, $salesTaxTotal, $salesTaxRate, $unitPrice, ''
-                ]);
+                try {
+                    $db->execute($insertCreditMemoStmt, [
+                        $date, $num, $customer, $itemDesc, $taxCode, $qty, $signedAmount,
+                        $base, $vat, $appliedRate, $total, $category, $rep, $poNumber, $memo,
+                        $txnId, $vatTreatment, $subtotal, $salesTaxTotal, $salesTaxRate, $unitPrice, ''
+                    ]);
+                } catch (\Exception $e) {
+                    // Ignore duplicate constraint
+                }
             }
 
             // Linked invoice settlement & payment insertion
