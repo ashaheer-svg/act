@@ -55,7 +55,7 @@ public class ApiClient
             wrappedJson = json; // Fallback to raw JSON if compression fails
         }
 
-        int maxRetries = 3;
+        int maxRetries = 5;
         for (int attempt = 1; attempt <= maxRetries; attempt++)
         {
             try
@@ -76,7 +76,8 @@ public class ApiClient
                     // If rate-limited (403, 429) or transient server hiccup (500, 502, 503, 504), wait and retry
                     if ((statusCode == 403 || statusCode == 429 || statusCode >= 500) && attempt < maxRetries)
                     {
-                        await Task.Delay(attempt * 1500);
+                        // Generous backoff (2.5s, 5s, 7.5s, 10s) allows hosting firewalls & burst limiters to completely reset
+                        await Task.Delay(attempt * 2500);
                         continue;
                     }
 

@@ -23,6 +23,8 @@ class Program
         bool noQbCheck = args.Contains("--no-qb-check");
         bool isFull = args.Contains("--full") || args.Contains("-a") || args.Contains("--all");
         bool isIncremental = args.Contains("--incremental") || args.Contains("-i");
+        bool fromLatest = args.Contains("--from-latest");
+        string? fromFile = null;
         string? customConfig = null;
         string? fromTxnDate = null;
         string? toTxnDate = null;
@@ -32,6 +34,10 @@ class Program
             if (args[i] == "--config" && i + 1 < args.Length)
             {
                 customConfig = args[i + 1];
+            }
+            else if (args[i] == "--from-file" && i + 1 < args.Length)
+            {
+                fromFile = args[i + 1];
             }
             else if ((args[i] == "--from" || args[i] == "-f") && i + 1 < args.Length)
             {
@@ -87,6 +93,12 @@ class Program
             }
         }
 
+        // Direct upload from local export JSON (bypasses QuickBooks connection)
+        if (fromLatest || !string.IsNullOrEmpty(fromFile))
+        {
+            return await RunFromFileSyncAsync(config, fromFile, fromLatest, isQuiet, isDryRun, customConfig);
+        }
+
         // Headless execution (Task Scheduler, CLI sync, or historical date range extraction)
         bool hasDateRange = !string.IsNullOrEmpty(fromTxnDate) || !string.IsNullOrEmpty(toTxnDate);
         if (isSync || isQuiet || isDryRun || isMock || isExportOnly || hasDateRange || isFull || isIncremental)
@@ -124,6 +136,8 @@ class Program
         Console.WriteLine();
         Console.WriteLine("Sync & Extraction Options:");
         Console.WriteLine("  --sync, -s          Run automated sync (extract and upload to web dashboard)");
+        Console.WriteLine("  --from-file <path>  Upload transactions directly from saved export JSON file (no QB needed)");
+        Console.WriteLine("  --from-latest       Upload transactions from most recent export JSON file in exports folder");
         Console.WriteLine("  --export-only, -e   Extract from QuickBooks and save local JSON/CSV exports without uploading");
         Console.WriteLine("  --full, -a, --all   Download FULL dataset (all records from the beginning, bypass LastSyncDate)");
         Console.WriteLine("  --incremental, -i   Download latest changes only (modified since LastSyncDate)");
@@ -175,6 +189,7 @@ class Program
             Console.WriteLine(" Select an Action:");
             Console.WriteLine("   [1] Sync to Web Dashboard (Choose: Latest Changes Only or Full Dataset)");
             Console.WriteLine("   [2] Extract & Save Locally ONLY (Choose: Latest Changes Only or Full Dataset for Analysis)");
+            Console.WriteLine("   [U] Upload Previously Downloaded JSON (Upload saved export directly, no QuickBooks needed)");
             Console.WriteLine("   [F] Run Quick FULL Sync (Download ALL records -> Web Dashboard)");
             Console.WriteLine("   [H] Extract Historical Archive Range (e.g. 2009-2021 to Local JSON & CSV)");
             Console.WriteLine("   [3] Test QuickBooks Desktop Connection (Read-Only)");
@@ -188,7 +203,7 @@ class Program
             Console.WriteLine("   [L] View Recent Sync Log Entries (logs/sync_log.txt)");
             Console.WriteLine("   [9] Exit");
             Console.WriteLine();
-            Console.Write(" Enter your choice [1-9, F, H, R, S, L]: ");
+            Console.Write(" Enter your choice [1-9, U, F, H, R, S, L]: ");
 
             string? choice = Console.ReadLine()?.Trim().ToUpperInvariant();
             Console.WriteLine();
@@ -200,6 +215,9 @@ class Program
                     break;
                 case "2":
                     await ExecuteSyncAsync(config, isMock: false, isDryRun: false, configPath, isQuiet: false, saveLocalOnly: true);
+                    break;
+                case "U":
+                    await ExecuteUploadExportMenuAsync(config, configPath);
                     break;
                 case "F":
                     await ExecuteSyncAsync(config, isMock: false, isDryRun: false, configPath, isQuiet: false, saveLocalOnly: false, forceFull: true);
@@ -688,19 +706,59 @@ class Program
             return 0;
         }
 
+        return await UploadDataAsync(
+            config,
+            invoices,
+            creditMemos,
+            payments,
+            customers,
+            isQuiet,
+            sourceName: isMock ? "qb_mock_sync" : "qb_desktop_sync",
+            configPath: configPath,
+            updateSyncCursor: string.IsNullOrEmpty(fromTxnDate) && string.IsNullOrEmpty(toTxnDate));
+    }
+
+    private static async Task<int> UploadDataAsync(
+        SyncConfig config,
+        List<InvoiceRecord> invoices,
+        List<CreditMemoRecord> creditMemos,
+        List<PaymentRecord> payments,
+        List<CustomerRecord> customers,
+        bool isQuiet,
+        string sourceName = "qb_desktop_sync",
+        string? configPath = null,
+        bool updateSyncCursor = true)
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        if (string.IsNullOrWhiteSpace(config.ServerUrl))
+        {
+            string msg = "Server URL is missing in config.json.";
+            Logger.LogFailure(config.LogFile, msg);
+            PrintError(msg, isQuiet);
+            return 1;
+        }
+
+        if (string.IsNullOrWhiteSpace(config.ApiKey))
+        {
+            string msg = "API Key is missing in config.json.";
+            Logger.LogFailure(config.LogFile, msg);
+            PrintError(msg, isQuiet);
+            return 1;
+        }
+
         if (invoices.Count == 0 && creditMemos.Count == 0 && payments.Count == 0 && customers.Count == 0)
         {
-            stopwatch.Stop();
-            PrintInfo("No new or modified records found to sync.", isQuiet);
-            Logger.LogSuccess(config.LogFile, $"Sync completed. 0 new records found since {config.LastSyncDate}. Duration: {stopwatch.Elapsed.TotalSeconds:F2}s.");
+            PrintInfo("No records found to sync or upload.", isQuiet);
             return 0;
         }
 
-        // Optimal batch sizes (payloads are Deflate-compressed down to 85%, staying safely under 5-10 KB per request)
-        int invBatchSize = config.BatchSize > 0 ? Math.Min(config.BatchSize, 100) : 75;
-        int custBatchSize = 25;
-        int cmBatchSize = 50;
-        int payBatchSize = 75;
+        // Optimal batch sizes (payloads are Deflate-compressed down to 85%, staying safely under 10-15 KB per request)
+        int invBatchSize = config.BatchSize > 0 ? Math.Min(config.BatchSize, 100) : 100;
+        int custBatchSize = 100;
+        int cmBatchSize = 100;
+        int payBatchSize = 100;
+        int pacingDelayMs = 250;
         var apiClient = new ApiClient();
 
         int totalInvoicesImported = 0;
@@ -724,7 +782,7 @@ class Program
                 {
                     var custPayload = new SyncPayload
                     {
-                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Source = sourceName,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Customers = batch,
                         Invoices = new List<InvoiceRecord>(),
@@ -744,7 +802,7 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Customers {fromIdx}–{toIdx} ({batch.Count} profiles) [OK]");
                 }
-                await Task.Delay(60);
+                await Task.Delay(pacingDelayMs);
             }
         }
 
@@ -762,7 +820,7 @@ class Program
                 {
                     var invPayload = new SyncPayload
                     {
-                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Source = sourceName,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Customers = new List<CustomerRecord>(),
                         Invoices = batch,
@@ -783,7 +841,7 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Invoices {fromIdx}–{toIdx} ({batch.Count} lines) [OK]");
                 }
-                await Task.Delay(60);
+                await Task.Delay(pacingDelayMs);
             }
         }
 
@@ -801,7 +859,7 @@ class Program
                 {
                     var cmPayload = new SyncPayload
                     {
-                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Source = sourceName,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Customers = new List<CustomerRecord>(),
                         Invoices = new List<InvoiceRecord>(),
@@ -821,7 +879,7 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Credit Memos {fromIdx}–{toIdx} ({batch.Count} lines) [OK]");
                 }
-                await Task.Delay(60);
+                await Task.Delay(pacingDelayMs);
             }
         }
 
@@ -839,7 +897,7 @@ class Program
                 {
                     var payPayload = new SyncPayload
                     {
-                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Source = sourceName,
                         Timestamp = DateTime.UtcNow.ToString("o"),
                         Customers = new List<CustomerRecord>(),
                         Invoices = new List<InvoiceRecord>(),
@@ -859,18 +917,18 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Payments {fromIdx}–{toIdx} ({batch.Count} records) [OK]");
                 }
-                await Task.Delay(60);
+                await Task.Delay(pacingDelayMs);
             }
         }
 
         stopwatch.Stop();
-        string successSummary = $"Sync completed successfully! Extracted & Transferred: {invoices.Count} Invoices, {creditMemos.Count} Credit Memos, {payments.Count} Payments, {customers.Count} Customers in {stopwatch.Elapsed.TotalSeconds:F2}s.";
+        string successSummary = $"Upload completed successfully! Transferred: {invoices.Count} Invoices, {creditMemos.Count} Credit Memos, {payments.Count} Payments, {customers.Count} Customers in {stopwatch.Elapsed.TotalSeconds:F2}s.";
         Logger.LogSuccess(config.LogFile, successSummary);
 
         if (!isQuiet)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"\n[SUCCESS] Sync completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s!");
+            Console.WriteLine($"\n[SUCCESS] Upload completed successfully in {stopwatch.Elapsed.TotalSeconds:F2}s!");
             Console.ResetColor();
             Console.WriteLine($"   - Imported Invoices    : {totalInvoicesImported}");
             Console.WriteLine($"   - Skipped (Duplicates) : {totalInvoicesSkipped}");
@@ -880,8 +938,7 @@ class Program
             Console.WriteLine($"   - Server Timestamp     : {lastServerTimestamp}");
         }
 
-        // Update local sync date (only for incremental / current syncs, not historical ranges)
-        if (string.IsNullOrEmpty(fromTxnDate) && string.IsNullOrEmpty(toTxnDate))
+        if (updateSyncCursor)
         {
             config.LastSyncDate = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
             ConfigManager.SaveConfig(config, configPath);
@@ -889,6 +946,164 @@ class Program
         }
 
         return 0;
+    }
+
+    private static async Task<int> RunFromFileSyncAsync(
+        SyncConfig config,
+        string? filePath,
+        bool pickLatest,
+        bool isQuiet,
+        bool isDryRun,
+        string? configPath)
+    {
+        string? targetFile = filePath;
+        if (pickLatest || string.IsNullOrWhiteSpace(targetFile))
+        {
+            var files = DataExporter.GetAvailableExports(config.ExportFolder);
+            if (files.Count == 0)
+            {
+                string msg = "No export JSON files found in exports directory.";
+                PrintError(msg, isQuiet);
+                return 1;
+            }
+            targetFile = files[0].FullName;
+        }
+
+        if (!File.Exists(targetFile))
+        {
+            string msg = $"Export file not found: {targetFile}";
+            PrintError(msg, isQuiet);
+            return 1;
+        }
+
+        if (!isQuiet)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine(@" ╔══════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine(@" ║ 📤 LOADING SAVED EXPORT DATA FOR UPLOAD (NO QB REQUIRED)         ║");
+            Console.WriteLine(@" ╚══════════════════════════════════════════════════════════════════╝");
+            Console.ResetColor();
+            Console.WriteLine($" Target File: {targetFile}\n");
+        }
+
+        var loaded = DataExporter.LoadExport(targetFile);
+        if (loaded == null)
+        {
+            string msg = $"Failed to parse export file: {targetFile}";
+            PrintError(msg, isQuiet);
+            return 1;
+        }
+
+        if (!isQuiet)
+        {
+            PrintSuccess($"Loaded export data successfully! ({Path.GetFileName(targetFile)})", isQuiet);
+            Console.WriteLine($"   - Invoices     : {loaded.Invoices.Count} lines");
+            Console.WriteLine($"   - Credit Memos : {loaded.CreditMemos.Count} lines");
+            Console.WriteLine($"   - Payments     : {loaded.Payments.Count} records");
+            Console.WriteLine($"   - Customers    : {loaded.Customers.Count} profiles");
+            if (!string.IsNullOrEmpty(loaded.LocalTime))
+            {
+                Console.WriteLine($"   - Exported At  : {loaded.LocalTime}");
+            }
+            Console.WriteLine();
+        }
+
+        if (isDryRun)
+        {
+            PrintInfo("[DRY RUN] Completed. No records were posted to the server.", isQuiet);
+            return 0;
+        }
+
+        return await UploadDataAsync(
+            config,
+            loaded.Invoices,
+            loaded.CreditMemos,
+            loaded.Payments,
+            loaded.Customers,
+            isQuiet,
+            sourceName: "qb_saved_export",
+            configPath: configPath,
+            updateSyncCursor: true);
+    }
+
+    private static async Task ExecuteUploadExportMenuAsync(SyncConfig config, string? configPath)
+    {
+        Console.ForegroundColor = ConsoleColor.Cyan;
+        Console.WriteLine(@" ╔══════════════════════════════════════════════════════════════════╗");
+        Console.WriteLine(@" ║ 📤 UPLOAD DOWNLOADED EXPORT JSON (NO QUICKBOOKS NEEDED)          ║");
+        Console.WriteLine(@" ╚══════════════════════════════════════════════════════════════════╝");
+        Console.ResetColor();
+        Console.WriteLine();
+
+        var exports = DataExporter.GetAvailableExports(config.ExportFolder);
+        if (exports.Count == 0)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(" No export JSON files were found in the exports folder.");
+            Console.ResetColor();
+            Console.WriteLine();
+            Console.Write(" Would you like to enter a custom file path? (y/n) [y]: ");
+            var enterCustom = Console.ReadLine()?.Trim().ToLowerInvariant();
+            if (enterCustom == "n" || enterCustom == "no") return;
+
+            Console.Write(" Enter absolute or relative path to .json file: ");
+            var customPath = Console.ReadLine()?.Trim()?.Trim('"', '\'');
+            if (string.IsNullOrEmpty(customPath) || !File.Exists(customPath))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($" File not found: {customPath}");
+                Console.ResetColor();
+                return;
+            }
+
+            await RunFromFileSyncAsync(config, customPath, false, false, false, configPath);
+            return;
+        }
+
+        Console.WriteLine(" Available Export Files:");
+        int showCount = Math.Min(exports.Count, 9);
+        for (int i = 0; i < showCount; i++)
+        {
+            var f = exports[i];
+            double sizeMb = (double)f.Length / (1024 * 1024);
+            Console.WriteLine($"   [{i + 1}] {f.Name} ({f.LastWriteTime:yyyy-MM-dd HH:mm:ss}, {sizeMb:F2} MB)");
+        }
+        Console.WriteLine("   [C] Specify Custom File Path...");
+        Console.WriteLine("   [Q] Back to Main Menu");
+        Console.WriteLine();
+        Console.Write($" Select file to upload [1-{showCount}, C, default: 1]: ");
+
+        string? choice = Console.ReadLine()?.Trim();
+        if (string.IsNullOrEmpty(choice)) choice = "1";
+
+        if (choice.Equals("Q", StringComparison.OrdinalIgnoreCase)) return;
+
+        string selectedPath;
+        if (choice.Equals("C", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Write(" Enter path to .json file: ");
+            var customPath = Console.ReadLine()?.Trim()?.Trim('"', '\'');
+            if (string.IsNullOrEmpty(customPath) || !File.Exists(customPath))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($" File not found: {customPath}");
+                Console.ResetColor();
+                return;
+            }
+            selectedPath = customPath;
+        }
+        else if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= showCount)
+        {
+            selectedPath = exports[idx - 1].FullName;
+        }
+        else
+        {
+            Console.WriteLine("Invalid selection.");
+            return;
+        }
+
+        Console.WriteLine();
+        await RunFromFileSyncAsync(config, selectedPath, false, false, false, configPath);
     }
 
     private static void ExecuteTestQuickBooks(SyncConfig config)

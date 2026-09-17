@@ -246,6 +246,79 @@ public static class DataExporter
         }
     }
 
+    public class LoadedExportData
+    {
+        public List<InvoiceRecord> Invoices { get; set; } = new();
+        public List<CreditMemoRecord> CreditMemos { get; set; } = new();
+        public List<PaymentRecord> Payments { get; set; } = new();
+        public List<CustomerRecord> Customers { get; set; } = new();
+        public string SourceFile { get; set; } = "";
+        public string? ExportTimestamp { get; set; }
+        public string? LocalTime { get; set; }
+    }
+
+    /// <summary>
+    /// Loads previously exported transactions and customers from a JSON file.
+    /// </summary>
+    public static LoadedExportData? LoadExport(string filePath)
+    {
+        if (!File.Exists(filePath)) return null;
+
+        var json = File.ReadAllText(filePath, Encoding.UTF8);
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        var data = new LoadedExportData { SourceFile = filePath };
+
+        if (root.TryGetProperty("export_timestamp", out var ts))
+        {
+            data.ExportTimestamp = ts.GetString();
+        }
+        if (root.TryGetProperty("local_time", out var lt))
+        {
+            data.LocalTime = lt.GetString();
+        }
+
+        var opt = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        if (root.TryGetProperty("invoices", out var invElem) && invElem.ValueKind == JsonValueKind.Array)
+        {
+            data.Invoices = JsonSerializer.Deserialize<List<InvoiceRecord>>(invElem.GetRawText(), opt) ?? new();
+        }
+        if (root.TryGetProperty("credit_memos", out var cmElem) && cmElem.ValueKind == JsonValueKind.Array)
+        {
+            data.CreditMemos = JsonSerializer.Deserialize<List<CreditMemoRecord>>(cmElem.GetRawText(), opt) ?? new();
+        }
+        if (root.TryGetProperty("payments", out var payElem) && payElem.ValueKind == JsonValueKind.Array)
+        {
+            data.Payments = JsonSerializer.Deserialize<List<PaymentRecord>>(payElem.GetRawText(), opt) ?? new();
+        }
+        if (root.TryGetProperty("customers", out var custElem) && custElem.ValueKind == JsonValueKind.Array)
+        {
+            data.Customers = JsonSerializer.Deserialize<List<CustomerRecord>>(custElem.GetRawText(), opt) ?? new();
+        }
+
+        return data;
+    }
+
+    /// <summary>
+    /// Retrieves all available JSON export files in the export folder, ordered by most recent first.
+    /// </summary>
+    public static List<FileInfo> GetAvailableExports(string? customDirectory = null)
+    {
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string exportDir = !string.IsNullOrWhiteSpace(customDirectory)
+            ? (Path.IsPathRooted(customDirectory) ? customDirectory : Path.Combine(baseDir, customDirectory))
+            : Path.Combine(baseDir, "exports");
+
+        if (!Directory.Exists(exportDir)) return new List<FileInfo>();
+
+        var dir = new DirectoryInfo(exportDir);
+        return dir.GetFiles("*.json", SearchOption.AllDirectories)
+            .OrderByDescending(f => f.LastWriteTime)
+            .ToList();
+    }
+
     private static string EscapeCsv(string? value)
     {
         if (string.IsNullOrEmpty(value)) return "";
