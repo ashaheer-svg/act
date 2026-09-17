@@ -1,0 +1,7 @@
+DirectoryIndex index.php
+Options -Indexes
+
+# Allow larger request payloads for QuickBooks sync batches
+<IfModule core.c>
+    LimitRequestBody 20971520
+</IfModule>
