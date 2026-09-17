@@ -526,7 +526,7 @@ try {
             if (preg_match('/(?:S\/N|Serial|SN|Lot)[:\s]+([A-Z0-9\-_]{5,})/i', $itemDesc, $snMatch)) {
                 $returnedSerial = trim($snMatch[1]);
                 $db->execute(
-                    "UPDATE hardware_assets SET status = 'Returned / Credited', warranty_status = 'Credited / Replaced' WHERE serial_number LIKE ? AND customer_name = ?",
+                    "UPDATE hardware_assets SET warranty_status = 'Credited / Replaced' WHERE serial_number LIKE ? AND customer_name = ?",
                     ['%' . $returnedSerial . '%', $customer]
                 );
             }

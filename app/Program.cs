@@ -696,7 +696,11 @@ class Program
             return 0;
         }
 
-        int batchSize = config.BatchSize > 0 ? config.BatchSize : 500;
+        // Safe chunk batch sizes (strictly capped to ensure payloads remain < 25 KB to comply with web server & proxy limits)
+        int invBatchSize = config.BatchSize > 0 ? Math.Min(config.BatchSize, 30) : 25;
+        int custBatchSize = 25;
+        int cmBatchSize = 25;
+        int payBatchSize = 50;
         var apiClient = new ApiClient();
 
         int totalInvoicesImported = 0;
@@ -706,44 +710,52 @@ class Program
         int totalCustomersImported = 0;
         string lastServerTimestamp = "";
 
-        // 1. Upload Customers first (Phase 1: ensuring customer VAT registration is cached before invoices)
+        // 1. Upload Customers first (Phase 1: chunked into safe batches so all profiles transfer reliably)
         if (customers.Count > 0)
         {
-            using (var prog = new ProgressIndicator($"Uploading {customers.Count} customer profiles to {config.ServerUrl}...", isQuiet))
+            int totalCustBatches = (int)Math.Ceiling((double)customers.Count / custBatchSize);
+            for (int b = 0; b < totalCustBatches; b++)
             {
-                var custPayload = new SyncPayload
-                {
-                    Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
-                    Timestamp = DateTime.UtcNow.ToString("o"),
-                    Customers = customers,
-                    Invoices = new List<InvoiceRecord>(),
-                    CreditMemos = new List<CreditMemoRecord>(),
-                    Payments = new List<PaymentRecord>()
-                };
+                var batch = customers.Skip(b * custBatchSize).Take(custBatchSize).ToList();
+                int fromIdx = b * custBatchSize + 1;
+                int toIdx = Math.Min((b + 1) * custBatchSize, customers.Count);
 
-                var (success, msg, resp) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, custPayload);
-                if (!success)
+                using (var prog = new ProgressIndicator($"[{b + 1}/{totalCustBatches}] Uploading customers {fromIdx}–{toIdx} of {customers.Count}...", isQuiet))
                 {
-                    string failMsg = $"Customer upload failed: {msg}";
-                    Logger.LogFailure(config.LogFile, failMsg);
-                    prog.Fail(failMsg);
-                    return 1;
+                    var custPayload = new SyncPayload
+                    {
+                        Source = isMock ? "qb_mock_sync" : "qb_desktop_sync",
+                        Timestamp = DateTime.UtcNow.ToString("o"),
+                        Customers = batch,
+                        Invoices = new List<InvoiceRecord>(),
+                        CreditMemos = new List<CreditMemoRecord>(),
+                        Payments = new List<PaymentRecord>()
+                    };
+
+                    var (success, msg, resp) = await apiClient.PostSyncDataAsync(config.ServerUrl, config.ApiKey, custPayload);
+                    if (!success)
+                    {
+                        string failMsg = $"Customer batch {b + 1}/{totalCustBatches} failed: {msg}";
+                        Logger.LogFailure(config.LogFile, failMsg);
+                        prog.Fail(failMsg);
+                        return 1;
+                    }
+                    totalCustomersImported += resp?.ImportedCustomers ?? batch.Count;
+                    lastServerTimestamp = resp?.SyncTimestamp ?? "";
+                    prog.Complete($"Customers {fromIdx}–{toIdx} ({batch.Count} profiles) [OK]");
                 }
-                totalCustomersImported = resp?.ImportedCustomers ?? customers.Count;
-                lastServerTimestamp = resp?.SyncTimestamp ?? "";
-                prog.Complete($"Transferred {customers.Count} customer accounts [OK]");
             }
         }
 
-        // 2. Upload Invoices in Batches (Phase 2: chunked by batch_size to prevent HTTP 400 payload limits)
+        // 2. Upload Invoices in Batches (Phase 2: chunked by invBatchSize <= 30 to prevent HTTP 400 payload limits)
         if (invoices.Count > 0)
         {
-            int totalBatches = (int)Math.Ceiling((double)invoices.Count / batchSize);
+            int totalBatches = (int)Math.Ceiling((double)invoices.Count / invBatchSize);
             for (int b = 0; b < totalBatches; b++)
             {
-                var batch = invoices.Skip(b * batchSize).Take(batchSize).ToList();
-                int fromIdx = b * batchSize + 1;
-                int toIdx = Math.Min((b + 1) * batchSize, invoices.Count);
+                var batch = invoices.Skip(b * invBatchSize).Take(invBatchSize).ToList();
+                int fromIdx = b * invBatchSize + 1;
+                int toIdx = Math.Min((b + 1) * invBatchSize, invoices.Count);
 
                 using (var prog = new ProgressIndicator($"[{b + 1}/{totalBatches}] Uploading invoices {fromIdx}–{toIdx} of {invoices.Count}...", isQuiet))
                 {
@@ -773,15 +785,15 @@ class Program
             }
         }
 
-        // 3. Upload Credit Memos in Batches (Phase 3: chunked by batch_size)
+        // 3. Upload Credit Memos in Batches (Phase 3: chunked by cmBatchSize)
         if (creditMemos.Count > 0)
         {
-            int totalBatches = (int)Math.Ceiling((double)creditMemos.Count / batchSize);
+            int totalBatches = (int)Math.Ceiling((double)creditMemos.Count / cmBatchSize);
             for (int b = 0; b < totalBatches; b++)
             {
-                var batch = creditMemos.Skip(b * batchSize).Take(batchSize).ToList();
-                int fromIdx = b * batchSize + 1;
-                int toIdx = Math.Min((b + 1) * batchSize, creditMemos.Count);
+                var batch = creditMemos.Skip(b * cmBatchSize).Take(cmBatchSize).ToList();
+                int fromIdx = b * cmBatchSize + 1;
+                int toIdx = Math.Min((b + 1) * cmBatchSize, creditMemos.Count);
 
                 using (var prog = new ProgressIndicator($"[{b + 1}/{totalBatches}] Uploading credit memos {fromIdx}–{toIdx} of {creditMemos.Count}...", isQuiet))
                 {
@@ -810,15 +822,15 @@ class Program
             }
         }
 
-        // 4. Upload Payments in Batches (Phase 4: chunked by batch_size)
+        // 4. Upload Payments in Batches (Phase 4: chunked by payBatchSize)
         if (payments.Count > 0)
         {
-            int totalBatches = (int)Math.Ceiling((double)payments.Count / batchSize);
+            int totalBatches = (int)Math.Ceiling((double)payments.Count / payBatchSize);
             for (int b = 0; b < totalBatches; b++)
             {
-                var batch = payments.Skip(b * batchSize).Take(batchSize).ToList();
-                int fromIdx = b * batchSize + 1;
-                int toIdx = Math.Min((b + 1) * batchSize, payments.Count);
+                var batch = payments.Skip(b * payBatchSize).Take(payBatchSize).ToList();
+                int fromIdx = b * payBatchSize + 1;
+                int toIdx = Math.Min((b + 1) * payBatchSize, payments.Count);
 
                 using (var prog = new ProgressIndicator($"[{b + 1}/{totalBatches}] Uploading payments {fromIdx}–{toIdx} of {payments.Count}...", isQuiet))
                 {
