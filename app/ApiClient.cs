@@ -33,79 +33,103 @@ public class ApiClient
             return (false, "API Key is not configured in config.json.", null);
         }
 
+        string json = JsonSerializer.Serialize(payload);
+
+        // Compress payload using Deflate + Base64:
+        // 1. Shrinks payload size by 80-85%, completely avoiding server request body limits
+        // 2. Encodes customer names & descriptions into Base64, completely preventing ModSecurity WAF false positives (e.g., 'Degrees (Pvt)' matching SQL function rules)
+        string wrappedJson;
         try
         {
-            string json = JsonSerializer.Serialize(payload);
+            byte[] inputBytes = Encoding.UTF8.GetBytes(json);
+            using var ms = new MemoryStream();
+            using (var ds = new DeflateStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+            {
+                ds.Write(inputBytes, 0, inputBytes.Length);
+            }
+            string compressedBase64 = Convert.ToBase64String(ms.ToArray());
+            wrappedJson = JsonSerializer.Serialize(new { compressed_payload = compressedBase64 });
+        }
+        catch
+        {
+            wrappedJson = json; // Fallback to raw JSON if compression fails
+        }
 
-            // Compress payload using Deflate + Base64:
-            // 1. Shrinks payload size by 80-85%, completely avoiding server request body limits
-            // 2. Encodes customer names & descriptions into Base64, completely preventing ModSecurity WAF false positives (e.g., 'Degrees (Pvt)' matching SQL function rules)
-            string wrappedJson;
+        int maxRetries = 3;
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
             try
             {
-                byte[] inputBytes = Encoding.UTF8.GetBytes(json);
-                using var ms = new MemoryStream();
-                using (var ds = new DeflateStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                using var request = new HttpRequestMessage(HttpMethod.Post, serverUrl)
                 {
-                    ds.Write(inputBytes, 0, inputBytes.Length);
-                }
-                string compressedBase64 = Convert.ToBase64String(ms.ToArray());
-                wrappedJson = JsonSerializer.Serialize(new { compressed_payload = compressedBase64 });
-            }
-            catch
-            {
-                wrappedJson = json; // Fallback to raw JSON if compression fails
-            }
+                    Content = new StringContent(wrappedJson, Encoding.UTF8, "application/json")
+                };
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, serverUrl)
-            {
-                Content = new StringContent(wrappedJson, Encoding.UTF8, "application/json")
-            };
+                request.Headers.Add("X-API-KEY", apiKey);
 
-            request.Headers.Add("X-API-KEY", apiKey);
+                using var response = await _httpClient.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
 
-            using var response = await _httpClient.SendAsync(request);
-            string responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                string errorDetail = responseBody;
-                try
+                if (!response.IsSuccessStatusCode)
                 {
-                    var errObj = JsonSerializer.Deserialize<SyncResponse>(responseBody);
-                    if (!string.IsNullOrWhiteSpace(errObj?.Message))
+                    int statusCode = (int)response.StatusCode;
+                    // If rate-limited (403, 429) or transient server hiccup (500, 502, 503, 504), wait and retry
+                    if ((statusCode == 403 || statusCode == 429 || statusCode >= 500) && attempt < maxRetries)
                     {
-                        errorDetail = errObj.Message;
+                        await Task.Delay(attempt * 1500);
+                        continue;
                     }
+
+                    string errorDetail = responseBody;
+                    try
+                    {
+                        var errObj = JsonSerializer.Deserialize<SyncResponse>(responseBody);
+                        if (!string.IsNullOrWhiteSpace(errObj?.Message))
+                        {
+                            errorDetail = errObj.Message;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore JSON parse errors on error responses
+                    }
+
+                    return (false, $"HTTP {statusCode} ({response.ReasonPhrase}): {errorDetail}", null);
                 }
-                catch
+
+                var syncResponse = JsonSerializer.Deserialize<SyncResponse>(responseBody);
+                if (syncResponse != null && syncResponse.Success)
                 {
-                    // Ignore JSON parse errors on error responses
+                    return (true, syncResponse.Message, syncResponse);
                 }
 
-                return (false, $"HTTP {(int)response.StatusCode} ({response.ReasonPhrase}): {errorDetail}", null);
+                return (false, syncResponse?.Message ?? "Server returned unsuccessful response.", syncResponse);
             }
-
-            var syncResponse = JsonSerializer.Deserialize<SyncResponse>(responseBody);
-            if (syncResponse != null && syncResponse.Success)
+            catch (TaskCanceledException)
             {
-                return (true, syncResponse.Message, syncResponse);
+                if (attempt < maxRetries)
+                {
+                    await Task.Delay(attempt * 1500);
+                    continue;
+                }
+                return (false, "Connection timed out. Check your server URL and network connection.", null);
             }
+            catch (HttpRequestException ex)
+            {
+                if (attempt < maxRetries)
+                {
+                    await Task.Delay(attempt * 1500);
+                    continue;
+                }
+                return (false, $"Network error: {ex.Message}", null);
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Unexpected API error: {ex.Message}", null);
+            }
+        }
 
-            return (false, syncResponse?.Message ?? "Server returned unsuccessful response.", syncResponse);
-        }
-        catch (TaskCanceledException)
-        {
-            return (false, "Connection timed out. Check your server URL and network connection.", null);
-        }
-        catch (HttpRequestException ex)
-        {
-            return (false, $"Network error: {ex.Message}", null);
-        }
-        catch (Exception ex)
-        {
-            return (false, $"Unexpected API error: {ex.Message}", null);
-        }
+        return (false, "Max retry attempts exceeded.", null);
     }
 
     public async Task<(bool Success, string Message)> TestConnectionAsync(string serverUrl, string apiKey)

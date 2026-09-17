@@ -696,11 +696,11 @@ class Program
             return 0;
         }
 
-        // Safe chunk batch sizes (strictly capped to ensure payloads remain < 25 KB to comply with web server & proxy limits)
-        int invBatchSize = config.BatchSize > 0 ? Math.Min(config.BatchSize, 30) : 25;
+        // Optimal batch sizes (payloads are Deflate-compressed down to 85%, staying safely under 5-10 KB per request)
+        int invBatchSize = config.BatchSize > 0 ? Math.Min(config.BatchSize, 100) : 75;
         int custBatchSize = 25;
-        int cmBatchSize = 25;
-        int payBatchSize = 50;
+        int cmBatchSize = 50;
+        int payBatchSize = 75;
         var apiClient = new ApiClient();
 
         int totalInvoicesImported = 0;
@@ -744,10 +744,11 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Customers {fromIdx}–{toIdx} ({batch.Count} profiles) [OK]");
                 }
+                await Task.Delay(60);
             }
         }
 
-        // 2. Upload Invoices in Batches (Phase 2: chunked by invBatchSize <= 30 to prevent HTTP 400 payload limits)
+        // 2. Upload Invoices in Batches (Phase 2: chunked with Deflate compression & gentle pacing)
         if (invoices.Count > 0)
         {
             int totalBatches = (int)Math.Ceiling((double)invoices.Count / invBatchSize);
@@ -782,6 +783,7 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Invoices {fromIdx}–{toIdx} ({batch.Count} lines) [OK]");
                 }
+                await Task.Delay(60);
             }
         }
 
@@ -819,6 +821,7 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Credit Memos {fromIdx}–{toIdx} ({batch.Count} lines) [OK]");
                 }
+                await Task.Delay(60);
             }
         }
 
@@ -856,6 +859,7 @@ class Program
                     lastServerTimestamp = resp?.SyncTimestamp ?? "";
                     prog.Complete($"Payments {fromIdx}–{toIdx} ({batch.Count} records) [OK]");
                 }
+                await Task.Delay(60);
             }
         }
 
