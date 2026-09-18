@@ -1781,7 +1781,7 @@ class Reports {
 
         $totalCount = (int)($summaryData['total_invoices'] ?? 0);
         $page = max(1, (int)$page);
-        $limit = max(10, min(200, (int)$limit));
+        $limit = ($limit === 'all' || (int)$limit >= 999999 || (int)$limit <= 0) ? 999999 : max(10, min(500, (int)$limit));
         $offset = ($page - 1) * $limit;
         $totalPages = max(1, (int)ceil($totalCount / $limit));
 
@@ -3471,7 +3471,7 @@ class Reports {
      */
     public function lookupWarrantySerial($query = '', $statusFilter = 'all', $limit = 50) {
         $cleanQuery = trim($query);
-        $cleanLimit = max(1, min(100, (int)$limit));
+        $cleanLimit = ($limit === 'all' || (int)$limit >= 999999) ? 999999 : max(1, min(100, (int)$limit));
         
         $params = [];
         $whereConditions = ["ha.serial_number IS NOT NULL AND ha.serial_number != '' AND ha.serial_number != 'UNASSIGNED'"];
@@ -3934,7 +3934,7 @@ class Reports {
         // Pagination
         $totalCustomers = count($customers);
         $page = max(1, (int)$page);
-        $limit = max(10, min(100, (int)$limit));
+        $limit = ($limit === 'all' || (int)$limit >= 999999 || (int)$limit <= 0) ? 999999 : max(10, min(500, (int)$limit));
         $totalPages = max(1, (int)ceil($totalCustomers / $limit));
         $offset = ($page - 1) * $limit;
         

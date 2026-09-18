@@ -11,6 +11,18 @@ $auth = new Auth($db);
 $auth->requireLogin();
 $reports = new Reports($db);
 
+if (!function_exists('getReportPaginationParams')) {
+    /**
+     * Helper to resolve pagination parameters for business reports
+     */
+    function getReportPaginationParams($defaultLimit = 25) {
+        $isAll = (isset($_GET['limit']) && $_GET['limit'] === 'all') || !empty($_GET['show_all']);
+        $limit = $isAll ? 999999 : (isset($_GET['limit']) && is_numeric($_GET['limit']) ? max(10, min(500, (int)$_GET['limit'])) : $defaultLimit);
+        $p = $isAll ? 1 : max(1, (int)($_GET['p'] ?? 1));
+        return [$p, $limit, $isAll];
+    }
+}
+
 // AJAX Handler for Customer Details
 if (isset($_GET['ajax_customer_history'])) {
     while (ob_get_level()) { ob_end_clean(); }
@@ -471,8 +483,7 @@ if ($type === 'matrix') {
             $status = $_GET['status'] ?? 'all';
             $search = $_GET['search'] ?? '';
             $sort = $_GET['sort'] ?? 'invoice_date_desc';
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $invoiceFilters = [
                 'year' => $year,
                 'month' => $month,
@@ -491,8 +502,7 @@ if ($type === 'matrix') {
             $reportTitle = 'Invoice Summary & Line-Item Audit';
             break;
         case 'ltv':
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $search = $_GET['search'] ?? '';
             $tier = $_GET['tier'] ?? 'all';
             $sort = $_GET['sort'] ?? 'ltv_desc';
@@ -511,8 +521,7 @@ if ($type === 'matrix') {
             $reportTitle = 'Customer Lifetime Value (LTV) & Loyalty Matrix';
             break;
         case 'churn':
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $search = $_GET['search'] ?? '';
             $risk = $_GET['risk'] ?? 'all';
             $churnFilters = [
@@ -528,8 +537,7 @@ if ($type === 'matrix') {
             $reportTitle = 'Account Churn & Reactivation Pipeline';
             break;
         case 'eol':
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $search = $_GET['search'] ?? '';
             $status = $_GET['status'] ?? 'all';
             $eolFilters = [
@@ -547,8 +555,7 @@ if ($type === 'matrix') {
         case 'contracts':
         case 'expiring_contracts':
             $type = 'contracts';
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $search = $_GET['search'] ?? '';
             $status = $_GET['status'] ?? 'all';
             $range = $_GET['range'] ?? 'pm_90d';
@@ -573,8 +580,7 @@ if ($type === 'matrix') {
             $reportTitle = 'Time-Based Expiring Contracts & Invoices';
             break;
         case 'rental_roi':
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $search = $_GET['search'] ?? '';
             $status = $_GET['status'] ?? 'all';
             $rentalFilters = [
@@ -628,8 +634,7 @@ if ($type === 'matrix') {
             $reportTitle = 'Working Capital & DSO Collection Velocity';
             break;
         case 'tax_audit':
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $taxResult = $reports->getTaxAuditReport($year, $month, $p, $limit);
             $taxData = $taxResult['rows'];
             $taxTotal = $taxResult['total'];
@@ -688,8 +693,7 @@ if ($type === 'matrix') {
         case 'stock':
             $fsn = $_GET['fsn'] ?? 'all';
             $search = $_GET['search'] ?? '';
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 50;
+            list($p, $limit, $isAll) = getReportPaginationParams(50);
             $offset = ($p - 1) * $limit;
             $stockResult = $reports->getStockMovementAnalysis($brand, $fsn, $search, $limit, $offset);
             $stockData = $stockResult['items'];
@@ -719,8 +723,7 @@ if ($type === 'matrix') {
             $reportTitle = 'Hardware Warranty & Maintenance Contract Lookup';
             break;
         case 'unpaid_invoices':
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 25;
+            list($p, $limit, $isAll) = getReportPaginationParams(25);
             $search = $_GET['search'] ?? '';
             $agingBracket = $_GET['aging_bracket'] ?? 'all';
             $sort = $_GET['sort'] ?? 'customer_asc';
@@ -741,8 +744,7 @@ if ($type === 'matrix') {
         case 'renewals':
             $renewalStatus = $_GET['status'] ?? 'all';
             $renewalSearch = $_GET['search'] ?? '';
-            $p = max(1, (int)($_GET['p'] ?? 1));
-            $limit = 50;
+            list($p, $limit, $isAll) = getReportPaginationParams(50);
             $renewalFilters = [
                 'status' => $renewalStatus,
                 'search' => $renewalSearch
@@ -5663,8 +5665,25 @@ $summary = $reportData['summary'] ?? [];
         }
 
         function printCurrentReport() {
+            const printAllBtn = document.querySelector('.pg-btn-print-all-link');
+            if (printAllBtn && printAllBtn.href) {
+                const total = printAllBtn.getAttribute('data-total') || '';
+                const msg = total ? `Print all ${total} entries, or only the current page view?` : 'Print all entries across all pages, or only the current page view?';
+                if (confirm(`${msg}\n\n• Click OK to Print All (${total} entries)\n• Click Cancel to Print Current View only`)) {
+                    window.open(printAllBtn.href, '_blank');
+                    return;
+                }
+            }
             window.print();
         }
+
+        <?php if (!empty($_GET['print'])): ?>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                window.print();
+            }, 450);
+        });
+        <?php endif; ?>
 
         function exportReportToPdf() {
             const originalTitle = document.title;
