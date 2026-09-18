@@ -49,7 +49,7 @@ class Reports {
      * Dashboard Summary - Key metrics
      */
     public function getDashboardSummary($dateFrom = null, $dateTo = null) {
-        $where = "WHERE invoice_type = 'Invoice'";
+        $where = "WHERE invoice_type IN ('Invoice', 'Credit Memo')";
         $params = [];
 
         if ($dateFrom && $dateTo) {
@@ -59,19 +59,21 @@ class Reports {
 
         $summary = $this->db->fetch(
             "SELECT
-                COUNT(*) as total_invoices,
+                COUNT(DISTINCT CASE WHEN invoice_type = 'Invoice' THEN invoice_number END) as total_invoices,
                 COUNT(DISTINCT customer_name) as unique_customers,
                 SUM(base_value) as total_revenue_base,
                 SUM(vat_component) as total_vat,
                 SUM(total_amount) as total_amount,
-                AVG(total_amount) as avg_invoice_value,
-                MAX(total_amount) as largest_invoice,
-                MIN(total_amount) as smallest_invoice,
+                AVG(CASE WHEN invoice_type = 'Invoice' THEN total_amount END) as avg_invoice_value,
+                MAX(CASE WHEN invoice_type = 'Invoice' THEN total_amount END) as largest_invoice,
+                MIN(CASE WHEN invoice_type = 'Invoice' AND total_amount > 0 THEN total_amount END) as smallest_invoice,
                 (SELECT SUM(amount) FROM payments) as total_payments_received
             FROM sales $where", $params
         );
 
-        $summary['total_outstanding'] = ($summary['total_amount'] ?? 0) - ($summary['total_payments_received'] ?? 0);
+        $grossInvoiced = (float)($this->db->fetch("SELECT SUM(total_amount) as s FROM sales WHERE invoice_type = 'Invoice'")['s'] ?? 0);
+        $totalSettled = (float)($summary['total_payments_received'] ?? 0);
+        $summary['total_outstanding'] = max(0, $grossInvoiced - $totalSettled);
 
         // Format numbers
         foreach ($summary as $key => $value) {
@@ -156,7 +158,7 @@ class Reports {
         $sql = "
             SELECT 
                 strftime('%Y-%m', invoice_date) as ym,
-                COUNT(DISTINCT invoice_number) as invoice_count,
+                COUNT(DISTINCT CASE WHEN invoice_type = 'Invoice' THEN invoice_number END) as invoice_count,
                 COUNT(DISTINCT customer_name) as customer_count,
                 SUM(quantity) as total_units,
                 SUM(base_value) as net_base,
@@ -166,7 +168,7 @@ class Reports {
                 SUM(CASE WHEN (paid_date IS NULL OR paid_date = '') THEN total_amount ELSE 0 END) as outstanding_amount
             FROM sales
             WHERE strftime('%Y-%m', invoice_date) IN ($placeholders)
-              AND invoice_type = 'Invoice'
+              AND invoice_type IN ('Invoice', 'Credit Memo')
               $limitSql
             GROUP BY ym
         ";
@@ -183,7 +185,7 @@ class Reports {
             SELECT COUNT(DISTINCT customer_name) as total_unique_customers
             FROM sales
             WHERE strftime('%Y-%m', invoice_date) IN ($periodPlaceholders)
-              AND invoice_type = 'Invoice'
+              AND invoice_type IN ('Invoice', 'Credit Memo')
               $limitSql
         ", $monthKeys);
         $totalUniqueCustomers = (int)($distinctCustRow['total_unique_customers'] ?? 0);
@@ -479,7 +481,7 @@ class Reports {
         $monthSelectSql = implode(",\n                    ", $monthSqlParts);
 
         // Build WHERE clauses and parameters
-        $where = ["s.invoice_type = 'Invoice'"];
+        $where = ["s.invoice_type IN ('Invoice', 'Credit Memo')"];
         $placeholders = implode(',', array_fill(0, count($monthKeys), '?'));
         $where[] = "strftime('%Y-%m', s.invoice_date) IN ($placeholders)";
         $params = $monthKeys;
@@ -511,7 +513,7 @@ class Reports {
             SELECT 
                 s.customer_name,
                 COALESCE(p.customer_type, 'End Customer') as customer_type,
-                COUNT(DISTINCT s.invoice_number) as total_invoices,
+                COUNT(DISTINCT CASE WHEN s.invoice_type = 'Invoice' THEN s.invoice_number END) as total_invoices,
                 SUM(s.quantity) as total_units,
                 SUM(s.total_amount) as total_revenue,
                 SUM(s.base_value) as total_net_base,
@@ -641,7 +643,7 @@ class Reports {
         $monthSelectSql = implode(",\n                    ", $monthSqlParts);
 
         // Build WHERE clauses and parameters
-        $where = ["s.invoice_type = 'Invoice'"];
+        $where = ["s.invoice_type IN ('Invoice', 'Credit Memo')"];
         $placeholders = implode(',', array_fill(0, count($monthKeys), '?'));
         $where[] = "strftime('%Y-%m', s.invoice_date) IN ($placeholders)";
         $params = $monthKeys;
@@ -666,7 +668,7 @@ class Reports {
                 COALESCE(NULLIF(s.sales_rep_code, ''), 'UNASSIGNED') as rep_code,
                 COALESCE(m.rep_name, CASE WHEN s.sales_rep_code IS NOT NULL AND s.sales_rep_code != '' THEN 'Sales Rep ' || s.sales_rep_code ELSE 'Direct / Unassigned' END) as rep_name,
                 COUNT(DISTINCT s.customer_name) as customer_reach,
-                COUNT(DISTINCT s.invoice_number) as total_invoices,
+                COUNT(DISTINCT CASE WHEN s.invoice_type = 'Invoice' THEN s.invoice_number END) as total_invoices,
                 SUM(s.quantity) as total_units,
                 SUM(s.total_amount) as total_revenue,
                 SUM(s.base_value) as total_net_base,
@@ -819,7 +821,7 @@ class Reports {
                     $monthSql
                 FROM sales
                 LEFT JOIN customer_profiles p ON sales.customer_name = p.customer_name
-                WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
+                WHERE strftime('%Y', invoice_date) = ? AND invoice_type IN ('Invoice', 'Credit Memo')
                 $where
                 GROUP BY sales.customer_name
                 ORDER BY total_revenue DESC
@@ -849,7 +851,7 @@ class Reports {
                 SUM(total_amount) as category_revenue,
                 COUNT(*) as purchase_count
             FROM sales
-            WHERE strftime('%Y', invoice_date) = ? AND invoice_type = 'Invoice'
+            WHERE strftime('%Y', invoice_date) = ? AND invoice_type IN ('Invoice', 'Credit Memo')
             GROUP BY customer_name, 2
             ORDER BY customer_name ASC, category_revenue DESC
         ", [$year]);
@@ -872,7 +874,7 @@ class Reports {
                 vat_component,
                 total_amount
             FROM sales
-            WHERE invoice_type = 'Invoice' 
+            WHERE invoice_type IN ('Invoice', 'Credit Memo') 
               AND invoice_date BETWEEN ? AND ?
               AND TRIM(COALESCE(item_description, '')) != ''
               AND TRIM(COALESCE(item_description, '')) != 'Item'
@@ -901,12 +903,12 @@ class Reports {
         $data = $this->db->fetchAll(
             "SELECT
                 strftime('%m', invoice_date) as month,
-                COUNT(*) as invoice_count,
+                COUNT(DISTINCT CASE WHEN invoice_type = 'Invoice' THEN invoice_number END) as invoice_count,
                 SUM(base_value) as revenue_base,
                 SUM(vat_component) as vat_total,
                 SUM(total_amount) as total
             FROM sales
-            WHERE invoice_type = 'Invoice' AND strftime('%Y', invoice_date) = ?
+            WHERE invoice_type IN ('Invoice', 'Credit Memo') AND strftime('%Y', invoice_date) = ?
             GROUP BY strftime('%m', invoice_date)
             ORDER BY month ASC",
             [$year]
@@ -924,7 +926,7 @@ class Reports {
      * Top customers report
      */
     public function getTopCustomers($limit = 10, $dateFrom = null, $dateTo = null) {
-        $where = "WHERE invoice_type = 'Invoice'";
+        $where = "WHERE invoice_type IN ('Invoice', 'Credit Memo')";
         $params = [];
 
         if ($dateFrom && $dateTo) {
@@ -935,11 +937,11 @@ class Reports {
         $customers = $this->db->fetchAll(
             "SELECT
                 customer_name,
-                COUNT(*) as invoice_count,
+                COUNT(DISTINCT CASE WHEN invoice_type = 'Invoice' THEN invoice_number END) as invoice_count,
                 SUM(base_value) as revenue_base,
                 SUM(vat_component) as vat_total,
                 SUM(total_amount) as total_revenue,
-                AVG(total_amount) as avg_invoice,
+                AVG(CASE WHEN invoice_type = 'Invoice' THEN total_amount END) as avg_invoice,
                 MAX(invoice_date) as last_purchase
             FROM sales $where
             GROUP BY customer_name
@@ -994,7 +996,7 @@ class Reports {
      * Sales by product category
      */
     public function getSalesByCategory($dateFrom = null, $dateTo = null) {
-        $where = "WHERE invoice_type = 'Invoice'";
+        $where = "WHERE invoice_type IN ('Invoice', 'Credit Memo')";
         $params = [];
  
         if ($dateFrom && $dateTo) {
@@ -1022,7 +1024,7 @@ class Reports {
      * Customer concentration analysis
      */
     public function getCustomerConcentration($dateFrom = null, $dateTo = null) {
-        $where = "WHERE invoice_type = 'Invoice'";
+        $where = "WHERE invoice_type IN ('Invoice', 'Credit Memo')";
         $params = [];
 
         if ($dateFrom && $dateTo) {
@@ -1060,7 +1062,7 @@ class Reports {
      * VAT summary
      */
     public function getVATSummary($dateFrom = null, $dateTo = null) {
-        $where = "WHERE invoice_type = 'Invoice'";
+        $where = "WHERE invoice_type IN ('Invoice', 'Credit Memo')";
         $params = [];
 
         if ($dateFrom && $dateTo) {
@@ -1086,7 +1088,7 @@ class Reports {
      * Daily sales trend
      */
     public function getDailySalesTrend($dateFrom = null, $dateTo = null) {
-        $where = "WHERE invoice_type = 'Invoice'";
+        $where = "WHERE invoice_type IN ('Invoice', 'Credit Memo')";
         $params = [];
 
         if ($dateFrom && $dateTo) {
@@ -1097,7 +1099,7 @@ class Reports {
         return $this->db->fetchAll(
             "SELECT
                 invoice_date as date,
-                COUNT(*) as invoice_count,
+                COUNT(DISTINCT CASE WHEN invoice_type = 'Invoice' THEN invoice_number END) as invoice_count,
                 SUM(base_value) as revenue_base,
                 SUM(total_amount) as total_revenue
             FROM sales $where
@@ -1138,9 +1140,9 @@ class Reports {
         return $this->db->fetchAll("
             SELECT 
                 s.customer_name,
-                SUM(CASE WHEN s.invoice_type = 'Invoice' THEN s.total_amount ELSE -s.total_amount END) as total_invoiced,
+                SUM(CASE WHEN s.invoice_type = 'Invoice' THEN s.total_amount ELSE 0 END) as total_invoiced,
                 COALESCE(p.total_paid, 0) as total_paid,
-                (SUM(CASE WHEN s.invoice_type = 'Invoice' THEN s.total_amount ELSE -s.total_amount END) - COALESCE(p.total_paid, 0)) as balance,
+                (SUM(CASE WHEN s.invoice_type = 'Invoice' THEN s.total_amount ELSE 0 END) - COALESCE(p.total_paid, 0)) as balance,
                 AVG(s.days_to_pay) as avg_days_to_pay,
                 COUNT(s.days_to_pay) as paid_invoices_count
             FROM sales s
@@ -1470,7 +1472,7 @@ class Reports {
                 SUM(s.total_amount) as total_volume
             FROM sales s
             LEFT JOIN customer_profiles p ON s.customer_name = p.customer_name
-            WHERE s.invoice_type = 'Invoice'
+            WHERE s.invoice_type IN ('Invoice', 'Credit Memo')
             GROUP BY s.customer_name
             ORDER BY monetary DESC
         ";
@@ -1638,7 +1640,7 @@ class Reports {
      * Sales Rep Performance, Quota Contribution & DSO Health
      */
     public function getSalesRepPerformance($year = null) {
-        $where = "WHERE s.invoice_type = 'Invoice' AND s.sales_rep_code IS NOT NULL AND s.sales_rep_code != ''";
+        $where = "WHERE s.invoice_type IN ('Invoice', 'Credit Memo') AND s.sales_rep_code IS NOT NULL AND s.sales_rep_code != ''";
         $params = [];
 
         if (!empty($year)) {
@@ -1650,7 +1652,7 @@ class Reports {
             SELECT 
                 s.sales_rep_code,
                 COALESCE(m.rep_name, 'Sales Rep ' || s.sales_rep_code) as rep_name,
-                COUNT(DISTINCT s.invoice_number) as invoice_count,
+                COUNT(DISTINCT CASE WHEN s.invoice_type = 'Invoice' THEN s.invoice_number END) as invoice_count,
                 COUNT(*) as total_lines,
                 COUNT(DISTINCT s.customer_name) as client_count,
                 SUM(s.total_amount) as gross_revenue,

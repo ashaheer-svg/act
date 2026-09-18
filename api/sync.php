@@ -506,7 +506,7 @@ try {
 
             // Linked invoice settlement & payment insertion
             $appliedInvoice = trim($cm['applied_to_invoice'] ?? $cm['AppliedToInvoice'] ?? '');
-            $appliedAmount = floatval(str_replace(',', '', $cm['applied_amount'] ?? $cm['AppliedAmount'] ?? 0));
+            $appliedAmount = abs(floatval(str_replace(',', '', $cm['applied_amount'] ?? $cm['AppliedAmount'] ?? 0)));
 
             // Also check linked_txns array
             $linkedTxns = $cm['linked_txns'] ?? [];
@@ -514,7 +514,7 @@ try {
                 foreach ($linkedTxns as $lk) {
                     if (strcasecmp($lk['txn_type'] ?? '', 'Invoice') === 0 && !empty($lk['ref_number'])) {
                         $appliedInvoice = trim($lk['ref_number']);
-                        $appliedAmount = floatval($lk['amount'] ?? $appliedAmount);
+                        $appliedAmount = abs(floatval($lk['amount'] ?? $appliedAmount));
                         break;
                     }
                 }
@@ -531,24 +531,26 @@ try {
                         "INSERT INTO payments (customer_name, payment_date, reference_num, amount, invoice_num, payment_method, memo) VALUES (?, ?, ?, ?, ?, 'Credit Memo', ?)",
                         [$customer, $date, $num, $appliedAmount, $appliedInvoice, "Applied Credit Memo #$num"]
                     );
-                }
 
-                // Update invoice balance in sales
-                $db->execute(
-                    "UPDATE sales SET balance_remaining = MAX(0, balance_remaining - ?), applied_amount = applied_amount + ? WHERE invoice_number = ? AND customer_name = ?",
-                    [$appliedAmount, $appliedAmount, $appliedInvoice, $customer]
-                );
+                    // Idempotently recalculate invoice applied_amount and balance_remaining from payments
+                    $db->execute("
+                        UPDATE sales 
+                        SET applied_amount = (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payments.invoice_num = sales.invoice_number AND payments.customer_name = sales.customer_name),
+                            balance_remaining = MAX(0, total_amount - (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE payments.invoice_num = sales.invoice_number AND payments.customer_name = sales.customer_name))
+                        WHERE invoice_number = ? AND customer_name = ?
+                    ", [$appliedInvoice, $customer]);
 
-                // If fully settled, mark is_paid = 1
-                $invRow = $db->fetch(
-                    "SELECT balance_remaining, total_amount FROM sales WHERE invoice_number = ? AND customer_name = ? LIMIT 1",
-                    [$appliedInvoice, $customer]
-                );
-                if ($invRow && floatval($invRow['balance_remaining']) <= 0.01) {
-                    $db->execute(
-                        "UPDATE sales SET is_paid = 1, paid_date = ? WHERE invoice_number = ? AND customer_name = ?",
-                        [$date, $appliedInvoice, $customer]
+                    // If fully settled, mark is_paid = 1
+                    $invRow = $db->fetch(
+                        "SELECT balance_remaining FROM sales WHERE invoice_number = ? AND customer_name = ? LIMIT 1",
+                        [$appliedInvoice, $customer]
                     );
+                    if ($invRow && floatval($invRow['balance_remaining']) <= 0.01) {
+                        $db->execute(
+                            "UPDATE sales SET is_paid = 1, paid_date = ? WHERE invoice_number = ? AND customer_name = ?",
+                            [$date, $appliedInvoice, $customer]
+                        );
+                    }
                 }
             }
 
@@ -556,7 +558,7 @@ try {
             if (preg_match('/(?:S\/N|Serial|SN|Lot)[:\s]+([A-Z0-9\-_]{5,})/i', $itemDesc, $snMatch)) {
                 $returnedSerial = trim($snMatch[1]);
                 $db->execute(
-                    "UPDATE hardware_assets SET warranty_status = 'Credited / Replaced' WHERE serial_number LIKE ? AND customer_name = ?",
+                    "UPDATE hardware_assets SET warranty_status = 'RETURNED' WHERE serial_number LIKE ? AND customer_name = ?",
                     ['%' . $returnedSerial . '%', $customer]
                 );
             }

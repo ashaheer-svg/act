@@ -137,15 +137,38 @@ $subStats = $db->fetch("
     FROM software_subscriptions
 ");
 
+$netSummary = $db->fetch("
+    SELECT 
+        ROUND(SUM(base_value), 2) as net_base_revenue,
+        ROUND(SUM(vat_component), 2) as net_vat,
+        ROUND(SUM(total_amount), 2) as net_billed_revenue
+    FROM sales
+    WHERE invoice_type IN ('Invoice', 'Credit Memo')
+");
+
+require_once __DIR__ . '/../classes/Reports.php';
+$reports = new Reports($db);
+$dashSummary = $reports->getDashboardSummary();
+$rollingMatrix = $reports->getMonthlySalesMatrix('rolling_12m');
+
 $audit['database_summary'] = [
-    'invoices' => $stats,
+    'invoices_gross' => $stats,
     'credit_memos' => $cmStats,
+    'net_commercial_totals' => $netSummary,
     'payments' => $payStats,
     'customer_profiles' => $custStats,
     'operational_registries' => [
         'invoice_items_total' => $itemsCount,
         'hardware_assets' => $hwStats,
         'software_subscriptions' => $subStats
+    ],
+    'reports_net_verification' => [
+        'dashboard_total_amount' => $dashSummary['total_amount'] ?? 0,
+        'dashboard_net_base' => $dashSummary['total_revenue_base'] ?? 0,
+        'dashboard_vat' => $dashSummary['total_vat'] ?? 0,
+        'dashboard_outstanding' => $dashSummary['total_outstanding'] ?? 0,
+        'rolling_12m_matrix_gross_sales' => $rollingMatrix['totals']['gross_sales'] ?? 0,
+        'rolling_12m_matrix_net_base' => $rollingMatrix['totals']['net_base'] ?? 0
     ]
 ];
 
