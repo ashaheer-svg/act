@@ -171,8 +171,64 @@ $audit['sample_records'] = [
     'most_recent_invoices' => $recentInvoices
 ];
 
+// 5. Deep Credit Memo Application Audit
+$cmInSales = $db->fetch("
+    SELECT 
+        COUNT(*) as total_cm_rows,
+        COUNT(DISTINCT invoice_number) as unique_cm_numbers,
+        ROUND(SUM(base_value), 2) as sum_base_value,
+        ROUND(SUM(vat_component), 2) as sum_vat_component,
+        ROUND(SUM(total_amount), 2) as sum_total_amount
+    FROM sales
+    WHERE invoice_type = 'Credit Memo'
+");
+
+$cmInPayments = $db->fetch("
+    SELECT 
+        COUNT(*) as total_cm_payment_rows,
+        COUNT(DISTINCT reference_num) as unique_cm_refs,
+        COUNT(DISTINCT invoice_num) as unique_invoices_settled,
+        ROUND(SUM(amount), 2) as total_cm_settlement_amount
+    FROM payments
+    WHERE payment_method = 'Credit Memo'
+");
+
+$cmSalesSamples = $db->fetchAll("
+    SELECT invoice_number, invoice_date, customer_name, item_description, quantity, qb_amount, base_value, total_amount, memo
+    FROM sales
+    WHERE invoice_type = 'Credit Memo'
+    ORDER BY id ASC
+    LIMIT 5
+");
+
+$cmPaymentSamples = $db->fetchAll("
+    SELECT customer_name, payment_date, reference_num, amount, invoice_num, payment_method, memo
+    FROM payments
+    WHERE payment_method = 'Credit Memo'
+    ORDER BY id ASC
+    LIMIT 5
+");
+
+// Check if any invoices have been marked is_paid or received applied_amount from credit memos
+$invoicesWithCm = $db->fetchAll("
+    SELECT s.invoice_number, s.customer_name, s.total_amount, s.applied_amount, s.balance_remaining, s.is_paid, p.reference_num as cm_ref, p.amount as cm_paid
+    FROM sales s
+    JOIN payments p ON p.invoice_num = s.invoice_number AND p.payment_method = 'Credit Memo'
+    GROUP BY s.invoice_number
+    LIMIT 5
+");
+
+$audit['credit_memo_application_audit'] = [
+    'credit_memos_in_sales' => $cmInSales,
+    'credit_memos_in_payments' => $cmInPayments,
+    'credit_memo_sales_samples' => $cmSalesSamples,
+    'credit_memo_payment_samples' => $cmPaymentSamples,
+    'invoices_settled_by_credit_memos' => $invoicesWithCm
+];
+
 echo json_encode([
     'success' => true,
     'audit_timestamp' => date('c'),
     'audit' => $audit
 ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
