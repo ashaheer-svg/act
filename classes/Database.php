@@ -905,7 +905,6 @@ class Database {
                     ['Exempt 0% VAT', 0.00, null, null, 'AS008212', 'AS010020', 0, 'VAT exempt era (2021-2023)'],
                     ['18% Statutory VAT', 0.18, '2024-01-01', '2026-06-30', 'AS010021', 'AS011260', 1, '18% VAT Regime (Old Seq)'],
                     ['New Seq ASN 18% VAT', 0.18, '2026-07-01', null, 'ASN000001', 'ASN999999', 1, '18% VAT Regime (New Seq ASN)'],
-                    ['New Seq AS 18% VAT', 0.18, '2026-07-01', null, 'AS000001', 'AS000102', 1, '18% VAT Regime (New Seq AS)'],
                     ['Historical Date 12% VAT', 0.12, '2009-01-01', '2014-12-31', null, null, 1, 'Statutory 12% VAT date fallback (2009-2014)'],
                     ['Historical Date 0% VAT', 0.00, '2015-01-01', '2016-10-31', null, null, 0, 'Statutory exempt date fallback (2015-2016)'],
                     ['Historical Date 15% VAT', 0.15, '2016-11-01', '2019-11-30', null, null, 1, 'Statutory 15% VAT date fallback (2016-2019)'],
@@ -997,13 +996,6 @@ class Database {
                     $vat = 0.00;
                     $total = 0.00;
                     $treatment = 'VAT_EXEMPT';
-                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
-                    // Explicitly non-taxable / export invoice in QuickBooks
-                    $appliedRate = 0.00;
-                    $base = $rawAmt;
-                    $vat = 0.00;
-                    $total = $rawAmt;
-                    $treatment = 'VAT_EXEMPT';
                 } elseif ($salesTaxTotal > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
                     // Modern Era (2024-2026): VAT is specified in invoice footer (+18% added on pre-tax subtotal)
                     $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
@@ -1012,8 +1004,22 @@ class Database {
                     $vat = round($rawAmt * $effRate, 2);
                     $total = round($base + $vat, 2);
                     $treatment = 'PLUS_VAT';
+                } elseif ($date >= '2024-01-01') {
+                    // Modern Era (2024-2026): Any invoice without an explicit +VAT footer is statutory VAT-INCLUSIVE
+                    $appliedRate = ($rate > 0) ? $rate : 0.18;
+                    $total = $rawAmt;
+                    $base = round($rawAmt / (1 + $appliedRate), 2);
+                    $vat = round($total - $base, 2);
+                    $treatment = 'VAT_INCLUSIVE';
                 } elseif ($rate <= 0) {
                     // Statutory 0% VAT exempt period (e.g. 2015-2016, 2021-2023)
+                    $appliedRate = 0.00;
+                    $base = $rawAmt;
+                    $vat = 0.00;
+                    $total = $rawAmt;
+                    $treatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
+                    // Historical non-taxable / export invoice in QuickBooks prior to 2024
                     $appliedRate = 0.00;
                     $base = $rawAmt;
                     $vat = 0.00;
@@ -1057,7 +1063,13 @@ class Database {
                 $updated++;
             }
 
-            // 3. Synchronize invoice_items with the extracted VAT and PLUS_VAT treatment
+            // 3. Synchronize invoice_items with matching invoice VAT treatment
+            $treatmentRows = $this->fetchAll("SELECT DISTINCT invoice_number, vat_treatment FROM sales WHERE vat_treatment != 'VAT_EXEMPT'");
+            $salesTreatmentMap = [];
+            foreach ($treatmentRows as $tr) {
+                $salesTreatmentMap[trim($tr['invoice_number'])] = $tr['vat_treatment'];
+            }
+
             $stmtItem = $this->db->prepare("
                 UPDATE invoice_items 
                 SET base_value = ?, vat_component = ?, vat_treatment = ?
@@ -1068,8 +1080,6 @@ class Database {
                 $invNum = trim($item['invoice_number']);
                 $date = $item['invoice_date'];
                 $total = floatval($item['total_amount']);
-                $custName = trim($item['customer_name'] ?? '');
-                $isVatReg = $custVatMap[$custName] ?? 0;
 
                 $rule = $this->getTaxRuleForInvoice($invNum, $date);
                 $rate = $rule['rate'];
@@ -1079,14 +1089,10 @@ class Database {
                     $vat = 0.00;
                     $treatment = 'VAT_EXEMPT';
                 } else {
-                    $treatment = 'PLUS_VAT';
-                    if ($item['base_value'] > 0 && $item['vat_component'] > 0 && abs(($item['base_value'] + $item['vat_component']) - $total) < 0.05) {
-                        $base = $item['base_value'];
-                        $vat = $item['vat_component'];
-                    } else {
-                        $base = round($total / (1 + $rate), 2);
-                        $vat = round($total - $base, 2);
-                    }
+                    $invMode = $salesTreatmentMap[$invNum] ?? ($date >= '2024-01-01' ? 'VAT_INCLUSIVE' : 'PLUS_VAT');
+                    $treatment = $invMode;
+                    $base = round($total / (1 + $rate), 2);
+                    $vat = round($total - $base, 2);
                 }
                 $stmtItem->execute([$base, $vat, $treatment, $item['id']]);
             }

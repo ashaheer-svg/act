@@ -205,9 +205,11 @@
                                             <button type="button" class="cmd-btn" style="height: 20px; padding: 0 6px; font-size: 10px;" onclick="event.stopPropagation(); selectInvoiceRow('<?php echo htmlspecialchars($row['invoice_number']); ?>', this.closest('tr'))">
                                                 Audit
                                             </button>
+                                            <?php if (!isset($auth) || $auth->canAccessReport('edit_invoices')): ?>
                                             <a href="invoice_edit.php?inv=<?php echo urlencode($row['invoice_number']); ?>" class="cmd-btn" style="height: 20px; padding: 0 6px; font-size: 10px; color: var(--primary); text-decoration: none; display: inline-flex; align-items: center;" onclick="event.stopPropagation();" title="Edit Commercial Invoice">
                                                 <i class="icon-edit-3" style="font-size: 10px; margin-right: 2px;"></i> Edit
                                             </a>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>

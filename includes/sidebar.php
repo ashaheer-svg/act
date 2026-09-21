@@ -9,6 +9,7 @@
 $currentPage = basename($_SERVER['PHP_SELF']);
 $currentType = $_GET['type'] ?? '';
 $currentView = $_GET['view'] ?? 'overview';
+$currentTab = $_GET['tab'] ?? '';
 
 $isInvoiceReport = ($currentPage === 'reports.php' && in_array($currentType, ['invoices', '']));
 $isUnpaidReport = ($currentPage === 'reports.php' && $currentType === 'unpaid_invoices');
@@ -27,7 +28,7 @@ $archivesOpen = ($currentPage === 'reports.php' && in_array($currentType, $archi
              || in_array($currentPage, ['index.php', 'explorer.php', 'customers.php', 'customer_report.php']);
 
 // Settings group open state
-$settingsOpen = ($currentPage === 'settings.php');
+$settingsOpen = in_array($currentPage, ['settings.php', 'rbac.php']);
 
 // Permissions resolution
 if (!isset($auth) && isset($db)) {
@@ -345,14 +346,20 @@ $archivesCount = ($canDashboard ? 1 : 0) + ($canYearly ? 1 : 0) + ($canQuarterly
                 <i class="icon-chevron-right nav-group-arrow"></i>
             </button>
             <div class="sub-nav">
-                <a href="settings.php#system" class="sub-nav-item" data-title="System Setup">
+                <a href="settings.php?tab=system" class="sub-nav-item <?= ($currentPage === 'settings.php' && ($currentTab === 'system' || $currentTab === '')) ? 'active' : '' ?>" data-title="System Setup">
                     <i class="icon-sliders"></i>
                     <span>System Setup</span>
                 </a>
-                <a href="settings.php#team" class="sub-nav-item" data-title="Access & Team">
+                <a href="settings.php?tab=team" class="sub-nav-item <?= ($currentPage === 'settings.php' && $currentTab === 'team') ? 'active' : '' ?>" data-title="Access & Team">
                     <i class="icon-users"></i>
                     <span>Access & Team</span>
                 </a>
+                <?php if (!isset($auth) || $auth->isAdmin()): ?>
+                <a href="rbac.php" class="sub-nav-item <?= ($currentPage === 'rbac.php') ? 'active' : '' ?>" data-title="RBAC Permissions">
+                    <i class="icon-shield"></i>
+                    <span>RBAC Permissions</span>
+                </a>
+                <?php endif; ?>
             </div>
         </div>
     </nav>

@@ -3427,7 +3427,7 @@ class Reports {
                 COALESCE(
                     (SELECT s2.vat_treatment FROM sales s2 WHERE s2.invoice_number = s.invoice_number AND s2.vat_treatment != 'VAT_EXEMPT' LIMIT 1),
                     (SELECT ii.vat_treatment FROM invoice_items ii WHERE ii.invoice_number = s.invoice_number LIMIT 1),
-                    'PLUS_VAT'
+                    CASE WHEN SUM(s.vat_component) > 0 THEN 'PLUS_VAT' ELSE 'VAT_EXEMPT' END
                 ) as vat_treatment,
                 SUM(s.base_value) as taxable_base,
                 SUM(s.vat_component) as vat_18_component,

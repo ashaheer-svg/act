@@ -289,6 +289,11 @@ try {
             $rawDate = $inv['Date'] ?? $inv['invoice_date'] ?? date('Y-m-d');
             $date = date('Y-m-d', strtotime(str_replace('/', '-', $rawDate)));
 
+            // Normalization: 2026 AS000001 -> AS000102 was officially renumbered to ASN range
+            if ($date >= '2026-01-01' && preg_match('/^AS(0000\d{2}|00010[0-2])$/', $num)) {
+                $num = 'ASN' . substr($num, 2);
+            }
+
             // Check duplicate (including invoice_date so legacy and modern sequence resets like AS000001 do not collide)
             $existing = $db->fetch(
                 "SELECT id FROM sales WHERE invoice_number = ? AND invoice_date = ? AND customer_name = ? AND item_description = ? AND qb_amount = ? LIMIT 1",
@@ -325,13 +330,6 @@ try {
                 $total = 0.00;
                 $appliedRate = 0.00;
                 $vatTreatment = 'VAT_EXEMPT';
-            } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
-                // Non-taxable / exempt invoice explicitly designated in QuickBooks
-                $base = $cleanAmount;
-                $vat = 0.00;
-                $total = $cleanAmount;
-                $appliedRate = 0.00;
-                $vatTreatment = 'VAT_EXEMPT';
             } elseif ($salesTaxTotal > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
                 // Modern Era (2024-2026): VAT is specified in invoice footer (+18% added on pre-tax subtotal)
                 $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
@@ -340,8 +338,22 @@ try {
                 $total = round($base + $vat, 2);
                 $appliedRate = $effRate;
                 $vatTreatment = 'PLUS_VAT';
+            } elseif ($date >= '2024-01-01') {
+                // Modern Era (2024-2026): Any invoice without explicit +VAT footer is statutory VAT-INCLUSIVE
+                $appliedRate = ($rate > 0) ? $rate : 0.18;
+                $total = $cleanAmount;
+                $base = round($cleanAmount / (1 + $appliedRate), 2);
+                $vat = round($total - $base, 2);
+                $vatTreatment = 'VAT_INCLUSIVE';
             } elseif ($rate <= 0) {
                 // Statutory 0% VAT exempt era (e.g. 2015-2016, 2021-2023)
+                $base = $cleanAmount;
+                $vat = 0.00;
+                $total = $cleanAmount;
+                $appliedRate = 0.00;
+                $vatTreatment = 'VAT_EXEMPT';
+            } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
+                // Historical non-taxable / export invoice explicitly designated in QuickBooks prior to 2024
                 $base = $cleanAmount;
                 $vat = 0.00;
                 $total = $cleanAmount;
@@ -616,6 +628,16 @@ try {
             $ref = trim($pay['reference_num'] ?? $pay['RefNumber'] ?? '');
             $amount = floatval(str_replace(',', '', $pay['amount'] ?? $pay['Amount'] ?? 0));
             $invoiceNum = trim($pay['invoice_num'] ?? $pay['AppliedToInvoice'] ?? '');
+
+            // Normalization: 2026 AS000001 -> AS000102 renumbered to ASN range
+            if ($payDate >= '2026-01-01') {
+                if (preg_match('/^AS(0000\d{2}|00010[0-2])$/', $invoiceNum)) {
+                    $invoiceNum = 'ASN' . substr($invoiceNum, 2);
+                }
+                if (preg_match('/^AS(0000\d{2}|00010[0-2])$/', $ref)) {
+                    $ref = 'ASN' . substr($ref, 2);
+                }
+            }
 
             $payMethod = trim($pay['payment_method'] ?? '');
             $depositAccount = trim($pay['deposit_to_account'] ?? '');

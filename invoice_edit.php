@@ -7,7 +7,7 @@ require_once 'classes/Reports.php';
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
 $auth->requireLogin();
-$auth->requireReportAccess('invoices');
+$auth->requireReportAccess('edit_invoices');
 $user = $auth->getCurrentUser();
 $reports = new Reports($db);
 
@@ -15,6 +15,7 @@ $currency = $db->getSetting('currency_symbol', 'LKR ');
 
 // ── AJAX Save Handler ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $auth->requireReportAccess('edit_invoices');
     while (ob_get_level()) { ob_end_clean(); }
     header('Content-Type: application/json');
 

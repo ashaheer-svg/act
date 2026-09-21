@@ -40,6 +40,7 @@ $searchPlaceholder = $searchPlaceholder ?? 'Search...';
                 <a href="settings.php#security" class="dropdown-item"><i class="icon-lock"></i> Change Password</a>
                 <?php if ($auth->isAdmin()): ?>
                 <a href="settings.php#team" class="dropdown-item"><i class="icon-users"></i> Manage Users</a>
+                <a href="rbac.php" class="dropdown-item"><i class="icon-shield"></i> RBAC Permissions</a>
                 <?php endif; ?>
                 <div class="dropdown-divider"></div>
                 <form method="POST" action="logout.php" style="margin: 0;">

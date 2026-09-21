@@ -201,12 +201,18 @@ class DataImporter {
             $diff = round(($payDate - $invDate) / (60 * 60 * 24));
             if ($diff < 0) $diff = 0;
 
+            $invNum = $inv['num'];
+            $formattedInvDate = $this->formatDate($inv['date']);
+            if ($formattedInvDate >= '2026-01-01' && preg_match('/^AS(0000\d{2}|00010[0-2])$/', $invNum)) {
+                $invNum = 'ASN' . substr($invNum, 2);
+            }
+
             $sql = "UPDATE sales SET paid_date = ?, days_to_pay = ? 
                     WHERE invoice_number = ? AND customer_name = ?";
             $this->db->execute($sql, [
                 $this->formatDate($payDateStr),
                 $diff,
-                $inv['num'],
+                $invNum,
                 $customer
             ]);
             return true;
@@ -360,6 +366,11 @@ class DataImporter {
                 $cleanAmount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
                 $invoiceDate = $this->formatDate($record['Date'] ?? '');
 
+                // Normalization: 2026 AS000001 -> AS000102 was renumbered to ASN range
+                if ($invoiceDate >= '2026-01-01' && isset($record['Num']) && preg_match('/^AS(0000\d{2}|00010[0-2])$/', trim($record['Num']))) {
+                    $record['Num'] = 'ASN' . substr(trim($record['Num']), 2);
+                }
+
                 // Check if record already exists (Smarter check: include normalized item and amount)
                 $existingRecord = $this->db->fetch(
                     "SELECT * FROM sales WHERE invoice_number = ? AND invoice_date = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
@@ -423,12 +434,6 @@ class DataImporter {
                     $total = 0.00;
                     $appliedRate = 0.00;
                     $vatTreatment = 'VAT_EXEMPT';
-                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
-                    $base = $amount;
-                    $vat = 0.00;
-                    $total = $amount;
-                    $appliedRate = 0.00;
-                    $vatTreatment = 'VAT_EXEMPT';
                 } elseif ($salesTaxTotal > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
                     // Modern Era (2024-2026): VAT is specified in invoice footer (+18% on top of pre-tax subtotal)
                     $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
@@ -437,8 +442,22 @@ class DataImporter {
                     $total = round($base + $vat, 2);
                     $appliedRate = $effRate;
                     $vatTreatment = 'PLUS_VAT';
+                } elseif ($date >= '2024-01-01') {
+                    // Modern Era (2024-2026): Any invoice without explicit +VAT footer is statutory VAT-INCLUSIVE
+                    $appliedRate = ($rate > 0) ? $rate : 0.18;
+                    $total = $amount;
+                    $base = round($amount / (1 + $appliedRate), 2);
+                    $vat = round($total - $base, 2);
+                    $vatTreatment = 'VAT_INCLUSIVE';
                 } elseif ($rate <= 0) {
                     // Statutory 0% VAT exempt era (e.g. 2015-2016, 2021-2023)
+                    $base = $amount;
+                    $vat = 0.00;
+                    $total = $amount;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
+                    // Historical non-taxable / export invoice prior to 2024
                     $base = $amount;
                     $vat = 0.00;
                     $total = $amount;

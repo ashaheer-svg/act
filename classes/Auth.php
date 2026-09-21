@@ -9,6 +9,18 @@
 class Auth {
     private $db;
     private $sessionTimeout;
+    private $userPermsCache = [];
+
+    /**
+     * Invalidate internal permission cache for a specific user or all users
+     */
+    public function invalidatePermissionsCache($userId = null) {
+        if ($userId === null) {
+            $this->userPermsCache = [];
+        } else {
+            unset($this->userPermsCache[$userId]);
+        }
+    }
 
     public function __construct(Database $db) {
         $this->db = $db;
@@ -509,6 +521,16 @@ class Auth {
                 'url' => 'sync_app.php',
                 'default_roles' => ['admin', 'accounts']
             ],
+            'edit_invoices' => [
+                'key' => 'edit_invoices',
+                'name' => 'Invoice Line-Item Editor',
+                'category' => 'operations',
+                'category_label' => 'Operations & Tools',
+                'desc' => 'Modify invoice line items, unit costs, pricing, serials, and statutory VAT mode',
+                'icon' => 'icon-edit',
+                'url' => 'invoice_edit.php',
+                'default_roles' => ['admin', 'accounts']
+            ],
 
             // Archived Reports
             'dashboard' => [
@@ -642,16 +664,23 @@ class Auth {
             return true;
         }
 
-        $this->initReportPermissionsSchema();
+        // Populate in-memory permission map for this user if not cached
+        if (!isset($this->userPermsCache[$userId])) {
+            $this->initReportPermissionsSchema();
+            $rows = $this->db->fetchAll(
+                "SELECT report_key, is_allowed FROM report_permissions WHERE user_id = ?",
+                [$userId]
+            );
+            $cached = [];
+            foreach ($rows as $r) {
+                $cached[$r['report_key']] = ((int)$r['is_allowed']) === 1;
+            }
+            $this->userPermsCache[$userId] = $cached;
+        }
 
-        // Check explicit permission record
-        $perm = $this->db->fetch(
-            "SELECT is_allowed FROM report_permissions WHERE user_id = ? AND report_key = ?",
-            [$userId, $reportKey]
-        );
-
-        if ($perm !== false && $perm !== null) {
-            return ((int)$perm['is_allowed']) === 1;
+        // Check explicit permission record from in-memory cache
+        if (isset($this->userPermsCache[$userId][$reportKey])) {
+            return $this->userPermsCache[$userId][$reportKey];
         }
 
         // Fallback to default role preset
@@ -724,11 +753,13 @@ class Auth {
     public function setUserReportPermission($userId, $reportKey, $allowed) {
         $this->initReportPermissionsSchema();
         $isAllowed = $allowed ? 1 : 0;
-        return (bool)$this->db->execute("
+        $res = (bool)$this->db->execute("
             INSERT INTO report_permissions (user_id, report_key, is_allowed, updated_at)
             VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(user_id, report_key) DO UPDATE SET is_allowed = excluded.is_allowed, updated_at = CURRENT_TIMESTAMP
         ", [$userId, $reportKey, $isAllowed]);
+        $this->invalidatePermissionsCache($userId);
+        return $res;
     }
 
     /**
@@ -749,6 +780,7 @@ class Auth {
                 $stmt->execute([$userId, $k, $isAllowed]);
             }
             $this->db->getConnection()->commit();
+            $this->invalidatePermissionsCache($userId);
             return true;
         } catch (Exception $e) {
             $this->db->getConnection()->rollBack();
@@ -760,6 +792,13 @@ class Auth {
      * Apply a quick role-based permission preset to a user
      */
     public function applyUserPreset($userId, $preset) {
+        if ($preset === 'role_default') {
+            $this->initReportPermissionsSchema();
+            $this->db->execute("DELETE FROM report_permissions WHERE user_id = ?", [$userId]);
+            $this->invalidatePermissionsCache($userId);
+            return true;
+        }
+
         $catalog = self::getReportDefinitions();
         $allowedKeys = [];
 
@@ -771,7 +810,7 @@ class Auth {
                 $allowedKeys = [];
                 break;
             case 'finance':
-                $allowedKeys = ['invoices', 'unpaid_invoices', 'tax_audit', 'dso_trends', 'profit_entry', 'vat_review', 'customers', 'customer_report', 'aging', 'credit', 'upload'];
+                $allowedKeys = ['invoices', 'edit_invoices', 'unpaid_invoices', 'tax_audit', 'dso_trends', 'profit_entry', 'vat_review', 'customers', 'customer_report', 'aging', 'credit', 'upload'];
                 break;
             case 'sales':
                 $allowedKeys = ['invoices', 'warranties', 'monthly_overview', 'monthly_customer', 'monthly_rep', 'contracts', 'brand_growth', 'customers', 'customer_report', 'eol'];
@@ -784,6 +823,44 @@ class Auth {
         }
 
         return $this->setUserReportPermissionsBatch($userId, $allowedKeys);
+    }
+
+    /**
+     * Clone all permissions from source user to target user
+     */
+    public function cloneUserPermissions($sourceUserId, $targetUserId) {
+        $this->initReportPermissionsSchema();
+        $this->db->execute("DELETE FROM report_permissions WHERE user_id = ?", [$targetUserId]);
+        $sourceRows = $this->db->fetchAll("SELECT report_key, is_allowed FROM report_permissions WHERE user_id = ?", [$sourceUserId]);
+        if (!empty($sourceRows)) {
+            $stmt = $this->db->getConnection()->prepare("INSERT INTO report_permissions (user_id, report_key, is_allowed) VALUES (?, ?, ?)");
+            foreach ($sourceRows as $sr) {
+                $stmt->execute([$targetUserId, $sr['report_key'], $sr['is_allowed']]);
+            }
+        }
+        $this->invalidatePermissionsCache($targetUserId);
+        return true;
+    }
+
+    /**
+     * Toggle all permissions within a category for a user
+     */
+    public function toggleCategoryPermissions($userId, $categoryKey, $isAllowed) {
+        $catalog = self::getReportDefinitions();
+        $catReports = array_filter($catalog, fn($r) => $r['category'] === $categoryKey);
+        $allowedVal = $isAllowed ? 1 : 0;
+        foreach ($catReports as $k => $def) {
+            $this->setUserReportPermission($userId, $k, $allowedVal);
+        }
+        $this->invalidatePermissionsCache($userId);
+        return true;
+    }
+
+    /**
+     * Helper check if user can edit commercial invoices
+     */
+    public function canEditInvoices($userId = null) {
+        return $this->canAccessReport('edit_invoices', $userId);
     }
 }
 

@@ -96,7 +96,7 @@
                 <div id="unpaidInvoicesContainer">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 11.5px;">
                         <span style="font-weight: 700; color: var(--text-main);">
-                            Showing <strong><?php echo number_format($unpaidTotal); ?></strong> debtor accounts 
+                            Showing <strong><?php echo number_format($unpaidTotal ?? 0); ?></strong> debtor accounts 
                             (Page <?php echo $p; ?> of <?php echo $unpaidPages; ?>)
                             <?php if (!empty($search)): ?>
                                 matching "<strong><?php echo htmlspecialchars($search); ?></strong>"
@@ -157,7 +157,7 @@
                                     <!-- Outstanding Amount Pill -->
                                     <div style="background: #0f172a; color: #ffffff; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 4px;">
                                         <span style="color: #94a3b8; font-size: 10px; font-weight: 600;">DUE:</span>
-                                        <span><?php echo htmlspecialchars($currency) . number_format($cust['total_gross_due'], 0); ?></span>
+                                        <span><?php echo htmlspecialchars($currency) . number_format($cust['total_gross_due'] ?? 0, 0); ?></span>
                                     </div>
                                 </div>
                             </div>

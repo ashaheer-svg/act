@@ -280,13 +280,14 @@
                                                                 </span>
                                                             <?php endif; ?>
                                                         </td>
-                                                        <td style="padding: 8px 12px; text-align: center; white-space: nowrap;">
                                                             <button type="button" class="btn-view" onclick="openInvoiceDetails('<?php echo htmlspecialchars($inv['invoice_number']); ?>')" style="padding: 4px 8px; font-size: 11px;">
                                                                 <i class="icon-eye"></i> Audit
                                                             </button>
+                                                            <?php if (!isset($auth) || $auth->canAccessReport('edit_invoices')): ?>
                                                             <a href="invoice_edit.php?inv=<?php echo urlencode($inv['invoice_number']); ?>" class="btn-view" style="padding: 4px 8px; font-size: 11px; color: var(--primary); text-decoration: none;" title="Edit Invoice Details &amp; Warranty">
                                                                 <i class="icon-edit-3"></i> Edit
                                                             </a>
+                                                            <?php endif; ?>
                                                         </td>
                                                     </tr>
                                                     <?php endforeach; ?>
@@ -350,9 +351,11 @@
                                                                     <button type="button" class="btn-view" onclick="openInvoiceDetails('<?php echo htmlspecialchars($mc['invoice_number']); ?>')" style="padding: 4px 8px; font-size: 11px;">
                                                                         <i class="icon-eye"></i> <?php echo htmlspecialchars($mc['invoice_number']); ?>
                                                                     </button>
+                                                                    <?php if (!isset($auth) || $auth->canAccessReport('edit_invoices')): ?>
                                                                     <a href="invoice_edit.php?inv=<?php echo urlencode($mc['invoice_number']); ?>" class="btn-view" style="padding: 4px 8px; font-size: 11px; color: var(--primary); text-decoration: none;" title="Edit Contract Invoice">
                                                                         <i class="icon-edit-3"></i>
                                                                     </a>
+                                                                    <?php endif; ?>
                                                                 <?php else: ?>
                                                                     <span style="color: var(--text-muted);">—</span>
                                                                 <?php endif; ?>

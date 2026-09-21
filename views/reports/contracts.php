@@ -119,9 +119,11 @@
                                             <button type="button" class="cmd-btn" style="padding: 2px 6px;" onclick="openInvoiceDetails('<?php echo htmlspecialchars($row['invoice_number']); ?>')" title="Inspect Invoice Line Items &amp; Serials">
                                                 <i class="icon-file-text"></i>
                                             </button>
+                                            <?php if (!isset($auth) || $auth->canAccessReport('edit_invoices')): ?>
                                             <a href="invoice_edit.php?inv=<?php echo urlencode($row['invoice_number']); ?>" class="cmd-btn" style="padding: 2px 6px; color: var(--primary); text-decoration: none;" title="Edit Invoice Details &amp; Contract">
                                                 <i class="icon-edit-3"></i>
                                             </a>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
