@@ -34,7 +34,7 @@ for ($b = 145; $b <= 155; $b++) {
 
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     echo "Batch $b (" . count($batch) . " lines): HTTP $code\n";
     if ($code !== 200) {

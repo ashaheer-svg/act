@@ -9,6 +9,6 @@ curl_setopt($ch, CURLOPT_FTP_USE_EPSV, false);
 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 $res = curl_exec($ch);
 $err = curl_error($ch);
-curl_close($ch);
+unset($ch);
 fclose($fp);
 echo 'FTP Upload result: ' . ($res ? 'SUCCESS' : 'FAILED: ' . $err) . PHP_EOL;

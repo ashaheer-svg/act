@@ -38,7 +38,7 @@ function simulateApiRequest($method, $headers = [], $body = null) {
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
     
     return ['code' => $httpCode, 'body' => $response, 'json' => json_decode($response, true)];
 }

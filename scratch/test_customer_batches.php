@@ -71,7 +71,7 @@ function testBatch($count) {
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     echo "Count: $count | Size: " . round($payloadSize / 1024, 1) . " KB | HTTP: $httpCode | Body: " . substr(strip_tags($response), 0, 80) . "\n";
 }

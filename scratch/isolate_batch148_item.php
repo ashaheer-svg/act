@@ -36,7 +36,7 @@ for ($i = 0; $i < count($batch148); $i++) {
 
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     $invNum = $item['Num'] ?? $item['invoice_number'] ?? '';
     $cust = $item['Name'] ?? $item['customer_name'] ?? '';

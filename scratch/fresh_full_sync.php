@@ -42,7 +42,7 @@ function postSyncPayload($url, $key, $payload) {
         $res = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $dt = round(microtime(true) - $t0, 2);
-        curl_close($ch);
+        unset($ch);
 
         if ($code === 200) {
             $parsed = json_decode($res, true);

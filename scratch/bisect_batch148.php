@@ -27,7 +27,7 @@ function testSlice($start, $len, $label) {
 
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     echo "$label (len: $len): HTTP $code\n";
     if ($code !== 200) {

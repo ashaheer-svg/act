@@ -90,7 +90,7 @@ $start = microtime(true);
 $res = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $dt = round(microtime(true) - $start, 2);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Code: $httpCode (took {$dt}s)\n";
 echo "Response:\n";

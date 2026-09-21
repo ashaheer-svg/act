@@ -6,13 +6,13 @@ require_once __DIR__ . '/../classes/Reports.php';
 $db = new Database(DATABASE_PATH);
 $reports = new Reports($db);
 
-$invoices = $reports->getInvoicesReport([], 1, 20);
+$invoices = $reports->getInvoiceSummaryReport([], 1, 20);
 
-echo "First 15 invoices from getInvoicesReport():\n";
+echo "First 15 invoices from getInvoiceSummaryReport():\n";
 echo sprintf("%-12s | %-25s | %-12s | %-10s | %-12s | %-15s\n", "Inv #", "Customer", "Base", "VAT", "Gross", "VAT Treatment");
 echo str_repeat("-", 85) . "\n";
 
-foreach (array_slice($invoices['rows'], 0, 15) as $row) {
+foreach (array_slice($invoices['invoices'] ?? [], 0, 15) as $row) {
     echo sprintf(
         "%-12s | %-25s | %-12s | %-10s | %-12s | %-15s\n",
         $row['invoice_number'],

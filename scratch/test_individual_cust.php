@@ -27,7 +27,7 @@ for ($i = 0; $i < count($batch1); $i++) {
 
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     $name = $batch1[$i]['Name'] ?? $batch1[$i]['name'] ?? 'unknown';
     echo "[$i] $name (" . strlen($json) . " B) -> HTTP $code\n";

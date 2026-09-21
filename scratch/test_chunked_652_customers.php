@@ -59,7 +59,7 @@ for ($b = 0; $b < $totalBatches; $b++) {
     ]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     if ($code !== 200) {
         echo "[FAILED] Batch " . ($b + 1) . "/$totalBatches (Size: {$sizeKB} KB): HTTP $code - " . substr(strip_tags($resp), 0, 100) . "\n";

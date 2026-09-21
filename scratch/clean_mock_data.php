@@ -9,7 +9,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-API-KEY: ' . $config['api_key']]);
 
 $res = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Code: $code\n";
 $data = json_decode($res, true);

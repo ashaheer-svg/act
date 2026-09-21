@@ -22,7 +22,7 @@ foreach ($endpoints as $type => $label) {
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     $html = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
     
     $found = (strpos($html, $label) !== false);
     $size = strlen($html);

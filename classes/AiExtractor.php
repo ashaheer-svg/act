@@ -268,9 +268,7 @@ PROMPT;
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
-            if (function_exists('curl_close')) {
-                @curl_close($ch);
-            }
+            unset($ch);
 
             if ($httpCode === 429) {
                 // Rate limit hit - backoff and retry
@@ -336,9 +334,7 @@ PROMPT;
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        if (function_exists('curl_close')) {
-            @curl_close($ch);
-        }
+        unset($ch);
 
         if ($error) {
             throw new Exception("AI cURL error: " . $error);

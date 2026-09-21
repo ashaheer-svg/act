@@ -47,7 +47,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 $response = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlErr = curl_error($ch);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Code: $code" . PHP_EOL;
 echo "Curl Error: $curlErr" . PHP_EOL;

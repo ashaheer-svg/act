@@ -60,7 +60,7 @@ function testPayload($payload, $label) {
     ]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
     echo "$label: HTTP $code\n";
     if ($code !== 200) {
         echo "Response: " . substr(strip_tags($resp), 0, 100) . "\n";

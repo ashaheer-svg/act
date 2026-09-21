@@ -47,7 +47,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 
 $response = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Code: $code\n";
 echo "Response: \n" . substr($response, 0, 500) . "\n";

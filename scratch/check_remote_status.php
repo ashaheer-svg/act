@@ -5,5 +5,5 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-API-KEY: ' . $config['api_key']]);
 $res = curl_exec($ch);
-curl_close($ch);
+unset($ch);
 echo $res . PHP_EOL;

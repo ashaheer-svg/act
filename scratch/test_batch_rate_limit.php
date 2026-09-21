@@ -41,7 +41,7 @@ for ($b = 0; $b < 10; $b++) {
     $res = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $dt = round(microtime(true) - $t0, 2);
-    curl_close($ch);
+    unset($ch);
 
     echo "Batch " . ($b + 1) . ": HTTP $code ($dt s)\n";
     if ($code !== 200) {

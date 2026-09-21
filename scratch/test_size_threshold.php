@@ -16,7 +16,7 @@ function testRawBody($body, $desc) {
 
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     echo "$desc | Size: " . strlen($body) . " B | HTTP: $httpCode | Body: " . substr(strip_tags($response), 0, 80) . "\n";
 }

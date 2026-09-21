@@ -43,7 +43,7 @@ curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_TIMEOUT, 60);
 $resp = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Status: $httpCode\n";
 echo "Verification Audit Response:\n$resp\n";
@@ -56,7 +56,7 @@ curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch2, CURLOPT_FOLLOWLOCATION, false);
 curl_exec($ch2);
 $vrHttpCode = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
-curl_close($ch2);
+unset($ch2);
 echo "vat_review.php HTTP Status: $vrHttpCode (Expected: 302 redirect to login.php for unauthenticated request)\n";
 
 echo "\n========================================================\n";

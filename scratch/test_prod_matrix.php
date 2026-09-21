@@ -17,7 +17,7 @@ foreach ($urls as $name => $url) {
     $res = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $finalUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
-    curl_close($ch);
+    unset($ch);
 
     echo "[$name] Code: $code, Final URL: $finalUrl, Length: " . strlen($res) . "\n";
     if (stripos($res, 'Fatal error') !== false || stripos($res, 'Parse error') !== false || stripos($res, 'Warning:') !== false) {

@@ -30,7 +30,7 @@ curl_setopt_array($ch, [
 $resp = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $err = curl_error($ch);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Status: $httpCode\n";
 if ($err) {

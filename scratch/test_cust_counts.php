@@ -44,7 +44,7 @@ function testFullCustCount($count) {
     ]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    unset($ch);
 
     echo "Count: $count | Size: " . round($size / 1024, 1) . " KB | HTTP: $code | Resp: " . substr(strip_tags($resp), 0, 80) . "\n";
 }

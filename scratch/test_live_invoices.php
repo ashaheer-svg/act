@@ -13,7 +13,7 @@ curl_setopt_array($ch, [
     CURLOPT_SSL_VERIFYHOST => false,
 ]);
 $html = curl_exec($ch);
-curl_close($ch);
+unset($ch);
 
 preg_match('/name="csrf_token" value="([^"]+)"/', $html, $matches);
 $csrf = $matches[1] ?? '';
@@ -36,7 +36,7 @@ curl_setopt_array($ch, [
 ]);
 $loginResp = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 
 echo "Login status: HTTP $httpCode\n";
 
@@ -49,7 +49,7 @@ curl_setopt_array($ch, [
     CURLOPT_SSL_VERIFYHOST => false,
 ]);
 $page = curl_exec($ch);
-curl_close($ch);
+unset($ch);
 
 if (strpos($page, 'Commercial Invoices Summary') !== false) {
     echo "SUCCESS: Live production reports.php?type=invoices loaded with 'Commercial Invoices Summary'!\n";
@@ -66,7 +66,7 @@ curl_setopt_array($ch, [
     CURLOPT_SSL_VERIFYHOST => false,
 ]);
 $json = curl_exec($ch);
-curl_close($ch);
+unset($ch);
 
 $data = json_decode($json, true);
 if ($data && !empty($data['success'])) {

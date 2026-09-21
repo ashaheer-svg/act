@@ -42,7 +42,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 
 $resp = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Status: $code\n";
 echo "Response:\n" . substr(strip_tags($resp), 0, 300) . "\n";

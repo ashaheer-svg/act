@@ -31,7 +31,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 ]);
 $resp = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 
 echo "HTTP Code: $code\n";
 echo "Response: " . substr(strip_tags($resp), 0, 200) . "\n";

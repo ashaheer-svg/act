@@ -39,7 +39,7 @@ curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
 curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
+unset($ch);
 echo "sync_app.php HTTP Status: $code (Expected: 302 redirect to login.php for unauthenticated request)\n";
 
 echo "\nChecking remote SalesBISync.zip download availability...\n";
@@ -51,7 +51,7 @@ curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
 curl_exec($ch2);
 $zipCode = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
 $zipLen = curl_getinfo($ch2, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
-curl_close($ch2);
+unset($ch2);
 echo "SalesBISync.zip HTTP Status: $zipCode (Size: " . round($zipLen / (1024*1024), 1) . " MB)\n";
 
 echo "\nChecking remote SalesBISync.exe download availability...\n";
@@ -63,7 +63,7 @@ curl_setopt($ch3, CURLOPT_SSL_VERIFYPEER, false);
 curl_exec($ch3);
 $exeCode = curl_getinfo($ch3, CURLINFO_HTTP_CODE);
 $exeLen = curl_getinfo($ch3, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
-curl_close($ch3);
+unset($ch3);
 echo "SalesBISync.exe HTTP Status: $exeCode (Size: " . round($exeLen / (1024*1024), 1) . " MB)\n";
 
 echo "\n========================================================\n";
