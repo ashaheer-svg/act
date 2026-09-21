@@ -295,6 +295,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'success';
         }
     }
+
+    if ($action === 'toggle_report_permission') {
+        $auth->requireAdmin();
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        $reportKey = trim($_POST['report_key'] ?? '');
+        $allowed = !empty($_POST['is_allowed']) ? 1 : 0;
+        
+        $success = $auth->setUserReportPermission($targetUserId, $reportKey, $allowed);
+        $db->logActivity($user['id'], 'RBAC_PERMISSION_TOGGLED', "User ID $targetUserId permission for '$reportKey' set to $allowed");
+
+        if (!empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+            while (ob_get_level()) { ob_end_clean(); }
+            header('Content-Type: application/json');
+            echo json_encode(['success' => (bool)$success, 'user_id' => $targetUserId, 'report_key' => $reportKey, 'is_allowed' => $allowed]);
+            exit;
+        }
+        $message = "Report permission updated successfully.";
+        $messageType = 'success';
+    }
+
+    if ($action === 'apply_user_preset') {
+        $auth->requireAdmin();
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        $preset = trim($_POST['preset'] ?? '');
+
+        try {
+            $auth->applyUserPreset($targetUserId, $preset);
+            $newPerms = $auth->getUserReportPermissions($targetUserId);
+            $db->logActivity($user['id'], 'RBAC_PRESET_APPLIED', "Applied preset '$preset' to User ID $targetUserId");
+
+            if (!empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                while (ob_get_level()) { ob_end_clean(); }
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'user_id' => $targetUserId, 'preset' => $preset, 'permissions' => $newPerms]);
+                exit;
+            }
+            $message = "Preset '" . ucfirst($preset) . "' applied successfully.";
+            $messageType = 'success';
+        } catch (Exception $e) {
+            if (!empty($_POST['ajax']) || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                while (ob_get_level()) { ob_end_clean(); }
+                header('Content-Type: application/json', true, 400);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+            $message = "Error applying preset: " . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
 // Get current settings
@@ -309,6 +358,13 @@ $aiModel = $db->getSetting('ai_model', 'gemini-3.6-flash');
 $aiCustomEndpoint = $db->getSetting('ai_custom_endpoint', '');
 $salesReps = $db->getSalesReps();
 $systemUsers = $db->fetchAll("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC");
+$reportDefinitions = Auth::getReportDefinitions();
+$allUserPermissions = [];
+if ($auth->isAdmin()) {
+    foreach ($systemUsers as $su) {
+        $allUserPermissions[$su['id']] = $auth->getUserReportPermissions($su['id']);
+    }
+}
 $apiKey = $db->getSetting('api_secret_key');
 $lastQbSync = $db->getSetting('last_qb_sync', '');
 $lastQbSummary = $db->getSetting('last_qb_sync_summary', '');
@@ -343,6 +399,227 @@ $sortProgressPct = $totalInvoicesCount > 0 ? round(($sortedInvoicesCount / $tota
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="docs/lucide-font/lucide.css">
     <link rel="stylesheet" href="layout.css?v=1.0.2">
+    <style>
+        /* RBAC Matrix Grid Component */
+        .rbac-controls-card {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .category-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cat-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #ffffff;
+            color: #475569;
+            border: 1px solid var(--border-color);
+            transition: all 0.15s;
+        }
+        .cat-pill:hover { background: #f1f5f9; }
+        .cat-pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .rbac-search-box {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            width: 260px;
+            outline: none;
+            background: #ffffff;
+            transition: border-color 0.15s;
+        }
+        .rbac-search-box:focus { border-color: var(--primary); }
+        .matrix-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            background: #ffffff;
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        .matrix-table th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            font-weight: 700;
+            color: #475569;
+            border-bottom: 2px solid var(--border-color);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .matrix-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        .matrix-table tr:hover td { background: #f8fafc; }
+        .cat-header-row td {
+            background: #f1f5f9 !important;
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            padding: 10px 16px;
+            border-top: 1px solid #cbd5e1;
+        }
+        .report-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .report-name {
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .report-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .report-key-tag {
+            font-family: monospace;
+            font-size: 11px;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+        .user-col-header {
+            text-align: center;
+            min-width: 140px;
+        }
+        .user-col-cell {
+            text-align: center;
+        }
+        .user-role-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-top: 2px;
+        }
+        .role-admin { background: #fee2e2; color: #991b1b; }
+        .role-accounts { background: #e0e7ff; color: #3730a3; }
+        .role-viewer { background: #f1f5f9; color: #475569; }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+            margin: 0 auto;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: 0.2s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider {
+            background-color: #16a34a;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        .lock-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #16a34a;
+            background: #dcfce7;
+            padding: 3px 8px;
+            border-radius: 12px;
+        }
+        .preset-bar {
+            margin-top: 6px;
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-preset {
+            font-size: 10px;
+            padding: 2px 6px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #475569;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+        .btn-preset:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .rbac-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: var(--shadow-md);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -426,10 +703,14 @@ $sortProgressPct = $totalInvoicesCount > 0 ? round(($sortedInvoicesCount / $tota
                         </div>
 
                         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <a href="sync_app.php" class="btn" style="background: #16a34a; color: white; display: flex; align-items: center; gap: 8px;">
+                                <i class="icon-cloud-download"></i> Download Windows Sync App (.zip)
+                            </a>
+
                             <form method="POST" style="margin: 0;">
                                 <input type="hidden" name="action" value="download_sync_config">
                                 <button type="submit" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
-                                    <i class="icon-download"></i> Download config.json for Windows App
+                                    <i class="icon-download"></i> Download config.json Only
                                 </button>
                             </form>
 
@@ -495,13 +776,17 @@ $sortProgressPct = $totalInvoicesCount > 0 ? round(($sortedInvoicesCount / $tota
                                 <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px; margin-bottom: 0;">
                                     Matches invoices by <strong>Invoice Number Sequence</strong> (highest precision), falling back to <strong>Date Ranges</strong>. Automatically calculates base amounts and VAT components according to historical tax laws.
                                 </p>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <a href="vat_review.php" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px; text-decoration: none; border: 1px solid #cbd5e1; background: #ffffff; color: #1e293b; font-weight: 600; padding: 8px 14px; border-radius: 6px;">
+                                    <span>🔍</span> Review &amp; Switch Invoices
+                                </a>
+                                <form method="POST" style="margin: 0;" onsubmit="return confirm('Recalculate VAT across all historical sales records using these active sequence rules? This runs in < 1 second.');">
+                                    <input type="hidden" name="action" value="recalculate_historical_vat">
+                                    <button type="submit" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.2);">
+                                        <span>⚡</span> Recalculate Historical VAT
+                                    </button>
+                                </form>
                             </div>
-                            <form method="POST" style="margin: 0;" onsubmit="return confirm('Recalculate VAT across all historical sales records using these active sequence rules? This runs in < 1 second.');">
-                                <input type="hidden" name="action" value="recalculate_historical_vat">
-                                <button type="submit" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.2);">
-                                    <span>⚡</span> Recalculate Historical VAT
-                                </button>
-                            </form>
                         </div>
 
                         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; margin-bottom: 25px; font-size: 13px; color: #1e40af;">
@@ -999,12 +1284,137 @@ $sortProgressPct = $totalInvoicesCount > 0 ? round(($sortedInvoicesCount / $tota
                             </table>
                         </div>
                     </div>
+
+                    <!-- RBAC Report Permissions Matrix Card -->
+                    <div class="card" style="margin-top: 30px; border-left: 4px solid #7c3aed;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+                            <div>
+                                <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                                    <span>🛡️ Granular Report Permissions Matrix</span>
+                                    <span style="font-size: 11px; font-weight: 700; color: #6d28d9; background: #ede9fe; padding: 4px 10px; border-radius: 20px; text-transform: uppercase;">RBAC Engine</span>
+                                </h2>
+                                <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px; margin-bottom: 0;">
+                                    Assign specific reports, operational tools, and financial modules to individual team members. Changes take effect immediately.
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button type="button" class="btn" style="background: #ffffff; border: 1px solid var(--border-color); color: var(--text-main); font-size: 13px;" onclick="exportRbacMatrix()">
+                                    <span>📄 Export Matrix (CSV)</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filter & Search Controls -->
+                        <div class="rbac-controls-card">
+                            <div class="category-pills">
+                                <button type="button" class="cat-pill active" onclick="filterRbacCategory('all', this)">All Modules (<?php echo count($reportDefinitions); ?>)</button>
+                                <button type="button" class="cat-pill" onclick="filterRbacCategory('core', this)">Core Reports (6)</button>
+                                <button type="button" class="cat-pill" onclick="filterRbacCategory('analytics', this)">Analytics &amp; BI (11)</button>
+                                <button type="button" class="cat-pill" onclick="filterRbacCategory('operations', this)">Operations &amp; Tools (6)</button>
+                                <button type="button" class="cat-pill" onclick="filterRbacCategory('archived', this)">Archived Reports (9)</button>
+                            </div>
+                            <div>
+                                <input type="text" class="rbac-search-box" id="rbacSearchInput" onkeyup="filterRbacReports()" placeholder="🔍 Search reports or modules...">
+                            </div>
+                        </div>
+
+                        <!-- Permissions Grid Table -->
+                        <div class="matrix-table-wrap">
+                            <table class="matrix-table" id="rbacMatrixTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 38%;">Report / Module Name</th>
+                                        <?php foreach ($systemUsers as $su): 
+                                            $roleClass = $su['role'] === 'admin' ? 'role-admin' : ($su['role'] === 'accounts' ? 'role-accounts' : 'role-viewer');
+                                        ?>
+                                        <th class="user-col-header" data-username="<?php echo htmlspecialchars($su['username']); ?>">
+                                            <div style="font-weight: 700; color: var(--text-main);"><?php echo htmlspecialchars($su['username']); ?></div>
+                                            <span class="user-role-badge <?php echo $roleClass; ?>"><?php echo strtoupper($su['role']); ?></span>
+                                            <?php if ($su['role'] !== 'admin'): ?>
+                                            <div class="preset-bar">
+                                                <button type="button" class="btn-preset" title="Assign All Reports" onclick="applyRbacPreset(<?php echo $su['id']; ?>, 'all')">All</button>
+                                                <button type="button" class="btn-preset" title="Finance Preset" onclick="applyRbacPreset(<?php echo $su['id']; ?>, 'finance')">Finance</button>
+                                                <button type="button" class="btn-preset" title="Sales Preset" onclick="applyRbacPreset(<?php echo $su['id']; ?>, 'sales')">Sales</button>
+                                                <button type="button" class="btn-preset" title="Executive Preset" onclick="applyRbacPreset(<?php echo $su['id']; ?>, 'executive')">Exec</button>
+                                                <button type="button" class="btn-preset" title="Remove All" onclick="applyRbacPreset(<?php echo $su['id']; ?>, 'none')">None</button>
+                                            </div>
+                                            <?php else: ?>
+                                            <div style="margin-top: 6px;">
+                                                <span class="lock-indicator">✓ Superadmin</span>
+                                            </div>
+                                            <?php endif; ?>
+                                        </th>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    $categories = [
+                                        'core' => 'Core Business Reports',
+                                        'analytics' => 'Active Analytics & Intelligence',
+                                        'operations' => 'Operations & Financial Tools',
+                                        'archived' => 'Archived Reports & Legacy Modules'
+                                    ];
+
+                                    foreach ($categories as $catKey => $catTitle): 
+                                        $catReports = array_filter($reportDefinitions, function($r) use ($catKey) {
+                                            return $r['category'] === $catKey;
+                                        });
+                                        if (empty($catReports)) continue;
+                                    ?>
+                                    <tr class="cat-header-row" data-cat="<?php echo $catKey; ?>">
+                                        <td colspan="<?php echo count($systemUsers) + 1; ?>">
+                                            <?php echo htmlspecialchars($catTitle); ?> (<?php echo count($catReports); ?> Modules)
+                                        </td>
+                                    </tr>
+                                    <?php foreach ($catReports as $k => $def): ?>
+                                    <tr data-cat="<?php echo $catKey; ?>" data-name="<?php echo htmlspecialchars(strtolower($def['name'] . ' ' . $def['desc'])); ?>" data-key="<?php echo htmlspecialchars($k); ?>">
+                                        <td>
+                                            <div class="report-info">
+                                                <div class="report-name">
+                                                    <span><?php echo htmlspecialchars($def['name']); ?></span>
+                                                    <span class="report-key-tag"><?php echo htmlspecialchars($k); ?></span>
+                                                </div>
+                                                <div class="report-desc"><?php echo htmlspecialchars($def['desc']); ?></div>
+                                            </div>
+                                        </td>
+                                        <?php foreach ($systemUsers as $su): ?>
+                                        <td class="user-col-cell">
+                                            <?php if ($su['role'] === 'admin'): ?>
+                                                <span class="lock-indicator" title="Admins retain unrestricted access to all reports">✓ Full Access</span>
+                                            <?php else: 
+                                                $isAllowed = !empty($allUserPermissions[$su['id']][$k]);
+                                            ?>
+                                                <label class="toggle-switch">
+                                                    <input type="checkbox" 
+                                                           data-user-id="<?php echo $su['id']; ?>" 
+                                                           data-report-key="<?php echo htmlspecialchars($k); ?>" 
+                                                           <?php echo $isAllowed ? 'checked' : ''; ?> 
+                                                           onchange="toggleRbacPerm(<?php echo $su['id']; ?>, '<?php echo htmlspecialchars($k); ?>', this)">
+                                                    <span class="slider"></span>
+                                                </label>
+                                            <?php endif; ?>
+                                        </td>
+                                        <?php endforeach; ?>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                     <?php endif; ?>
 
                 </div>
                 <?php endif; ?>
             </div>
         </main>
+    </div>
+
+    <!-- Notification Toast Banner -->
+    <div class="rbac-toast" id="rbacToast">
+        <span id="rbacToastIcon">✓</span>
+        <span id="rbacToastMsg">Permissions updated successfully!</span>
     </div>
 
     <?php require_once 'includes/layout_js.php'; ?>
@@ -1031,13 +1441,169 @@ $sortProgressPct = $totalInvoicesCount > 0 ? round(($sortedInvoicesCount / $tota
         }
     }
 
+    // RBAC Grid Client-side Interactivity
+    function filterRbacCategory(cat, btn) {
+        document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        const rows = document.querySelectorAll('#rbacMatrixTable tbody tr');
+        rows.forEach(r => {
+            if (cat === 'all' || r.dataset.cat === cat) {
+                r.style.display = '';
+            } else {
+                r.style.display = 'none';
+            }
+        });
+    }
+
+    function filterRbacReports() {
+        const q = (document.getElementById('rbacSearchInput').value || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('#rbacMatrixTable tbody tr');
+        rows.forEach(r => {
+            if (r.classList.contains('cat-header-row')) {
+                r.style.display = q === '' ? '' : 'none';
+                return;
+            }
+            const text = ((r.dataset.name || '') + ' ' + (r.dataset.key || '')).toLowerCase();
+            r.style.display = (q === '' || text.includes(q)) ? '' : 'none';
+        });
+    }
+
+    function showRbacToast(msg, isSuccess = true) {
+        const toast = document.getElementById('rbacToast');
+        const icon = document.getElementById('rbacToastIcon');
+        const text = document.getElementById('rbacToastMsg');
+        if (!toast) return;
+
+        text.innerText = msg;
+        icon.innerText = isSuccess ? '✓' : '⚠️';
+        toast.style.background = isSuccess ? '#0f172a' : '#dc2626';
+        toast.style.display = 'flex';
+        
+        if (window._rbacToastTimeout) clearTimeout(window._rbacToastTimeout);
+        window._rbacToastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    }
+
+    function toggleRbacPerm(userId, reportKey, checkbox) {
+        const isAllowed = checkbox.checked ? 1 : 0;
+        checkbox.disabled = true;
+
+        const formData = new FormData();
+        formData.append('action', 'toggle_report_permission');
+        formData.append('user_id', userId);
+        formData.append('report_key', reportKey);
+        formData.append('is_allowed', isAllowed);
+        formData.append('ajax', '1');
+
+        fetch('settings.php', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            checkbox.disabled = false;
+            if (data && data.success) {
+                showRbacToast(`Permission '${reportKey}' ${isAllowed ? 'enabled' : 'disabled'}`);
+            } else {
+                checkbox.checked = !checkbox.checked;
+                showRbacToast(`Error: ${data.error || 'Failed to update'}`, false);
+            }
+        })
+        .catch(err => {
+            checkbox.disabled = false;
+            checkbox.checked = !checkbox.checked;
+            showRbacToast('Connection error updating permission', false);
+        });
+    }
+
+    function applyRbacPreset(userId, preset) {
+        const formData = new FormData();
+        formData.append('action', 'apply_user_preset');
+        formData.append('user_id', userId);
+        formData.append('preset', preset);
+        formData.append('ajax', '1');
+
+        fetch('settings.php', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.success && data.permissions) {
+                const checkboxes = document.querySelectorAll(`input[data-user-id="${userId}"]`);
+                checkboxes.forEach(cb => {
+                    const key = cb.getAttribute('data-report-key');
+                    if (data.permissions.hasOwnProperty(key)) {
+                        cb.checked = !!data.permissions[key];
+                    }
+                });
+                showRbacToast(`Applied '${preset.toUpperCase()}' preset successfully!`);
+            } else {
+                showRbacToast(`Error applying preset: ${data.error || 'Server error'}`, false);
+            }
+        })
+        .catch(err => {
+            showRbacToast('Connection error applying preset', false);
+        });
+    }
+
+    function exportRbacMatrix() {
+        const table = document.getElementById('rbacMatrixTable');
+        if (!table) return;
+
+        let csv = [];
+        // Header
+        const ths = table.querySelectorAll('thead th');
+        let headerRow = [];
+        ths.forEach(th => {
+            headerRow.push('"' + (th.dataset.username || th.innerText.split('\n')[0]).replace(/"/g, '""') + '"');
+        });
+        csv.push(headerRow.join(','));
+
+        // Body rows
+        const trs = table.querySelectorAll('tbody tr');
+        trs.forEach(tr => {
+            if (tr.classList.contains('cat-header-row')) {
+                csv.push('"' + tr.innerText.trim().replace(/"/g, '""') + '"');
+                return;
+            }
+            let row = [];
+            const key = tr.dataset.key || '';
+            const nameEl = tr.querySelector('.report-name span');
+            const reportName = nameEl ? nameEl.innerText : key;
+            row.push('"' + reportName.replace(/"/g, '""') + ' (' + key + ')"');
+
+            const cells = tr.querySelectorAll('td.user-col-cell');
+            cells.forEach(c => {
+                const lock = c.querySelector('.lock-indicator');
+                if (lock) {
+                    row.push('"Allowed (Superadmin)"');
+                } else {
+                    const cb = c.querySelector('input[type="checkbox"]');
+                    row.push(cb && cb.checked ? '"Allowed"' : '"Restricted"');
+                }
+            });
+            csv.push(row.join(','));
+        });
+
+        const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'rbac_permissions_matrix_' + new Date().toISOString().slice(0,10) + '.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     // Auto-select tab on load based on hash or last action
     window.addEventListener('DOMContentLoaded', () => {
         const hash = window.location.hash.replace('#', '');
         <?php 
         $lastAction = $_POST['action'] ?? '';
         $jumpTo = '';
-        if (strpos($lastAction, 'sales_rep') !== false || strpos($lastAction, 'user') !== false || strpos($lastAction, 'password') !== false) {
+        if (strpos($lastAction, 'sales_rep') !== false || strpos($lastAction, 'user') !== false || strpos($lastAction, 'password') !== false || strpos($lastAction, 'report_permission') !== false || strpos($lastAction, 'preset') !== false) {
             $jumpTo = 'team';
         }
         if (strpos($lastAction, 'tax_rule') !== false || $lastAction === 'update_settings' || $lastAction === 'reset_database' || $lastAction === 'force_sync' || $lastAction === 'update_limit') {

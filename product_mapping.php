@@ -11,7 +11,7 @@ require_once 'classes/Reports.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireLogin();
+$auth->requireReportAccess('product_mapping');
 $user = $auth->getCurrentUser();
 $reports = new Reports($db);
 

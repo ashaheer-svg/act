@@ -7,6 +7,7 @@ require_once 'classes/Reports.php';
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
 $auth->requireLogin();
+$auth->requireReportAccess('invoices');
 $user = $auth->getCurrentUser();
 $reports = new Reports($db);
 
@@ -20,6 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
 
     try {
+        if ($action === 'switch_invoice_vat_mode') {
+            $invoiceNumber = trim($_POST['invoice_number'] ?? '');
+            $targetMode = trim($_POST['target_mode'] ?? 'VAT_INCLUSIVE');
+            $res = $db->switchInvoiceVatMode($invoiceNumber, $targetMode);
+            echo json_encode($res);
+            exit;
+        }
+
         if ($action === 'save_invoice_full') {
             $payload = json_decode($_POST['payload'] ?? '{}', true);
             $invoiceNumber = trim($payload['invoice_number'] ?? '');
@@ -331,6 +340,35 @@ $title = "Edit Commercial Invoice: " . htmlspecialchars($inv);
                                 <i class="icon-clock"></i> Unpaid
                             </span>
                         <?php endif; ?>
+
+                        <?php 
+                        $currentVatTreatment = strtoupper(trim($header['vat_treatment'] ?? 'VAT_INCLUSIVE'));
+                        $appliedRatePct = !empty($header['applied_tax_rate']) ? (floatval($header['applied_tax_rate']) * 100) : 18;
+                        ?>
+                        <div style="display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; border-left: 1px solid var(--border-color); padding-left: 8px;">
+                            <?php if ($currentVatTreatment === 'VAT_INCLUSIVE'): ?>
+                                <span class="dense-badge" style="background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; font-size: 10px; font-weight: 700;" title="Invoice price includes VAT">
+                                    ⚡ VAT-Inclusive (<?= $appliedRatePct; ?>%)
+                                </span>
+                                <button type="button" class="cmd-btn" style="height: 22px; padding: 0 8px; font-size: 10.5px; color: #1e40af; border-color: #93c5fd; background: #eff6ff;" onclick="quickSwitchVat('PLUS_VAT')" title="Switch to calculate VAT on top of base (+<?= $appliedRatePct; ?>%)">
+                                    Switch to VAT+
+                                </button>
+                            <?php elseif ($currentVatTreatment === 'PLUS_VAT'): ?>
+                                <span class="dense-badge" style="background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 700;" title="VAT is charged on top of pre-tax subtotal">
+                                    ⚡ VAT+ Pre-Tax (<?= $appliedRatePct; ?>%)
+                                </span>
+                                <button type="button" class="cmd-btn" style="height: 22px; padding: 0 8px; font-size: 10.5px; color: #065f46; border-color: #a7f3d0; background: #ecfdf5;" onclick="quickSwitchVat('VAT_INCLUSIVE')" title="Switch so total amount includes VAT">
+                                    Switch to VAT-Inclusive
+                                </button>
+                            <?php else: ?>
+                                <span class="dense-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700;">
+                                    VAT-Exempt (0%)
+                                </span>
+                                <button type="button" class="cmd-btn" style="height: 22px; padding: 0 8px; font-size: 10.5px; color: #065f46; border-color: #a7f3d0; background: #ecfdf5;" onclick="quickSwitchVat('VAT_INCLUSIVE')">
+                                    Set VAT-Inclusive
+                                </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="cmd-right">
                         <button type="button" class="cmd-btn cmd-btn-primary" onclick="saveAllChanges()" id="btnSaveTop">
@@ -1131,6 +1169,34 @@ $title = "Edit Commercial Invoice: " . htmlspecialchars($inv);
             setTimeout(() => {
                 toast.classList.remove('active');
             }, 3000);
+        }
+
+        function quickSwitchVat(targetMode) {
+            const modeName = targetMode.replace('_', ' ');
+            if (!confirm('Switch invoice #' + INVOICE_NUMBER + ' to ' + modeName + '?\n\nLine items and invoice totals will be recalculated immediately.')) {
+                return;
+            }
+            const fd = new FormData();
+            fd.append('action', 'switch_invoice_vat_mode');
+            fd.append('invoice_number', INVOICE_NUMBER);
+            fd.append('target_mode', targetMode);
+            
+            fetch('invoice_edit.php?inv=' + encodeURIComponent(INVOICE_NUMBER), {
+                method: 'POST',
+                body: fd
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.success) {
+                    showToast('✓ Invoice switched to ' + modeName + ' successfully!');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    alert('Error: ' + (res.error || res.message || 'Failed to switch VAT mode'));
+                }
+            })
+            .catch(err => {
+                alert('Network error: ' + err.message);
+            });
         }
 
         // Ctrl+S / Cmd+S shortcut to save

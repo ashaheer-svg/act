@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RBAC Report Permissions Matrix | Active Solutions BI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --success: #16a34a;
+            --success-light: #f0fdf4;
+            --danger: #dc2626;
+            --danger-light: #fef2f2;
+            --warning: #d97706;
+            --warning-light: #fffbeb;
+            --radius-lg: 12px;
+            --radius-md: 8px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 24px 32px;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .title-group h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge-rbac {
+            font-size: 11px;
+            font-weight: 700;
+            background: #ede9fe;
+            color: #6d28d9;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .title-group p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .actions-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary {
+            background: white;
+            color: var(--text-main);
+            border-color: var(--border-color);
+        }
+        .btn-secondary:hover { background: #f1f5f9; }
+
+        /* Filter Controls */
+        .controls-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: var(--shadow-sm);
+        }
+        .category-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .cat-pill {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid var(--border-color);
+            transition: all 0.15s;
+        }
+        .cat-pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .search-box {
+            padding: 8px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            width: 260px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .search-box:focus { border-color: var(--primary); }
+
+        /* Grid Table */
+        .matrix-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        .matrix-table th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            font-weight: 700;
+            color: #475569;
+            border-bottom: 2px solid var(--border-color);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .matrix-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        .matrix-table tr:hover td {
+            background: #f8fafc;
+        }
+        .cat-header-row td {
+            background: #f1f5f9;
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            padding: 10px 16px;
+            border-top: 1px solid #cbd5e1;
+        }
+        .report-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .report-name {
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .report-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .report-key-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            background: #f1f5f9;
+            color: #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+        .user-col-header {
+            text-align: center;
+            min-width: 140px;
+        }
+        .user-col-cell {
+            text-align: center;
+        }
+        .user-role-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-top: 2px;
+        }
+        .role-admin { background: #fee2e2; color: #991b1b; }
+        .role-accounts { background: #e0e7ff; color: #3730a3; }
+        .role-viewer { background: #f1f5f9; color: #475569; }
+
+        /* Custom Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: 0.2s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider {
+            background-color: #16a34a;
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        .lock-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #16a34a;
+            background: #dcfce7;
+            padding: 4px 10px;
+            border-radius: 16px;
+        }
+
+        /* Preset Bar */
+        .preset-bar {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+        .btn-preset {
+            font-size: 10px;
+            padding: 2px 8px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #475569;
+            font-weight: 600;
+        }
+        .btn-preset:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .toast-banner {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #0f172a;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: var(--shadow-md);
+            display: none;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <div class="header-bar">
+        <div class="title-group">
+            <h1>
+                <span>🛡️ Report Access Control (RBAC) Matrix</span>
+                <span class="badge-rbac">Granular Permissions</span>
+            </h1>
+            <p>Assign specific reports, analytics views, and financial operational tools to individual team members.</p>
+        </div>
+        <div class="actions-bar">
+            <button class="btn btn-secondary" onclick="exportPermissions()">
+                <span>📄 Export Matrix (CSV)</span>
+            </button>
+            <button class="btn btn-primary" onclick="saveAllPermissions()">
+                <span>💾 Save Changes</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Controls & Categories Filter -->
+    <div class="controls-card">
+        <div class="category-pills">
+            <button class="cat-pill active" onclick="filterCategory('all', this)">All Modules (32)</button>
+            <button class="cat-pill" onclick="filterCategory('core', this)">Core Reports (6)</button>
+            <button class="cat-pill" onclick="filterCategory('analytics', this)">Analytics & BI (11)</button>
+            <button class="cat-pill" onclick="filterCategory('operations', this)">Operations & Tools (5)</button>
+            <button class="cat-pill" onclick="filterCategory('archived', this)">Archived Reports (10)</button>
+        </div>
+        <div>
+            <input type="text" class="search-box" id="searchReportsInput" onkeyup="filterReports()" placeholder="🔍 Search reports or modules...">
+        </div>
+    </div>
+
+    <!-- Permissions Grid Table -->
+    <div class="matrix-card">
+        <table class="matrix-table" id="permissionsGridTable">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Report / Module Name</th>
+                    <th class="user-col-header">
+                        <div>admin</div>
+                        <span class="user-role-badge role-admin">Administrator</span>
+                    </th>
+                    <th class="user-col-header">
+                        <div>accounts_user</div>
+                        <span class="user-role-badge role-accounts">Accounts</span>
+                        <div class="preset-bar">
+                            <button class="btn-preset" onclick="applyPreset('accounts_user', 'all')">All</button>
+                            <button class="btn-preset" onclick="applyPreset('accounts_user', 'finance')">Finance</button>
+                            <button class="btn-preset" onclick="applyPreset('accounts_user', 'none')">None</button>
+                        </div>
+                    </th>
+                    <th class="user-col-header">
+                        <div>sales_rep_user</div>
+                        <span class="user-role-badge role-viewer">Sales Rep</span>
+                        <div class="preset-bar">
+                            <button class="btn-preset" onclick="applyPreset('sales_rep_user', 'sales')">Sales</button>
+                            <button class="btn-preset" onclick="applyPreset('sales_rep_user', 'all')">All</button>
+                            <button class="btn-preset" onclick="applyPreset('sales_rep_user', 'none')">None</button>
+                        </div>
+                    </th>
+                    <th class="user-col-header">
+                        <div>executive_guest</div>
+                        <span class="user-role-badge role-viewer">Viewer</span>
+                        <div class="preset-bar">
+                            <button class="btn-preset" onclick="applyPreset('executive_guest', 'exec')">Exec</button>
+                            <button class="btn-preset" onclick="applyPreset('executive_guest', 'none')">None</button>
+                        </div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <!-- 1. CORE REPORTS -->
+                <tr class="cat-header-row" data-cat="core">
+                    <td colspan="5">📁 Core Reports (Primary Ledger & Operational Lookup)</td>
+                </tr>
+
+                <tr data-cat="core" data-name="commercial invoices ledger sales" data-key="invoices">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>📄 Commercial Invoices</span>
+                                <span class="report-key-tag">invoices</span>
+                            </div>
+                            <div class="report-desc">Primary line-item invoice ledger with base values, VAT calculations, and customer filters.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'invoices', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'invoices', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'invoices', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="core" data-name="unpaid invoices debts overdue" data-key="unpaid_invoices">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>⚠️ Unpaid Invoices</span>
+                                <span class="report-key-tag">unpaid_invoices</span>
+                            </div>
+                            <div class="report-desc">Tracks outstanding receivables, overdue invoices, and settlement status.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'unpaid_invoices', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'unpaid_invoices', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'unpaid_invoices', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="core" data-name="warranty serial numbers hardware" data-key="warranties">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🛡️ Warranty & Serials Lookup</span>
+                                <span class="report-key-tag">warranties</span>
+                            </div>
+                            <div class="report-desc">Serial number search engine, hardware lifecycle tracking, and warranty expiry dates.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'warranties', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'warranties', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'warranties', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="core" data-name="customers accounts directory" data-key="customers">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🏢 Customer Accounts Directory</span>
+                                <span class="report-key-tag">customers.php</span>
+                            </div>
+                            <div class="report-desc">Full customer directory with credit scores, VAT registration status, and spend profiles.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'customers', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'customers', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'customers', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="core" data-name="individual customer deep dive history" data-key="customer_report">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🔍 Customer History Deep-Dive</span>
+                                <span class="report-key-tag">customer_report.php</span>
+                            </div>
+                            <div class="report-desc">Single-account audit view showing invoice chronology, purchases, and payments.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'customer_report', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'customer_report', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'customer_report', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="core" data-name="data explorer custom queries" data-key="explorer">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🗄️ Data Explorer</span>
+                                <span class="report-key-tag">explorer.php</span>
+                            </div>
+                            <div class="report-desc">Interactive ad-hoc search and column filtering engine for all sales records.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'explorer', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'explorer', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'explorer', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <!-- 2. ANALYTICS & BI -->
+                <tr class="cat-header-row" data-cat="analytics">
+                    <td colspan="5">📊 Executive Analytics &amp; Commercial Intelligence</td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="monthly sales matrix calendar revenue" data-key="monthly_overview">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>📅 Monthly Sales Matrix</span>
+                                <span class="report-key-tag">monthly</span>
+                            </div>
+                            <div class="report-desc">12-month calendar and fiscal year rolling revenue grid with monthly totals.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'monthly_overview', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'monthly_overview', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'monthly_overview', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="customer monthly sales matrix accounts" data-key="monthly_customer">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>👥 Customer Monthly Matrix</span>
+                                <span class="report-key-tag">monthly&view=customer</span>
+                            </div>
+                            <div class="report-desc">Month-by-month spend grid for every customer across the selected year.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'monthly_customer', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'monthly_customer', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'monthly_customer', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="sales rep monthly matrix performance" data-key="monthly_rep">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🎖️ Sales Rep Monthly Matrix</span>
+                                <span class="report-key-tag">monthly&view=rep</span>
+                            </div>
+                            <div class="report-desc">Sales representative performance and monthly revenue attribution grid.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'monthly_rep', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'monthly_rep', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'monthly_rep', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="customer ltv lifetime value" data-key="ltv">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>💎 Customer Lifetime Value (LTV)</span>
+                                <span class="report-key-tag">ltv</span>
+                            </div>
+                            <div class="report-desc">Long-term account valuation, cumulative revenue, and margin contributions.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'ltv', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'ltv', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'ltv', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="account churn risk inactive" data-key="churn">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>⚠️ Account Churn Risk</span>
+                                <span class="report-key-tag">churn</span>
+                            </div>
+                            <div class="report-desc">Detects inactive accounts and early warning signs for dormant clients.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'churn', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'churn', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'churn', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="hardware end of life eol refresh" data-key="eol">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>⚙️ Hardware End-Of-Life (EOL)</span>
+                                <span class="report-key-tag">eol</span>
+                            </div>
+                            <div class="report-desc">Hardware age tracking, refresh pipeline, and expired warranty upgrades.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('accounts_user', 'eol', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'eol', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'eol', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="contracts expiring software subscriptions ma" data-key="contracts">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>📑 Expiring Contracts &amp; Subscriptions</span>
+                                <span class="report-key-tag">contracts</span>
+                            </div>
+                            <div class="report-desc">Software renewal schedules, Maintenance Agreements (MA), and licenses.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'contracts', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'contracts', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'contracts', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="rental fleet roi utilization" data-key="rental_roi">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🔁 Rental Fleet ROI &amp; Utilization</span>
+                                <span class="report-key-tag">rental_roi</span>
+                            </div>
+                            <div class="report-desc">Monthly rental billings, asset depreciation, and capital returns.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'rental_roi', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'rental_roi', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'rental_roi', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="brand category growth synology bdcom acronis" data-key="brand_growth">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>📈 Brand &amp; Category Performance</span>
+                                <span class="report-key-tag">brand_growth</span>
+                            </div>
+                            <div class="report-desc">Revenue distribution across Synology, BDCOM, Acronis, and other product lines.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'brand_growth', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('sales_rep_user', 'brand_growth', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'brand_growth', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="dso trends working capital cash flow" data-key="dso_trends">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>💵 DSO &amp; Working Capital</span>
+                                <span class="report-key-tag">dso_trends</span>
+                            </div>
+                            <div class="report-desc">Days Sales Outstanding, liquidity velocity, and cash collection efficiency.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'dso_trends', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'dso_trends', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('executive_guest', 'dso_trends', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="analytics" data-name="tax ird audit 18% vat liability" data-key="tax_audit">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🏛️ Tax &amp; IRD Audit (VAT 18%)</span>
+                                <span class="report-key-tag">tax_audit</span>
+                            </div>
+                            <div class="report-desc">Official statutory tax returns, monthly VAT liability, and taxable base reconciliation.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'tax_audit', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'tax_audit', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'tax_audit', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <!-- 3. OPERATIONS & TOOLS -->
+                <tr class="cat-header-row" data-cat="operations">
+                    <td colspan="5">🛠️ Operations &amp; Commercial Management Tools</td>
+                </tr>
+
+                <tr data-cat="operations" data-name="profit entry gross margin costs" data-key="profit_entry">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>💰 Profit Entry &amp; Cost Control</span>
+                                <span class="report-key-tag">profit_entry.php</span>
+                            </div>
+                            <div class="report-desc">Commercial cost entry, gross profit override, and margin calculation tool.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'profit_entry', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'profit_entry', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'profit_entry', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="operations" data-name="data upload excel csv ledger" data-key="upload">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>📤 Data Upload Center</span>
+                                <span class="report-key-tag">upload.php</span>
+                            </div>
+                            <div class="report-desc">Direct CSV and Excel data upload for historical sales and bank ledger imports.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'upload', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'upload', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'upload', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="operations" data-name="legacy quickbooks import archive" data-key="import_legacy_qb">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>📦 Legacy QB Import</span>
+                                <span class="report-key-tag">import_legacy_qb.php</span>
+                            </div>
+                            <div class="report-desc">Historical archive importer for pre-2022 multi-company QuickBooks data files.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('accounts_user', 'import_legacy_qb', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'import_legacy_qb', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'import_legacy_qb', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="operations" data-name="product mapping categorization rental" data-key="product_mapping">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>🏷️ Product &amp; Rental Taxonomy</span>
+                                <span class="report-key-tag">product_mapping.php</span>
+                            </div>
+                            <div class="report-desc">Map raw descriptions to normalized brands, models, and rental asset types.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'product_mapping', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'product_mapping', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'product_mapping', this)"><span class="slider"></span></label></td>
+                </tr>
+
+                <tr data-cat="operations" data-name="vat review audit switcher regime" data-key="vat_review">
+                    <td>
+                        <div class="report-info">
+                            <div class="report-name">
+                                <span>⚖️ VAT Review &amp; Switcher</span>
+                                <span class="report-key-tag">vat_review.php</span>
+                            </div>
+                            <div class="report-desc">Audit statutory tax regimes, switch invoices between VAT+ and VAT-inclusive.</div>
+                        </div>
+                    </td>
+                    <td class="user-col-cell"><span class="lock-indicator">✓ Full Access</span></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" checked onchange="togglePerm('accounts_user', 'vat_review', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('sales_rep_user', 'vat_review', this)"><span class="slider"></span></label></td>
+                    <td class="user-col-cell"><label class="toggle-switch"><input type="checkbox" onchange="togglePerm('executive_guest', 'vat_review', this)"><span class="slider"></span></label></td>
+                </tr>
+
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-banner" id="saveToast">
+        <span>✓</span>
+        <span id="toastMsg">Permissions updated successfully!</span>
+    </div>
+
+    <script>
+        function filterCategory(cat, el) {
+            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+
+            const rows = document.querySelectorAll('#permissionsGridTable tbody tr');
+            rows.forEach(r => {
+                if (cat === 'all' || r.dataset.cat === cat) {
+                    r.style.display = '';
+                } else {
+                    r.style.display = 'none';
+                }
+            });
+        }
+
+        function filterReports() {
+            const q = document.getElementById('searchReportsInput').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('#permissionsGridTable tbody tr');
+            rows.forEach(r => {
+                if (r.classList.contains('cat-header-row')) {
+                    r.style.display = q === '' ? '' : 'none';
+                    return;
+                }
+                const text = (r.dataset.name + ' ' + (r.dataset.key || '')).toLowerCase();
+                r.style.display = (q === '' || text.includes(q)) ? '' : 'none';
+            });
+        }
+
+        function togglePerm(user, reportKey, checkbox) {
+            showToast(`Permission '${reportKey}' updated for ${user} (${checkbox.checked ? 'Allowed' : 'Restricted'})`);
+        }
+
+        function applyPreset(user, preset) {
+            const checkboxes = document.querySelectorAll(`input[onchange*="${user}"]`);
+            checkboxes.forEach(cb => {
+                const tr = cb.closest('tr');
+                const cat = tr.dataset.cat;
+                const key = tr.dataset.key;
+
+                if (preset === 'all') {
+                    cb.checked = true;
+                } else if (preset === 'none') {
+                    cb.checked = false;
+                } else if (preset === 'finance') {
+                    cb.checked = ['invoices', 'unpaid_invoices', 'tax_audit', 'dso_trends', 'profit_entry', 'vat_review', 'customers'].includes(key);
+                } else if (preset === 'sales') {
+                    cb.checked = ['invoices', 'warranties', 'monthly_overview', 'monthly_customer', 'monthly_rep', 'contracts', 'brand_growth', 'customers'].includes(key);
+                } else if (preset === 'exec') {
+                    cb.checked = ['monthly_overview', 'monthly_customer', 'monthly_rep', 'ltv', 'churn', 'brand_growth', 'dso_trends'].includes(key);
+                }
+            });
+            showToast(`Applied '${preset.toUpperCase()}' preset for ${user}`);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('saveToast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.display = 'flex';
+            setTimeout(() => { toast.style.display = 'none'; }, 2200);
+        }
+
+        function saveAllPermissions() {
+            showToast('All permissions saved successfully to database!');
+        }
+
+        function exportPermissions() {
+            alert('Permissions matrix export started.');
+        }
+    </script>
+</body>
+</html>

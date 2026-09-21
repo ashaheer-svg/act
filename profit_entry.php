@@ -5,7 +5,7 @@ require_once 'classes/Auth.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireAccounts(); // Admin or Accounts
+$auth->requireReportAccess('profit_entry');
 
 $user = $auth->getCurrentUser();
 $currency = $db->getSetting('currency_symbol', 'LKR ');

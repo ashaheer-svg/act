@@ -355,16 +355,19 @@ class DataImporter {
 
                 $rowIndex++;
                 
-                // Check if record already exists (Smarter check: include item and amount)
+                // Item description: normalize brand misspellings
+                $itemDesc = $this->normalizeBrandSpelling(trim($record['Description'] ?? $record['Item'] ?? 'Item'));
                 $cleanAmount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
                 $invoiceDate = $this->formatDate($record['Date'] ?? '');
+
+                // Check if record already exists (Smarter check: include normalized item and amount)
                 $existingRecord = $this->db->fetch(
                     "SELECT * FROM sales WHERE invoice_number = ? AND invoice_date = ? AND customer_name = ? AND item_description = ? AND qb_amount = ?",
                     [
                         $record['Num'] ?? '', 
                         $invoiceDate,
                         $record['Name'] ?? '', 
-                        $record['Item'] ?? '', 
+                        $itemDesc, 
                         $cleanAmount
                     ]
                 );
@@ -376,7 +379,7 @@ class DataImporter {
                         'row' => $rowIndex,
                         'num' => $record['Num'] ?? 'N/A',
                         'name' => $record['Name'] ?? 'N/A',
-                        'item' => $record['Item'] ?? 'N/A',
+                        'item' => $itemDesc,
                         'amount' => $record['Amount'] ?? 0,
                         'reason' => 'Duplicate record (same Invoice, Date, Customer, Item, and Amount)'
                     ];
@@ -387,7 +390,7 @@ class DataImporter {
                         'duplicate' => [
                             'num' => $record['Num'] ?? 'N/A',
                             'name' => $record['Name'] ?? 'N/A',
-                            'item' => $record['Item'] ?? 'N/A',
+                            'item' => $itemDesc,
                             'amount' => $record['Amount'] ?? 0
                         ],
                         'original' => [
@@ -401,17 +404,18 @@ class DataImporter {
                     continue;
                 }
 
-                // Calculate VAT values using dynamic sequence rules & customer registration
-                $amount = floatval(str_replace(',', '', $record['Amount'] ?? 0));
+                // Calculate VAT values using dynamic sequence rules & VAT footer metadata
+                $amount = $cleanAmount;
                 $invNum = trim($record['Num'] ?? '');
                 $customerName = trim($record['Name'] ?? '');
                 $taxCode = trim($record['Sales Tax Code'] ?? '');
-                $itemDesc = $record['Item'] ?? '';
                 
+                $salesTaxTotal = floatval($record['sales_tax_total'] ?? 0);
+                $salesTaxRate = floatval($record['sales_tax_rate'] ?? 0);
+                $salesTaxItem = trim($record['sales_tax_item'] ?? '');
+
                 $rule = $this->db->getTaxRuleForInvoice($invNum, $invoiceDate);
                 $rate = $rule['rate'];
-                $custProfile = $this->db->fetch("SELECT is_vat_registered FROM customer_profiles WHERE customer_name = ? LIMIT 1", [$customerName]);
-                $isVatReg = (int)($custProfile['is_vat_registered'] ?? 0);
 
                 if ($amount == 0) {
                     $base = 0.00;
@@ -419,35 +423,35 @@ class DataImporter {
                     $total = 0.00;
                     $appliedRate = 0.00;
                     $vatTreatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
+                    $base = $amount;
+                    $vat = 0.00;
+                    $total = $amount;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxTotal > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
+                    // Modern Era (2024-2026): VAT is specified in invoice footer (+18% on top of pre-tax subtotal)
+                    $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
+                    $base = $amount;
+                    $vat = round($amount * $effRate, 2);
+                    $total = round($base + $vat, 2);
+                    $appliedRate = $effRate;
+                    $vatTreatment = 'PLUS_VAT';
                 } elseif ($rate <= 0) {
+                    // Statutory 0% VAT exempt era (e.g. 2015-2016, 2021-2023)
                     $base = $amount;
                     $vat = 0.00;
                     $total = $amount;
                     $appliedRate = 0.00;
                     $vatTreatment = 'VAT_EXEMPT';
                 } else {
-                    $isVatLine = (bool)preg_match('/^(VAT|Value Added Tax|\d+%\s*VAT)/i', $itemDesc);
-                    if ($isVatLine) {
-                        $base = 0.00;
-                        $vat = $amount;
-                        $total = $amount;
-                        $appliedRate = $rate;
-                        $vatTreatment = 'PLUS_VAT';
-                    } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
-                        $base = $amount;
-                        $vat = round($amount * $rate, 2);
-                        $total = round($base + $vat, 2);
-                        $appliedRate = $rate;
-                        $vatTreatment = 'PLUS_VAT';
-                    } else {
-                        // VAT-Inclusive invoice: Under government regulations, VAT is included in price.
-                        // Converted to +VAT invoice for system purposes with +VAT tag.
-                        $total = $amount;
-                        $base = round($amount / (1 + $rate), 2);
-                        $vat = round($total - $base, 2);
-                        $appliedRate = $rate;
-                        $vatTreatment = 'PLUS_VAT';
-                    }
+                    // Taxable statutory regime without explicit separate VAT footer or line item:
+                    // Under statutory rule, invoice is treated as VAT-INCLUSIVE.
+                    $total = $amount;
+                    $base = round($amount / (1 + $rate), 2);
+                    $vat = round($total - $base, 2);
+                    $appliedRate = $rate;
+                    $vatTreatment = 'VAT_INCLUSIVE';
                 }
 
                 // Rationalization: Resolve category using mappings if source is empty
@@ -621,6 +625,16 @@ class DataImporter {
             }
         }
         return '';
+    }
+
+    /**
+     * Normalize brand typos
+     */
+    private function normalizeBrandSpelling(string $text): string {
+        $text = preg_replace('/\b(sinology|snology)\b/i', 'Synology', $text);
+        $text = preg_replace('/\b(become|becom)\b/i', 'BDCOM', $text);
+        $text = preg_replace('/\b(macronis|acronic)\b/i', 'Acronis', $text);
+        return $text;
     }
 }
 ?>

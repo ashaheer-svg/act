@@ -234,6 +234,16 @@ try {
         }
     }
 
+    // Helper to sanitize brand typos
+    if (!function_exists('normalizeBrandSpelling')) {
+        function normalizeBrandSpelling(string $text): string {
+            $text = preg_replace('/\b(sinology|snology)\b/i', 'Synology', $text);
+            $text = preg_replace('/\b(become|becom)\b/i', 'BDCOM', $text);
+            $text = preg_replace('/\b(macronis|acronic)\b/i', 'Acronis', $text);
+            return $text;
+        }
+    }
+
     // 2. Process Invoices
     if (!empty($invoices)) {
         // Preload customer VAT registration cache
@@ -259,8 +269,8 @@ try {
             $num = trim($inv['Num'] ?? $inv['invoice_number'] ?? '');
             $customer = trim($inv['Name'] ?? $inv['customer_name'] ?? '');
             
-            // Item description: preserve full description including serial numbers
-            $itemDesc = trim($inv['Description'] ?? $inv['Item'] ?? $inv['item_description'] ?? 'Item');
+            // Item description: preserve full description including serial numbers and normalize brand typos
+            $itemDesc = normalizeBrandSpelling(trim($inv['Description'] ?? $inv['Item'] ?? $inv['item_description'] ?? 'Item'));
             $rawAmount = $inv['Amount'] ?? $inv['amount'] ?? 0;
             $cleanAmount = floatval(str_replace(',', '', $rawAmount));
             $txnId = trim($inv['QBTxnID'] ?? $inv['qb_txn_id'] ?? '');
@@ -298,11 +308,16 @@ try {
                 }
             }
 
-            // Dynamic VAT calculation based on invoice sequence range & customer registration
+            // Extract QuickBooks tax footer fields
             $taxCode = trim($inv['Sales Tax Code'] ?? $inv['tax_code'] ?? 'Taxable Sales');
+            $subtotal = floatval($inv['subtotal'] ?? 0);
+            $salesTaxTotal = floatval($inv['sales_tax_total'] ?? 0);
+            $salesTaxRate = floatval($inv['sales_tax_rate'] ?? 0);
+            $salesTaxItem = trim($inv['sales_tax_item'] ?? '');
+            $customerTaxCode = trim($inv['customer_tax_code'] ?? '');
+
             $rule = $db->getTaxRuleForInvoice($num, $date);
             $rate = $rule['rate'];
-            $isVatReg = $custVatMap[$customer] ?? 0;
 
             if ($cleanAmount == 0) {
                 $base = 0.00;
@@ -310,36 +325,36 @@ try {
                 $total = 0.00;
                 $appliedRate = 0.00;
                 $vatTreatment = 'VAT_EXEMPT';
+            } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
+                // Non-taxable / exempt invoice explicitly designated in QuickBooks
+                $base = $cleanAmount;
+                $vat = 0.00;
+                $total = $cleanAmount;
+                $appliedRate = 0.00;
+                $vatTreatment = 'VAT_EXEMPT';
+            } elseif ($salesTaxTotal > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
+                // Modern Era (2024-2026): VAT is specified in invoice footer (+18% added on pre-tax subtotal)
+                $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
+                $base = $cleanAmount;
+                $vat = round($cleanAmount * $effRate, 2);
+                $total = round($base + $vat, 2);
+                $appliedRate = $effRate;
+                $vatTreatment = 'PLUS_VAT';
             } elseif ($rate <= 0) {
+                // Statutory 0% VAT exempt era (e.g. 2015-2016, 2021-2023)
                 $base = $cleanAmount;
                 $vat = 0.00;
                 $total = $cleanAmount;
                 $appliedRate = 0.00;
                 $vatTreatment = 'VAT_EXEMPT';
             } else {
-                $isVatLine = (bool)preg_match('/^(VAT|Value Added Tax|\d+%\s*VAT)/i', $itemDesc);
-                if ($isVatLine) {
-                    $base = 0.00;
-                    $vat = $cleanAmount;
-                    $total = $cleanAmount;
-                    $appliedRate = $rate;
-                    $vatTreatment = 'PLUS_VAT';
-                } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
-                    // Customer IS VAT-Registered: Line is Net Base, VAT is +18% on top (PLUS_VAT)
-                    $base = $cleanAmount;
-                    $vat = round($cleanAmount * $rate, 2);
-                    $total = round($base + $vat, 2);
-                    $appliedRate = $rate;
-                    $vatTreatment = 'PLUS_VAT';
-                } else {
-                    // VAT-Inclusive invoice: Under government regulations, VAT is included in price.
-                    // Converted to +VAT invoice for system purposes with +VAT tag.
-                    $total = $cleanAmount;
-                    $base = round($cleanAmount / (1 + $rate), 2);
-                    $vat = round($total - $base, 2);
-                    $appliedRate = $rate;
-                    $vatTreatment = 'PLUS_VAT';
-                }
+                // Taxable statutory regime without explicit separate VAT footer or line item:
+                // Under statutory rule, invoice is treated as VAT-INCLUSIVE.
+                $total = $cleanAmount;
+                $base = round($cleanAmount / (1 + $rate), 2);
+                $vat = round($total - $base, 2);
+                $appliedRate = $rate;
+                $vatTreatment = 'VAT_INCLUSIVE';
             }
 
             $qty = floatval($inv['Qty'] ?? $inv['quantity'] ?? 1);
@@ -436,7 +451,7 @@ try {
         foreach ($creditMemos as $cm) {
             $num = trim($cm['Num'] ?? $cm['credit_memo_number'] ?? '');
             $customer = trim($cm['Name'] ?? $cm['customer_name'] ?? '');
-            $itemDesc = trim($cm['Description'] ?? $cm['Item'] ?? 'Credit Memo Item');
+            $itemDesc = normalizeBrandSpelling(trim($cm['Description'] ?? $cm['Item'] ?? 'Credit Memo Item'));
             $rawAmount = $cm['Amount'] ?? $cm['amount'] ?? 0;
             $cleanAmount = floatval(str_replace(',', '', $rawAmount));
             $txnId = trim($cm['QBTxnID'] ?? $cm['qb_txn_id'] ?? '');
@@ -460,27 +475,44 @@ try {
             if (!$existing) {
                 $rule = $db->getTaxRuleForInvoice($num, $date);
                 $rate = $rule['rate'];
-                $isVatReg = $custVatMap[$customer] ?? 0;
                 $taxCode = trim($cm['Sales Tax Code'] ?? 'Taxable Sales');
 
-                if ($cleanAmount == 0 || $rate <= 0) {
+                $subtotal = -abs(floatval($cm['subtotal'] ?? 0));
+                $salesTaxTotal = -abs(floatval($cm['sales_tax_total'] ?? 0));
+                $salesTaxRate = floatval($cm['sales_tax_rate'] ?? 0);
+                $salesTaxItem = trim($cm['sales_tax_item'] ?? '');
+
+                if ($cleanAmount == 0) {
+                    $base = 0.00;
+                    $vat = 0.00;
+                    $total = 0.00;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
                     $base = $signedAmount;
                     $vat = 0.00;
                     $total = $signedAmount;
                     $appliedRate = 0.00;
                     $vatTreatment = 'VAT_EXEMPT';
-                } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
+                } elseif (abs($salesTaxTotal) > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
+                    $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
                     $base = $signedAmount;
-                    $vat = round($signedAmount * $rate, 2);
+                    $vat = round($signedAmount * $effRate, 2);
                     $total = round($base + $vat, 2);
-                    $appliedRate = $rate;
+                    $appliedRate = $effRate;
                     $vatTreatment = 'PLUS_VAT';
+                } elseif ($rate <= 0) {
+                    $base = $signedAmount;
+                    $vat = 0.00;
+                    $total = $signedAmount;
+                    $appliedRate = 0.00;
+                    $vatTreatment = 'VAT_EXEMPT';
                 } else {
                     $total = $signedAmount;
                     $base = round($signedAmount / (1 + $rate), 2);
                     $vat = round($total - $base, 2);
                     $appliedRate = $rate;
-                    $vatTreatment = 'PLUS_VAT';
+                    $vatTreatment = 'VAT_INCLUSIVE';
                 }
 
                 $qty = -abs(floatval($cm['Qty'] ?? 1));
@@ -488,9 +520,6 @@ try {
                 $rep = trim($cm['Rep'] ?? '');
                 $poNumber = trim($cm['PONumber'] ?? '');
                 $memo = trim($cm['Memo'] ?? '');
-                $subtotal = -abs(floatval($cm['subtotal'] ?? 0));
-                $salesTaxTotal = -abs(floatval($cm['sales_tax_total'] ?? 0));
-                $salesTaxRate = floatval($cm['sales_tax_rate'] ?? 0);
                 $unitPrice = floatval($cm['unit_price'] ?? abs($cleanAmount));
 
                 try {
@@ -504,23 +533,34 @@ try {
                 }
             }
 
-            // Linked invoice settlement & payment insertion
-            $appliedInvoice = trim($cm['applied_to_invoice'] ?? $cm['AppliedToInvoice'] ?? '');
-            $appliedAmount = abs(floatval(str_replace(',', '', $cm['applied_amount'] ?? $cm['AppliedAmount'] ?? 0)));
-
-            // Also check linked_txns array
-            $linkedTxns = $cm['linked_txns'] ?? [];
-            if (empty($appliedInvoice) && !empty($linkedTxns)) {
-                foreach ($linkedTxns as $lk) {
+            // Linked invoice settlements: support multiple linked transactions in linked_txns
+            $settlements = [];
+            if (!empty($cm['linked_txns']) && is_array($cm['linked_txns'])) {
+                foreach ($cm['linked_txns'] as $lk) {
                     if (strcasecmp($lk['txn_type'] ?? '', 'Invoice') === 0 && !empty($lk['ref_number'])) {
-                        $appliedInvoice = trim($lk['ref_number']);
-                        $appliedAmount = abs(floatval($lk['amount'] ?? $appliedAmount));
-                        break;
+                        $settlements[] = [
+                            'invoice' => trim($lk['ref_number']),
+                            'amount' => abs(floatval($lk['amount'] ?? 0))
+                        ];
                     }
                 }
             }
+            if (empty($settlements)) {
+                $appliedInvoice = trim($cm['applied_to_invoice'] ?? $cm['AppliedToInvoice'] ?? '');
+                $appliedAmount = abs(floatval(str_replace(',', '', $cm['applied_amount'] ?? $cm['AppliedAmount'] ?? 0)));
+                if (!empty($appliedInvoice) && $appliedAmount > 0) {
+                    $settlements[] = [
+                        'invoice' => $appliedInvoice,
+                        'amount' => $appliedAmount
+                    ];
+                }
+            }
 
-            if (!empty($appliedInvoice) && $appliedAmount > 0) {
+            foreach ($settlements as $st) {
+                $appliedInvoice = $st['invoice'];
+                $appliedAmount = $st['amount'];
+                if ($appliedAmount <= 0) continue;
+
                 // Record in payments table so the invoice modal & payments ledger reflect credit memo settlement
                 $existingPay = $db->fetch(
                     "SELECT id FROM payments WHERE customer_name = ? AND reference_num = ? AND invoice_num = ? AND payment_method = 'Credit Memo' LIMIT 1",

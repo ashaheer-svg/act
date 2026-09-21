@@ -8,7 +8,7 @@ $db->initialize();
 $db->syncCustomerProfiles(); 
 
 $auth = new Auth($db);
-$auth->requireAccounts(); 
+$auth->requireReportAccess('customers'); 
 
 $user = $auth->getCurrentUser();
 $currency = $db->getSetting('currency_symbol', 'LKR ');

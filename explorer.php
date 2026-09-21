@@ -12,7 +12,7 @@ require_once 'classes/Reports.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireLogin();
+$auth->requireReportAccess('explorer');
 $user = $auth->getCurrentUser();
 
 $currency = $db->getSetting('currency_symbol', 'LKR ');

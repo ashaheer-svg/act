@@ -957,8 +957,13 @@ class Database {
             $custVatMap[$cp['customer_name']] = (int)($cp['is_vat_registered'] ?? 0);
         }
 
-        // 2. Fetch all sales lines
-        $sales = $this->fetchAll("SELECT id, invoice_number, invoice_date, customer_name, tax_code, qb_amount, total_amount, item_description FROM sales");
+        // 2. Fetch all sales lines with tax footer metadata
+        try {
+            $this->db->exec("ALTER TABLE sales ADD COLUMN manual_vat_override INTEGER DEFAULT 0");
+        } catch (Exception $e) {
+            // Column already exists
+        }
+        $sales = $this->fetchAll("SELECT id, invoice_number, invoice_date, customer_name, tax_code, qb_amount, total_amount, item_description, subtotal, sales_tax_total, sales_tax_rate, sales_tax_item, vat_treatment, COALESCE(manual_vat_override, 0) as manual_vat_override FROM sales");
         $updated = 0;
 
         $stmt = $this->db->prepare("
@@ -975,8 +980,12 @@ class Database {
                 $invNum = trim($row['invoice_number']);
                 $desc = trim($row['item_description'] ?? '');
                 $custName = trim($row['customer_name'] ?? '');
-                $isVatReg = $custVatMap[$custName] ?? 0;
                 $taxCode = trim($row['tax_code'] ?? 'Taxable Sales');
+
+                $salesTaxTotal = floatval($row['sales_tax_total'] ?? 0);
+                $salesTaxRate = floatval($row['sales_tax_rate'] ?? 0);
+                $salesTaxItem = trim($row['sales_tax_item'] ?? '');
+                $currentTreatment = trim($row['vat_treatment'] ?? '');
 
                 $rule = $this->getTaxRuleForInvoice($invNum, $date);
                 $rate = $rule['rate'];
@@ -988,8 +997,23 @@ class Database {
                     $vat = 0.00;
                     $total = 0.00;
                     $treatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxItem === 'Non' || ($salesTaxRate <= 0 && !empty($salesTaxItem))) {
+                    // Explicitly non-taxable / export invoice in QuickBooks
+                    $appliedRate = 0.00;
+                    $base = $rawAmt;
+                    $vat = 0.00;
+                    $total = $rawAmt;
+                    $treatment = 'VAT_EXEMPT';
+                } elseif ($salesTaxTotal > 0 && strcasecmp($salesTaxItem, 'VAT') === 0) {
+                    // Modern Era (2024-2026): VAT is specified in invoice footer (+18% added on pre-tax subtotal)
+                    $effRate = ($salesTaxRate > 0) ? ($salesTaxRate / 100) : $rate;
+                    $appliedRate = $effRate;
+                    $base = $rawAmt;
+                    $vat = round($rawAmt * $effRate, 2);
+                    $total = round($base + $vat, 2);
+                    $treatment = 'PLUS_VAT';
                 } elseif ($rate <= 0) {
-                    // Statutory 0% VAT exempt period (e.g. 2015-2016)
+                    // Statutory 0% VAT exempt period (e.g. 2015-2016, 2021-2023)
                     $appliedRate = 0.00;
                     $base = $rawAmt;
                     $vat = 0.00;
@@ -1011,8 +1035,8 @@ class Database {
                             $vat = 0.00;
                             $total = $rawAmt;
                         }
-                    } elseif ($isVatReg == 1 && stripos($taxCode, 'Non') === false) {
-                        // Customer IS VAT-Registered: Line amount is Net Base, VAT is added on top (+18%)
+                    } elseif (!empty($row['manual_vat_override']) && $row['manual_vat_override'] == 1 && $currentTreatment === 'PLUS_VAT') {
+                        // Preserved user manual override to PLUS_VAT
                         $treatment = 'PLUS_VAT';
                         $appliedRate = $rate;
                         $base = $rawAmt;
@@ -1020,9 +1044,8 @@ class Database {
                         $total = round($base + $vat, 2);
                     } else {
                         // VAT-INCLUSIVE INVOICE:
-                        // Under government regulations, VAT is included in price but not shown on customer invoice.
-                        // Converted to +VAT invoice for system purposes with +VAT tag.
-                        $treatment = 'PLUS_VAT';
+                        // Under statutory rule, any invoice without an explicit VAT breakdown shown in a taxable period is VAT-inclusive.
+                        $treatment = 'VAT_INCLUSIVE';
                         $appliedRate = $rate;
                         $total = $rawAmt;
                         $base = round($rawAmt / (1 + $rate), 2);
@@ -1070,6 +1093,91 @@ class Database {
 
             $this->db->commit();
             return $updated;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * TAX: Manually switch an invoice between VAT_INCLUSIVE, PLUS_VAT, and VAT_EXEMPT
+     */
+    public function switchInvoiceVatMode(string $invoiceNumber, string $targetMode): array {
+        $invoiceNumber = trim($invoiceNumber);
+        $targetMode = strtoupper(trim($targetMode));
+        if (!in_array($targetMode, ['VAT_INCLUSIVE', 'PLUS_VAT', 'VAT_EXEMPT'])) {
+            throw new InvalidArgumentException("Invalid VAT mode: $targetMode");
+        }
+
+        $lines = $this->fetchAll("SELECT * FROM sales WHERE invoice_number = ?", [$invoiceNumber]);
+        if (empty($lines)) {
+            throw new RuntimeException("Invoice '$invoiceNumber' not found.");
+        }
+
+        $date = $lines[0]['invoice_date'];
+        $rule = $this->getTaxRuleForInvoice($invoiceNumber, $date);
+        $rate = $rule['rate'];
+
+        $this->db->beginTransaction();
+        try {
+            $stmtSales = $this->db->prepare("
+                UPDATE sales 
+                SET applied_tax_rate = ?, base_value = ?, vat_component = ?, total_amount = ?, vat_treatment = ?, manual_vat_override = 1
+                WHERE id = ?
+            ");
+
+            $newTotalInvoice = 0.0;
+            $newBaseInvoice = 0.0;
+            $newVatInvoice = 0.0;
+
+            foreach ($lines as $row) {
+                $rawAmt = floatval(($row['qb_amount'] != 0) ? $row['qb_amount'] : $row['total_amount']);
+
+                if ($rawAmt == 0) {
+                    $appliedRate = 0.00; $base = 0.00; $vat = 0.00; $total = 0.00; $treatment = 'VAT_EXEMPT';
+                } elseif ($targetMode === 'VAT_EXEMPT' || $rate <= 0) {
+                    $appliedRate = 0.00; $base = $rawAmt; $vat = 0.00; $total = $rawAmt; $treatment = 'VAT_EXEMPT';
+                } elseif ($targetMode === 'PLUS_VAT') {
+                    $appliedRate = $rate;
+                    $base = $rawAmt;
+                    $vat = round($rawAmt * $rate, 2);
+                    $total = round($base + $vat, 2);
+                    $treatment = 'PLUS_VAT';
+                } else { // VAT_INCLUSIVE
+                    $appliedRate = $rate;
+                    $total = $rawAmt;
+                    $base = round($rawAmt / (1 + $rate), 2);
+                    $vat = round($total - $base, 2);
+                    $treatment = 'VAT_INCLUSIVE';
+                }
+
+                $newTotalInvoice += $total;
+                $newBaseInvoice += $base;
+                $newVatInvoice += $vat;
+                $stmtSales->execute([$appliedRate, $base, $vat, $total, $treatment, $row['id']]);
+            }
+
+            // Recalculate invoice applied amount and balance remaining
+            $pmtTotal = floatval($this->fetch("SELECT SUM(amount) as s FROM payments WHERE invoice_num = ?", [$invoiceNumber])['s'] ?? 0);
+            $newBal = max(0.0, round($newTotalInvoice - $pmtTotal, 2));
+            $isPaid = ($newBal <= 0.01 && $pmtTotal > 0) ? 1 : 0;
+            $this->execute("UPDATE sales SET balance_remaining = ?, is_paid = ? WHERE invoice_number = ?", [$newBal, $isPaid, $invoiceNumber]);
+
+            // Synchronize invoice_items
+            $this->execute("UPDATE invoice_items SET base_value = ?, vat_component = ?, vat_treatment = ? WHERE invoice_number = ?", [
+                $newBaseInvoice, $newVatInvoice, $targetMode, $invoiceNumber
+            ]);
+
+            $this->db->commit();
+            return [
+                'success' => true,
+                'invoice_number' => $invoiceNumber,
+                'new_mode' => $targetMode,
+                'new_total' => $newTotalInvoice,
+                'new_base' => $newBaseInvoice,
+                'new_vat' => $newVatInvoice,
+                'new_balance' => $newBal
+            ];
         } catch (Exception $e) {
             $this->db->rollBack();
             throw $e;

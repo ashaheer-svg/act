@@ -18,7 +18,7 @@ require_once 'classes/DataImporter.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireAccounts();
+$auth->requireReportAccess('import_legacy_qb');
 
 $user = $auth->getCurrentUser();
 $importer = new DataImporter($db, $user['id']);

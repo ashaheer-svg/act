@@ -6,7 +6,7 @@ require_once 'classes/Reports.php';
 
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
-$auth->requireLogin();
+$auth->requireReportAccess('customer_report');
 $reports = new Reports($db);
 
 $customerName = $_GET['name'] ?? '';

@@ -7,6 +7,17 @@ require_once 'classes/Reports.php';
 $db = new Database(DATABASE_PATH);
 $auth = new Auth($db);
 $auth->requireLogin();
+
+if (!$auth->canAccessReport('dashboard')) {
+    $catalog = Auth::getReportDefinitions();
+    foreach ($catalog as $k => $def) {
+        if ($k !== 'dashboard' && $auth->canAccessReport($k)) {
+            header('Location: ' . $def['url']);
+            exit;
+        }
+    }
+    $auth->requireReportAccess('dashboard');
+}
 $reports = new Reports($db);
 
 $user = $auth->getCurrentUser();

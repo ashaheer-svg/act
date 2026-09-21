@@ -304,7 +304,7 @@ class DataSorter {
         }
 
         // 2. Software / SaaS
-        if (preg_match('/(?:acronis|eset|endpoint|antivirus|license|licence|subscription|synalyze|mailstore|office\s*365|microsoft|saas)/i', $pLower)) {
+        if (preg_match('/(?:acronis|acronic|macronis|eset|endpoint|antivirus|license|licence|subscription|synalyze|mailstore|office\s*365|microsoft|saas)/i', $pLower)) {
             return [
                 'type' => 'SOFTWARE',
                 'brand' => $this->detectBrand($allText),
@@ -313,7 +313,7 @@ class DataSorter {
         }
 
         // 3. Hardware (NAS, HDD, Switches, RAM, Server, etc.)
-        if (preg_match('/(?:s[yi]nology|qnap|diskstation|rackstation|\bnas\b|hard\s*drive|hdd|ssd|seagate|ironwolf|barracuda|skyhawk|toshiba|western\s*digital|\bwd\b|bdcom|switch|draytek|router|vigor|innodisk|\bram\b|ecc|memory|transceiver|rail\s*kit)/i', $lower)) {
+        if (preg_match('/(?:s[yi]nology|snology|qnap|diskstation|rackstation|\bnas\b|hard\s*drive|hdd|ssd|seagate|ironwolf|barracuda|skyhawk|toshiba|western\s*digital|\bwd\b|bdcom|become|becom|switch|draytek|router|vigor|innodisk|\bram\b|ecc|memory|transceiver|rail\s*kit)/i', $lower)) {
             return [
                 'type' => 'HARDWARE',
                 'brand' => $this->detectBrand($allText),
@@ -351,13 +351,13 @@ class DataSorter {
      */
     private function detectBrand(string $text): string {
         $brands = [
-            'Synology' => '/s[yi]nology|diskstation|rackstation|plus\s*hdd|hat33|hat53|sat52|has53/i',
+            'Synology' => '/s[yi]nology|snology|diskstation|rackstation|plus\s*hdd|hat33|hat53|sat52|has53/i',
             'Seagate' => '/seagate|ironwolf|barracuda|skyhawk|exos/i',
             'Toshiba' => '/toshiba/i',
             'Western Digital' => '/western\s*digital|\bwd\b|ultrastar/i',
-            'BDCOM' => '/bdcom/i',
+            'BDCOM' => '/\bbdcom\b|\bbecom\b|\bbecome\b/i',
             'DrayTek' => '/draytek|vigor/i',
-            'Acronis' => '/acronis/i',
+            'Acronis' => '/\bacronis\b|\bacronic\b|\bmacronis\b/i',
             'ESET' => '/eset/i',
             'Innodisk' => '/innodisk/i',
             'Microsoft' => '/microsoft|office\s*365/i',
@@ -628,8 +628,10 @@ class DataSorter {
         // Strip warranty clause if embedded in parenthesis e.g. "(warranty 01 Year)"
         $clean = preg_replace('/\((?:warranty|agreement)[^\)]*\)/is', '', $clean);
 
-        // Normalise Sinology -> Synology and associated common typos
-        $clean = preg_replace('/\bsinology\b/i', 'Synology', $clean);
+        // Normalise Synology / Snology / BDCOM / Acronis and associated common typos
+        $clean = preg_replace('/\b(sinology|snology)\b/i', 'Synology', $clean);
+        $clean = preg_replace('/\b(become|becom)\b/i', 'BDCOM', $clean);
+        $clean = preg_replace('/\b(macronis|acronic)\b/i', 'Acronis', $clean);
         $clean = preg_replace('/\bNASA\b/', 'NAS', $clean);
         $clean = preg_replace('/\bRecitation\b/i', 'RackStation', $clean);
 
