@@ -1738,9 +1738,9 @@ class Reports {
         // Status filter: all, settled, unpaid
         if (!empty($filters['status'])) {
             if ($filters['status'] === 'settled') {
-                $whereConditions[] = "(s.paid_date IS NOT NULL AND s.paid_date != '')";
+                $whereConditions[] = "((s.paid_date IS NOT NULL AND s.paid_date != '') OR s.is_paid = 1 OR (s.balance_remaining IS NOT NULL AND s.balance_remaining <= 0.01))";
             } elseif ($filters['status'] === 'unpaid') {
-                $whereConditions[] = "(s.paid_date IS NULL OR s.paid_date = '')";
+                $whereConditions[] = "((s.paid_date IS NULL OR s.paid_date = '') AND (s.is_paid = 0 OR s.is_paid IS NULL) AND (s.balance_remaining IS NULL OR s.balance_remaining > 0.01))";
             }
         }
 
@@ -3800,6 +3800,8 @@ class Reports {
         $whereConditions = [
             "s.invoice_type = 'Invoice'",
             "(s.paid_date IS NULL OR s.paid_date = '')",
+            "(s.is_paid = 0 OR s.is_paid IS NULL)",
+            "(s.balance_remaining IS NULL OR s.balance_remaining > 0.01)",
             "s.total_amount > 0",
             "s.invoice_date > '2021-12-31'"
         ];
@@ -3957,6 +3959,8 @@ class Reports {
                 WHERE s.customer_name = ?
                   AND s.invoice_type = 'Invoice'
                   AND (s.paid_date IS NULL OR s.paid_date = '')
+                  AND (s.is_paid = 0 OR s.is_paid IS NULL)
+                  AND (s.balance_remaining IS NULL OR s.balance_remaining > 0.01)
                   AND s.total_amount > 0
                   AND s.invoice_date > '2021-12-31'
                 GROUP BY s.invoice_number

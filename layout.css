@@ -76,6 +76,93 @@ body {
     width: var(--sidebar-collapsed-width);
 }
 
+
+/* --- Sidebar Brand Header & Vector Line Logo --- */
+.sidebar-brand,
+.sidebar-header {
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 10px 0 12px;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.brand-info,
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.brand-logo-svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    color: #ffffff;
+    stroke: #ffffff;
+}
+
+.brand-text {
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+}
+
+.brand-badge {
+    font-size: 8.5px;
+    font-weight: 800;
+    background: rgba(99, 102, 241, 0.25);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 2px;
+}
+
+.sidebar-collapse-btn,
+.sidebar-collapse-toggle {
+    background: transparent;
+    border: none;
+    color: var(--sidebar-text);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.15s ease;
+}
+
+.sidebar-collapse-btn:hover,
+.sidebar-collapse-toggle:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar.collapsed .sidebar-brand,
+.sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 0;
+}
+
+.sidebar.collapsed .brand-text,
+.sidebar.collapsed .brand-badge,
+.sidebar.collapsed .sidebar-collapse-btn {
+    display: none;
+}
+
 .sidebar-header {
     height: var(--header-height);
     display: flex;
@@ -224,6 +311,15 @@ body {
     transition: background 0.15s ease, color 0.15s ease;
     white-space: nowrap;
     position: relative;
+    overflow: hidden;
+}
+
+.nav-item > span:first-of-type {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .nav-item i {
@@ -261,7 +357,16 @@ body {
     padding: 1px 5px;
     border-radius: 8px;
     margin-left: auto;
+    flex-shrink: 0;
+    min-width: 32px;
+    text-align: center;
     font-variant-numeric: tabular-nums;
+}
+
+.sb-badge.red {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .nav-item.active .sb-badge {
@@ -327,6 +432,9 @@ body {
 .nav-group-toggle .sb-badge {
     margin-left: auto;
     margin-right: 4px;
+    flex-shrink: 0;
+    min-width: 20px;
+    text-align: center;
 }
 
 /* The rotating arrow icon */

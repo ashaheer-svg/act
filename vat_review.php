@@ -150,16 +150,13 @@ $totalPages = ceil($totalInvoicesCount / $limit);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VAT Invoice Review & Switcher | Active Solutions</title>
-    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="docs/lucide-font/lucide.css">
+    <link rel="stylesheet" href="layout.css?v=1.0.3">
     <style>
-        .vat-review-page {
-            padding: 24px 32px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
+        .vat-review-page { padding: 4px 0 24px; max-width: 100%; margin: 0; }
         .era-pills {
             display: flex;
             gap: 8px;
@@ -320,7 +317,8 @@ $totalPages = ceil($totalInvoicesCount / $limit);
         <main class="main-wrapper">
             <?php $searchPlaceholder = 'Search invoices or customers...'; require_once 'includes/header.php'; ?>
 
-            <div class="vat-review-page">
+            <div class="content-body">
+                <div class="vat-review-page">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
                     <div>
                         <h1 style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 0;">⚡ VAT Invoice Audit &amp; Switcher</h1>
@@ -505,9 +503,12 @@ $totalPages = ceil($totalInvoicesCount / $limit);
                     </div>
                 </div>
                 <?php endif; ?>
+                </div>
             </div>
         </main>
     </div>
+
+    <?php require_once 'includes/layout_js.php'; ?>
 
     <script>
         function toggleAllCheckboxes(master) {
