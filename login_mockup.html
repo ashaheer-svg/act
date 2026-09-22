@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity BI — Login Screen Redesign Mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Activity BI Theme Tokens */
+            --canvas-dark: #080d1a;
+            --sidebar-bg: #0b1121;
+            --surface-panel: #111827;
+            --surface-card: #162032;
+            --border-panel: rgba(255, 255, 255, 0.09);
+            --border-subtle: rgba(255, 255, 255, 0.05);
+            
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-glow: rgba(79, 70, 229, 0.35);
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            
+            /* Light Theme Tokens */
+            --canvas-light: #f1f5f9;
+            --surface-white: #ffffff;
+            --border-light: #cbd5e1;
+            --text-dark: #0f172a;
+            --text-light-muted: #64748b;
+            
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --radius-xl: 22px;
+            
+            --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--canvas-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Sticky Master Controls */
+        .master-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(11, 17, 33, 0.94);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-panel);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .master-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .master-brand-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%);
+            border: 1px solid rgba(79, 70, 229, 0.4);
+            color: #ffffff;
+        }
+
+        .master-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .master-title span.badge {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .master-tabs {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-panel);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 3px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-light);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+        }
+
+        .master-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-pill {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-panel);
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+
+        .action-pill:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #ffffff;
+        }
+
+        /* Hero / Diagnostic Banner */
+        .intro-banner {
+            max-width: 1440px;
+            margin: 20px auto 0;
+            padding: 0 24px;
+        }
+
+        .diagnostic-card {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(17, 24, 39, 0.6) 100%);
+            border: 1px solid rgba(79, 70, 229, 0.25);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .diag-left {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .diag-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(79, 70, 229, 0.2);
+            border: 1px solid rgba(79, 70, 229, 0.35);
+            color: #a5b4fc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .diag-content h3 {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .diag-content p {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .diag-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .diag-tag {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-panel);
+            color: #cbd5e1;
+        }
+        .diag-tag.red {
+            border-color: rgba(244, 63, 94, 0.3);
+            color: #fda4af;
+            background: rgba(244, 63, 94, 0.1);
+        }
+        .diag-tag.green {
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1440px;
+            margin: 24px auto 60px;
+            padding: 0 24px;
+        }
+
+        /* View Modes */
+        .view-section {
+            display: none;
+        }
+        .view-section.active {
+            display: block;
+        }
+
+        /* Comparison Grid */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .compare-card {
+            background: var(--surface-panel);
+            border: 1px solid var(--border-panel);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s ease;
+        }
+
+        .compare-card:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+        }
+
+        .compare-card.featured {
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4), 0 16px 36px rgba(79, 70, 229, 0.15);
+        }
+
+        .card-header-badge {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: linear-gradient(135deg, #4f46e5, #06b6d4);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 20px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            z-index: 10;
+        }
+
+        .card-meta-bar {
+            padding: 18px 20px 14px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        .card-opt-num {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: #818cf8;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .card-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        /* Preview Stage inside cards */
+        .card-preview-viewport {
+            padding: 24px 18px;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 480px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- THEME STYLES FOR THE 3 OPTIONS --- */
+
+        /* SHARED BRAND MARK */
+        .brand-logo-svg {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .brand-heading-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .brand-text {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .brand-badge {
+            font-size: 10px;
+            font-weight: 800;
+            background: rgba(99, 102, 241, 0.25);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.04em;
+        }
+
+        /* =======================================================
+           OPTION 1: MIDNIGHT EXECUTIVE (Dark Theme - Direct Match)
+           ======================================================= */
+        .stage-opt1 {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 20%, #151f38 0%, #080d1a 75%);
+            border-radius: var(--radius-md);
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .stage-opt1::before {
+            content: "";
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.16) 0%, rgba(6, 182, 212, 0.04) 60%, transparent 70%);
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            border-radius: 50%;
+            filter: blur(28px);
+        }
+
+        .login-box-opt1 {
+            width: 100%;
+            max-width: 330px;
+            background: rgba(17, 24, 39, 0.88);
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            backdrop-filter: blur(16px);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px 22px;
+            box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            position: relative;
+            z-index: 2;
+        }
+
+        .login-box-opt1 .logo-icon-wrap {
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 12px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+            color: #ffffff;
+        }
+
+        .login-box-opt1 .brand-subtitle {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .field-group {
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .field-label {
+            display: block;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            color: #64748b;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dark-input {
+            width: 100%;
+            height: 40px;
+            background: rgba(11, 17, 33, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-sm);
+            padding: 0 38px 0 38px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.18s ease;
+        }
+
+        .dark-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.22);
+        }
+
+        .input-toggle-btn {
+            position: absolute;
+            right: 10px;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s;
+        }
+
+        .input-toggle-btn:hover {
+            color: #e2e8f0;
+        }
+
+        .btn-submit-opt1 {
+            width: 100%;
+            height: 40px;
+            margin-top: 8px;
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-sm);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit-opt1:hover {
+            background: linear-gradient(135deg, #5b54f6 0%, #4f46e5 100%);
+            box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+            transform: translateY(-1px);
+        }
+
+        .btn-submit-opt1:active {
+            transform: translateY(0);
+        }
+
+        /* Quick-Fill Drawer / Accordion */
+        .cred-drawer {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .cred-toggle-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: var(--radius-sm);
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .cred-toggle-link:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #cbd5e1;
+        }
+
+        .cred-pills-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn-quickfill {
+            flex: 1;
+            background: rgba(79, 70, 229, 0.12);
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            color: #a5b4fc;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+        }
+
+        .btn-quickfill:hover {
+            background: rgba(79, 70, 229, 0.25);
+            color: #ffffff;
+        }
+
+        /* =======================================================
+           OPTION 2: PURE WHITE CARD WITH DARK BLUE SIDEBAR CANVAS
+           ======================================================= */
+        .stage-opt2 {
+            width: 100%;
+            height: 100%;
+            background: #0b1121;
+            background-image: radial-gradient(circle at 50% 25%, rgba(79, 70, 229, 0.18) 0%, transparent 65%);
+            border-radius: var(--radius-md);
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .login-box-opt2 {
+            width: 100%;
+            max-width: 330px;
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px 22px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 14px 28px -4px rgba(15, 23, 42, 0.07);
+            position: relative;
+            z-index: 2;
+        }
+
+        .login-box-opt2 .logo-icon-wrap {
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 12px;
+            background: #0b1121;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(11, 17, 33, 0.2);
+            color: #ffffff;
+        }
+
+        .login-box-opt2 .brand-text {
+            color: var(--text-dark);
+        }
+
+        .login-box-opt2 .brand-subtitle {
+            font-size: 11.5px;
+            color: var(--text-light-muted);
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .login-box-opt2 .field-label {
+            color: #334155;
+        }
+
+        .light-input {
+            width: 100%;
+            height: 40px;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius-sm);
+            padding: 0 38px 0 38px;
+            color: #0f172a;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.18s ease;
+        }
+
+        .light-input:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        .login-box-opt2 .btn-submit-opt1 {
+            background: #4f46e5;
+            border: none;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        }
+
+        .login-box-opt2 .btn-submit-opt1:hover {
+            background: #4338ca;
+        }
+
+        .login-box-opt2 .cred-drawer {
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .login-box-opt2 .cred-toggle-link {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+
+        .login-box-opt2 .btn-quickfill {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+        }
+
+        .login-box-opt2 .btn-quickfill:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* =======================================================
+           OPTION 3: EXECUTIVE SPLIT PANE (SaaS Presentation)
+           ======================================================= */
+        .stage-opt3 {
+            width: 100%;
+            height: 100%;
+            background: #090d18;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .split-mockup-card {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-panel);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .split-left-pane {
+            background: linear-gradient(155deg, #0f172a 0%, #090d16 100%);
+            border-right: 1px solid var(--border-panel);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .split-header-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .split-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(79, 70, 229, 0.25);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .split-features-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .split-feat-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .feat-bullet {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .feat-text h5 {
+            font-size: 11.5px;
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+
+        .feat-text p {
+            font-size: 10.5px;
+            color: var(--text-dim);
+            line-height: 1.35;
+        }
+
+        .mini-stat-bar {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mini-stat-label {
+            font-size: 10px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .mini-stat-val {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .split-right-pane {
+            padding: 24px 20px;
+            background: #111827;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Feature Matrix Table */
+        .specs-table {
+            width: 100%;
+            margin-top: 36px;
+            background: var(--surface-panel);
+            border: 1px solid var(--border-panel);
+            border-radius: var(--radius-md);
+            border-collapse: collapse;
+            overflow: hidden;
+        }
+
+        .specs-table th, .specs-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: 12px;
+        }
+
+        .specs-table th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        .specs-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Fullscreen Interactive Mode Stage */
+        .fullscreen-stage {
+            min-height: calc(100vh - 65px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 40px 20px;
+        }
+
+        /* Alert Toast */
+        .toast-notify {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #10b981;
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 12.5px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(120px);
+            opacity: 0;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 2000;
+        }
+
+        .toast-notify.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-notify.error {
+            background: #ef4444;
+        }
+
+        /* Key Comparison Callout */
+        .pill-badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 600;
+        }
+        .pill-badge.green { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+        .pill-badge.blue { background: rgba(79, 70, 229, 0.2); color: #a5b4fc; }
+        .pill-badge.amber { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+
+        @media (max-width: 1100px) {
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+            .diagnostic-card {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- MASTER TOP CONTROL BAR -->
+    <header class="master-bar">
+        <div class="master-brand">
+            <div class="master-brand-logo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                    <path d="M2 17l10 5 10-5"></path>
+                    <path d="M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+            <div class="master-title">
+                Activity BI — Login Redesign Mockup
+                <span class="badge">PROPOSAL</span>
+            </div>
+        </div>
+
+        <!-- View Switcher -->
+        <div class="master-tabs">
+            <button class="tab-btn active" onclick="switchView('comparison')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Side-by-Side Comparison
+            </button>
+            <button class="tab-btn" onclick="switchView('full-opt1')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
+                Option 1: Midnight Executive
+            </button>
+            <button class="tab-btn" onclick="switchView('full-opt2')">
+                Option 2: Corporate Light
+            </button>
+            <button class="tab-btn" onclick="switchView('full-opt3')">
+                Option 3: SaaS Split Pane
+            </button>
+        </div>
+
+        <div class="master-actions">
+            <a href="login.php" class="action-pill" target="_blank" title="Open current live login screen">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                View Current Live Login
+            </a>
+        </div>
+    </header>
+
+    <!-- INTRO DIAGNOSTIC CARD -->
+    <div class="intro-banner">
+        <div class="diagnostic-card">
+            <div class="diag-left">
+                <div class="diag-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                </div>
+                <div class="diag-content">
+                    <h3>Design Harmonization: Bringing Activity BI Brand Identity to Authentication</h3>
+                    <p>
+                        The current live login screen still uses legacy 2018 purple-lavender gradients (<code>#667eea &rarr; #764ba2</code>), an old chart icon, and an unformatted default credentials warning. This mockup applies the official <strong>Concept 2 HexaMetrics vector line logo</strong>, <strong>Inter typography</strong>, and <strong>Activity Midnight design tokens</strong> for a unified executive feel.
+                    </p>
+                </div>
+            </div>
+            <div class="diag-tags">
+                <span class="diag-tag red">Legacy: Purple Gradient & Chart Icon</span>
+                <span class="diag-tag green">New: Vector HexaMetrics & Indigo Midnight</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN WRAPPER -->
+    <main class="main-container">
+
+        <!-- =========================================================
+             VIEW 1: SIDE BY SIDE COMPARISON (ALL 3 OPTIONS)
+             ========================================================= -->
+        <section id="view-comparison" class="view-section active">
+            <div class="compare-grid">
+
+                <!-- OPTION 1 CARD -->
+                <div class="compare-card featured">
+                    <span class="card-header-badge">Recommended</span>
+                    <div class="card-meta-bar">
+                        <div class="card-opt-num">OPTION 01</div>
+                        <h4 class="card-title">Midnight Executive (Dark Glass)</h4>
+                        <p class="card-desc">Matches the application sidebar (<code>#0b1121</code>). Radial indigo glow, frosted glassmorphism card, and clean credentials drawer.</p>
+                    </div>
+
+                    <div class="card-preview-viewport">
+                        <div class="stage-opt1">
+                            <div class="login-box-opt1">
+                                <div class="logo-icon-wrap">
+                                    <svg class="brand-logo-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5"></path>
+                                        <path d="M2 12l10 5 10-5"></path>
+                                    </svg>
+                                </div>
+                                <div class="brand-heading-wrap">
+                                    <span class="brand-text">ACTIVITY</span>
+                                    <span class="brand-badge">BI</span>
+                                </div>
+                                <div class="brand-subtitle">Sales Intelligence & Governance</div>
+
+                                <form onsubmit="event.preventDefault(); simulateLogin(this, 'opt1');">
+                                    <div class="field-group">
+                                        <label class="field-label">Username</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                            </span>
+                                            <input type="text" class="dark-input" id="opt1-user" placeholder="e.g. admin" value="admin" required autocomplete="username">
+                                        </div>
+                                    </div>
+
+                                    <div class="field-group">
+                                        <label class="field-label">Password</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                            </span>
+                                            <input type="password" class="dark-input" id="opt1-pass" placeholder="••••••••" value="admin123" required autocomplete="current-password">
+                                            <button type="button" class="input-toggle-btn" onclick="togglePass('opt1-pass', this)" title="Toggle password visibility">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn-submit-opt1">
+                                        Sign In to Console
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                    </button>
+
+                                    <!-- Quick Fill Drawer -->
+                                    <div class="cred-drawer">
+                                        <div class="cred-toggle-link" onclick="quickFill('opt1-user', 'opt1-pass')">
+                                            <span>⚡ Quick Fill Demo Credentials</span>
+                                            <span style="font-family: var(--font-mono); font-size: 10px; color: #818cf8;">admin / admin123</span>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPTION 2 CARD -->
+                <div class="compare-card">
+                    <div class="card-meta-bar">
+                        <div class="card-opt-num">OPTION 02</div>
+                        <h4 class="card-title">Corporate Slate Light (60-30-10)</h4>
+                        <p class="card-desc">Follows the corporate standard light theme. Pure white container on subtle slate canvas with high-contrast borders and midnight emblem.</p>
+                    </div>
+
+                    <div class="card-preview-viewport">
+                        <div class="stage-opt2">
+                            <div class="login-box-opt2">
+                                <div class="logo-icon-wrap">
+                                    <svg class="brand-logo-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5"></path>
+                                        <path d="M2 12l10 5 10-5"></path>
+                                    </svg>
+                                </div>
+                                <div class="brand-heading-wrap">
+                                    <span class="brand-text">ACTIVITY</span>
+                                    <span class="brand-badge" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; border-color: rgba(79, 70, 229, 0.25);">BI</span>
+                                </div>
+                                <div class="brand-subtitle">Commercial Intelligence Portal</div>
+
+                                <form onsubmit="event.preventDefault(); simulateLogin(this, 'opt2');">
+                                    <div class="field-group">
+                                        <label class="field-label">Username</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                            </span>
+                                            <input type="text" class="light-input" id="opt2-user" placeholder="e.g. admin" value="admin" required autocomplete="username">
+                                        </div>
+                                    </div>
+
+                                    <div class="field-group">
+                                        <label class="field-label">Password</label>
+                                        <div class="input-wrapper">
+                                            <span class="input-icon">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                            </span>
+                                            <input type="password" class="light-input" id="opt2-pass" placeholder="••••••••" value="admin123" required autocomplete="current-password">
+                                            <button type="button" class="input-toggle-btn" onclick="togglePass('opt2-pass', this)" title="Toggle password visibility">
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn-submit-opt1">
+                                        Sign In to Console
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                    </button>
+
+                                    <!-- Quick Fill Drawer -->
+                                    <div class="cred-drawer">
+                                        <div class="cred-toggle-link" onclick="quickFill('opt2-user', 'opt2-pass')">
+                                            <span>⚡ Quick Fill Demo Credentials</span>
+                                            <span style="font-family: var(--font-mono); font-size: 10px; color: #4f46e5;">admin / admin123</span>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OPTION 3 CARD -->
+                <div class="compare-card">
+                    <div class="card-meta-bar">
+                        <div class="card-opt-num">OPTION 03</div>
+                        <h4 class="card-title">Executive SaaS Split-Pane</h4>
+                        <p class="card-desc">Two-column layout showcasing key platform capabilities (QuickBooks sync, VAT compliance, LTV) next to the authentication card.</p>
+                    </div>
+
+                    <div class="card-preview-viewport">
+                        <div class="stage-opt3">
+                            <div class="split-mockup-card">
+                                <div class="split-left-pane">
+                                    <div>
+                                        <div class="split-header-info">
+                                            <div class="split-icon">
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                                    <path d="M2 17l10 5 10-5"></path>
+                                                    <path d="M2 12l10 5 10-5"></path>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <div style="font-size: 12px; font-weight: 800; color: #ffffff; letter-spacing: 0.04em;">ACTIVITY BI</div>
+                                                <div style="font-size: 9.5px; color: #64748b;">Enterprise Suite</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="split-features-list">
+                                            <div class="split-feat-item">
+                                                <div class="feat-bullet">✓</div>
+                                                <div class="feat-text">
+                                                    <h5>Automated QB Sync</h5>
+                                                    <p>Bi-directional commercial invoice & payment reconciliation.</p>
+                                                </div>
+                                            </div>
+                                            <div class="split-feat-item">
+                                                <div class="feat-bullet">✓</div>
+                                                <div class="feat-text">
+                                                    <h5>18% VAT Governance</h5>
+                                                    <p>Audit-ready split calculation & compliance exports.</p>
+                                                </div>
+                                            </div>
+                                            <div class="split-feat-item">
+                                                <div class="feat-bullet">✓</div>
+                                                <div class="feat-text">
+                                                    <h5>Serial Asset Intelligence</h5>
+                                                    <p>Hardware lifecycle, expiry, and warranty tracking.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mini-stat-bar">
+                                        <span class="mini-stat-label">Indexed Records</span>
+                                        <span class="mini-stat-val">12,418 Invoices</span>
+                                    </div>
+                                </div>
+
+                                <div class="split-right-pane">
+                                    <div style="font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 2px;">Sign In</div>
+                                    <div style="font-size: 11px; color: #64748b; margin-bottom: 16px;">Access management console</div>
+
+                                    <form onsubmit="event.preventDefault(); simulateLogin(this, 'opt3');">
+                                        <div class="field-group" style="margin-bottom: 12px;">
+                                            <label class="field-label" style="font-size: 11px;">Username</label>
+                                            <input type="text" class="dark-input" id="opt3-user" value="admin" style="height: 36px; font-size: 12px; padding: 0 12px;" required>
+                                        </div>
+                                        <div class="field-group" style="margin-bottom: 14px;">
+                                            <label class="field-label" style="font-size: 11px;">Password</label>
+                                            <input type="password" class="dark-input" id="opt3-pass" value="admin123" style="height: 36px; font-size: 12px; padding: 0 12px;" required>
+                                        </div>
+                                        <button type="submit" class="btn-submit-opt1" style="height: 36px; font-size: 12px;">
+                                            Continue
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COMPARISON SPEC TABLE -->
+            <table class="specs-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Feature Element</th>
+                        <th style="width: 25%;">Legacy Login (Current Live)</th>
+                        <th style="width: 25%;">Option 1: Midnight Executive</th>
+                        <th style="width: 25%;">Option 2: Corporate Light</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Brand & Logo</strong></td>
+                        <td>Generic Lucide bar chart icon</td>
+                        <td><span class="pill-badge blue">Concept 2 HexaMetrics SVG</span> + ACTIVITY BI</td>
+                        <td><span class="pill-badge blue">Concept 2 HexaMetrics SVG</span> + ACTIVITY BI</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Background Palette</strong></td>
+                        <td>Old purple-lavender gradient (<code>#667eea</code> &rarr; <code>#764ba2</code>)</td>
+                        <td><span class="pill-badge blue">Midnight Navy (<code>#0b1121</code>)</span> + radial glow</td>
+                        <td><span class="pill-badge green">Slate Canvas (<code>#f1f5f9</code>)</span> with dot matrix</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Card Surface</strong></td>
+                        <td>Standard white box with heavy black shadow</td>
+                        <td>Frosted dark glass (<code>#111827</code> / 88% blur)</td>
+                        <td>Pure white with crisp <code>#cbd5e1</code> borders</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Form Controls</strong></td>
+                        <td>Plain inputs without icons or visibility toggle</td>
+                        <td>Left iconography, focus ring, eye password toggle</td>
+                        <td>Left iconography, focus ring, eye password toggle</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Default Credentials Helper</strong></td>
+                        <td>Harsh, intrusive yellow warning text block</td>
+                        <td><span class="pill-badge green">Sleek 1-click Quick-Fill Drawer</span></td>
+                        <td><span class="pill-badge green">Sleek 1-click Quick-Fill Drawer</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- =========================================================
+             VIEW 2: FULLSCREEN PREVIEW - OPTION 1 (MIDNIGHT EXECUTIVE)
+             ========================================================= -->
+        <section id="view-full-opt1" class="view-section">
+            <div class="fullscreen-stage" style="background: radial-gradient(circle at 50% 30%, #152244 0%, #080d1a 80%);">
+                <div class="login-box-opt1" style="max-width: 380px; padding: 36px 32px;">
+                    <div class="logo-icon-wrap" style="width: 52px; height: 52px; margin-bottom: 16px;">
+                        <svg class="brand-logo-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                    </div>
+                    <div class="brand-heading-wrap" style="gap: 12px; margin-bottom: 8px;">
+                        <span class="brand-text" style="font-size: 22px;">ACTIVITY</span>
+                        <span class="brand-badge" style="font-size: 11px; padding: 2px 7px;">BI</span>
+                    </div>
+                    <div class="brand-subtitle" style="font-size: 13px; margin-bottom: 28px;">Executive Sales Intelligence Dashboard</div>
+
+                    <form onsubmit="event.preventDefault(); simulateLogin(this, 'full1');">
+                        <div class="field-group" style="margin-bottom: 18px;">
+                            <label class="field-label" style="font-size: 12px;">Username</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </span>
+                                <input type="text" class="dark-input" id="full1-user" style="height: 42px;" placeholder="Username" value="admin" required autocomplete="username">
+                            </div>
+                        </div>
+
+                        <div class="field-group" style="margin-bottom: 22px;">
+                            <label class="field-label" style="font-size: 12px;">Password</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <input type="password" class="dark-input" id="full1-pass" style="height: 42px;" placeholder="Password" value="admin123" required autocomplete="current-password">
+                                <button type="button" class="input-toggle-btn" onclick="togglePass('full1-pass', this)">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit-opt1" style="height: 44px; font-size: 14px;">
+                            Sign In to Activity
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+
+                        <div class="cred-drawer">
+                            <div class="cred-toggle-link" onclick="quickFill('full1-user', 'full1-pass')">
+                                <span>⚡ Quick Fill Credentials</span>
+                                <span style="font-family: var(--font-mono); font-size: 11px; color: #818cf8;">admin / admin123</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- =========================================================
+             VIEW 3: FULLSCREEN PREVIEW - OPTION 2 (CORPORATE LIGHT)
+             ========================================================= -->
+        <section id="view-full-opt2" class="view-section">
+            <div class="fullscreen-stage" style="background: #0b1121; background-image: radial-gradient(circle at 50% 25%, rgba(79, 70, 229, 0.18) 0%, transparent 65%);">
+                <div class="login-box-opt2" style="max-width: 380px; padding: 36px 32px; box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);">
+                    <div class="logo-icon-wrap" style="width: 52px; height: 52px; margin-bottom: 16px;">
+                        <svg class="brand-logo-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                    </div>
+                    <div class="brand-heading-wrap" style="gap: 12px; margin-bottom: 8px;">
+                        <span class="brand-text" style="font-size: 22px;">ACTIVITY</span>
+                        <span class="brand-badge" style="font-size: 11px; padding: 2px 7px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; border-color: rgba(79, 70, 229, 0.25);">BI</span>
+                    </div>
+                    <div class="brand-subtitle" style="font-size: 13px; margin-bottom: 28px;">Commercial Intelligence Portal</div>
+
+                    <form onsubmit="event.preventDefault(); simulateLogin(this, 'full2');">
+                        <div class="field-group" style="margin-bottom: 18px;">
+                            <label class="field-label" style="font-size: 12px;">Username</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                </span>
+                                <input type="text" class="light-input" id="full2-user" style="height: 42px;" placeholder="Username" value="admin" required autocomplete="username">
+                            </div>
+                        </div>
+
+                        <div class="field-group" style="margin-bottom: 22px;">
+                            <label class="field-label" style="font-size: 12px;">Password</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                </span>
+                                <input type="password" class="light-input" id="full2-pass" style="height: 42px;" placeholder="Password" value="admin123" required autocomplete="current-password">
+                                <button type="button" class="input-toggle-btn" onclick="togglePass('full2-pass', this)">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit-opt1" style="height: 44px; font-size: 14px;">
+                            Sign In to Activity
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+
+                        <div class="cred-drawer">
+                            <div class="cred-toggle-link" onclick="quickFill('full2-user', 'full2-pass')">
+                                <span>⚡ Quick Fill Credentials</span>
+                                <span style="font-family: var(--font-mono); font-size: 11px; color: #4f46e5;">admin / admin123</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- =========================================================
+             VIEW 4: FULLSCREEN PREVIEW - OPTION 3 (SPLIT PANE)
+             ========================================================= -->
+        <section id="view-full-opt3" class="view-section">
+            <div class="fullscreen-stage" style="background: #080c17;">
+                <div class="split-mockup-card" style="max-width: 820px; min-height: 460px;">
+                    <div class="split-left-pane" style="padding: 40px 36px;">
+                        <div>
+                            <div class="split-header-info" style="gap: 14px; margin-bottom: 30px;">
+                                <div class="split-icon" style="width: 44px; height: 44px; border-radius: 12px;">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                                        <path d="M2 17l10 5 10-5"></path>
+                                        <path d="M2 12l10 5 10-5"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div style="font-size: 17px; font-weight: 800; color: #ffffff; letter-spacing: 0.05em;">ACTIVITY BI</div>
+                                    <div style="font-size: 11px; color: #818cf8; font-weight: 600;">Executive Business Intelligence</div>
+                                </div>
+                            </div>
+
+                            <div class="split-features-list" style="gap: 18px; margin-bottom: 40px;">
+                                <div class="split-feat-item" style="gap: 14px;">
+                                    <div class="feat-bullet" style="width: 22px; height: 22px; font-size: 13px;">✓</div>
+                                    <div class="feat-text">
+                                        <h5 style="font-size: 13px; margin-bottom: 2px;">Real-Time QuickBooks Sync</h5>
+                                        <p style="font-size: 11.5px;">Continuous automated data reconciliation across all sales ledgers.</p>
+                                    </div>
+                                </div>
+                                <div class="split-feat-item" style="gap: 14px;">
+                                    <div class="feat-bullet" style="width: 22px; height: 22px; font-size: 13px;">✓</div>
+                                    <div class="feat-text">
+                                        <h5 style="font-size: 13px; margin-bottom: 2px;">Statutory 18% VAT Governance</h5>
+                                        <p style="font-size: 11.5px;">Accurate tax breakdown, RAMIS-compliant reporting & export audits.</p>
+                                    </div>
+                                </div>
+                                <div class="split-feat-item" style="gap: 14px;">
+                                    <div class="feat-bullet" style="width: 22px; height: 22px; font-size: 13px;">✓</div>
+                                    <div class="feat-text">
+                                        <h5 style="font-size: 13px; margin-bottom: 2px;">Hardware & Warranty Matrix</h5>
+                                        <p style="font-size: 11.5px;">Complete serial number tracking, RMA diagnostics, and expiry alerts.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mini-stat-bar" style="padding: 12px 16px;">
+                            <span class="mini-stat-label" style="font-size: 11px;">Active Commercial Records</span>
+                            <span class="mini-stat-val" style="font-size: 14px;">12,418 Invoices Indexed</span>
+                        </div>
+                    </div>
+
+                    <div class="split-right-pane" style="padding: 40px 32px;">
+                        <div style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px;">Welcome Back</div>
+                        <div style="font-size: 12px; color: #94a3b8; margin-bottom: 26px;">Enter your credentials to enter the console</div>
+
+                        <form onsubmit="event.preventDefault(); simulateLogin(this, 'full3');">
+                            <div class="field-group" style="margin-bottom: 18px;">
+                                <label class="field-label">Username</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    </span>
+                                    <input type="text" class="dark-input" id="full3-user" value="admin" style="height: 42px;" required>
+                                </div>
+                            </div>
+
+                            <div class="field-group" style="margin-bottom: 22px;">
+                                <label class="field-label">Password</label>
+                                <div class="input-wrapper">
+                                    <span class="input-icon">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                    </span>
+                                    <input type="password" class="dark-input" id="full3-pass" value="admin123" style="height: 42px;" required>
+                                    <button type="button" class="input-toggle-btn" onclick="togglePass('full3-pass', this)">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-submit-opt1" style="height: 42px;">
+                                Authenticate & Enter
+                            </button>
+
+                            <div class="cred-drawer">
+                                <div class="cred-toggle-link" onclick="quickFill('full3-user', 'full3-pass')">
+                                    <span>⚡ Quick Fill Credentials</span>
+                                    <span style="font-family: var(--font-mono); font-size: 10px; color: #818cf8;">admin / admin123</span>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- LIVE NOTIFICATION TOAST -->
+    <div id="toastNotify" class="toast-notify">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span id="toastMsg">Simulated Login Successful! Redirecting to index.php...</span>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Tab Switcher
+        function switchView(viewId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+
+            const target = document.getElementById('view-' + viewId);
+            if (target) {
+                target.classList.add('active');
+            }
+
+            // Highlight button
+            event.currentTarget.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Quick Fill Helper
+        function quickFill(userId, passId) {
+            const userEl = document.getElementById(userId);
+            const passEl = document.getElementById(passId);
+            if (userEl && passEl) {
+                userEl.value = 'admin';
+                passEl.value = 'admin123';
+                showToast('Credentials filled: admin / admin123');
+            }
+        }
+
+        // Toggle Password Visibility
+        function togglePass(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+            } else {
+                input.type = 'password';
+                btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+            }
+        }
+
+        // Simulated Login Action
+        function simulateLogin(form, optKey) {
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 0.8s linear infinite;">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                    <path d="M12 2a10 10 0 0 1 10 10"></path>
+                </svg>
+                Authenticating...
+            `;
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('Authentication Verified! Welcome to Activity BI.');
+            }, 900);
+        }
+
+        // Toast Feedback
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toastNotify');
+            const msgEl = document.getElementById('toastMsg');
+            msgEl.textContent = message;
+            if (isError) {
+                toast.classList.add('error');
+            } else {
+                toast.classList.remove('error');
+            }
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+
+    <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+
+</body>
+</html>
