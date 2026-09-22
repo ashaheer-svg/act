@@ -3997,5 +3997,237 @@ class Reports {
             'summary' => $summary
         ];
     }
+
+    /**
+     * Get 360-degree Customer Payment Analytics Profile
+     * Calculates the 7 payment days metrics and 3-year purchase history.
+     */
+    public function getCustomerPaymentProfile($customerName) {
+        $today = date('Y-m-d');
+        
+        // 1. Customer metadata
+        $profile = $this->db->fetch("
+            SELECT customer_name, customer_type, sales_rep, credit_limit, terms
+            FROM customer_profiles
+            WHERE customer_name = ?
+        ", [$customerName]);
+        
+        // 2. Settled invoices for payment days calculations
+        $settled = $this->db->fetchAll("
+            SELECT 
+                invoice_number,
+                MIN(invoice_date) as invoice_date,
+                MAX(paid_date) as paid_date,
+                SUM(total_amount) as invoice_amount,
+                MAX(days_to_pay) as days_to_pay
+            FROM sales
+            WHERE customer_name = ?
+              AND invoice_type = 'Invoice'
+              AND is_paid = 1
+              AND days_to_pay IS NOT NULL
+            GROUP BY invoice_number
+        ", [$customerName]);
+        
+        // 3. Open/unpaid invoices
+        $openInvoices = $this->db->fetchAll("
+            SELECT 
+                invoice_number,
+                MIN(invoice_date) as invoice_date,
+                SUM(total_amount) as invoice_amount,
+                CAST((julianday(?) - julianday(MIN(invoice_date))) AS INT) as aging_days
+            FROM sales
+            WHERE customer_name = ?
+              AND invoice_type = 'Invoice'
+              AND (is_paid = 0 OR is_paid IS NULL)
+              AND total_amount > 0
+            GROUP BY invoice_number
+        ", [$today, $customerName]);
+        
+        // Calculate the 7 Payment Days Calculations
+        $daysList = [];
+        $amountsList = [];
+        $totalSettledAmount = 0;
+        $totalDaysProduct = 0;
+        
+        $twelveMonthsAgo = date('Y-m-d', strtotime('-12 months'));
+        $recentDaysProduct = 0;
+        $recentAmountTotal = 0;
+        
+        foreach ($settled as $inv) {
+            $d = (int)$inv['days_to_pay'];
+            $amt = (float)$inv['invoice_amount'];
+            if ($amt > 0) {
+                $daysList[] = $d;
+                $amountsList[] = $amt;
+                $totalSettledAmount += $amt;
+                $totalDaysProduct += ($d * $amt);
+                
+                if ($inv['invoice_date'] >= $twelveMonthsAgo) {
+                    $recentDaysProduct += ($d * $amt);
+                    $recentAmountTotal += $amt;
+                }
+            }
+        }
+        
+        $settledCount = count($daysList);
+        
+        // 1. Simple Average Days (ADTP)
+        $simpleAvg = $settledCount > 0 ? round(array_sum($daysList) / $settledCount, 1) : 0;
+        
+        // 2. Value-Weighted Average Days (WDTP)
+        $weightedAvg = $totalSettledAmount > 0 ? round($totalDaysProduct / $totalSettledAmount, 1) : 0;
+        
+        // 3. Median Days
+        $medianDays = 0;
+        if ($settledCount > 0) {
+            $sorted = $daysList;
+            sort($sorted);
+            $mid = (int)floor($settledCount / 2);
+            if ($settledCount % 2 === 0) {
+                $medianDays = round(($sorted[$mid - 1] + $sorted[$mid]) / 2, 1);
+            } else {
+                $medianDays = (float)$sorted[$mid];
+            }
+        }
+        
+        // 4. Recent Velocity (Trailing 12-Month Value-Weighted Days)
+        $recentWeightedAvg = $recentAmountTotal > 0 ? round($recentDaysProduct / $recentAmountTotal, 1) : $weightedAvg;
+        
+        // 5. Fastest Turnaround (Min Days)
+        $minDays = $settledCount > 0 ? min($daysList) : 0;
+        
+        // 6. Slowest Settlement (Max Days)
+        $maxDays = $settledCount > 0 ? max($daysList) : 0;
+        
+        // 7. Active Backlog Aging (Average open invoice aging)
+        $openCount = count($openInvoices);
+        $totalOpenAmount = 0;
+        $totalOpenAging = 0;
+        foreach ($openInvoices as $o) {
+            $totalOpenAmount += (float)$o['invoice_amount'];
+            $totalOpenAging += (int)$o['aging_days'];
+        }
+        $openBacklogAvgDays = $openCount > 0 ? round($totalOpenAging / $openCount, 1) : 0;
+        
+        // 4. Yearly Purchases Breakdown for last 3 years + Current YTD
+        $yearlyRows = $this->db->fetchAll("
+            SELECT 
+                strftime('%Y', invoice_date) as year,
+                COUNT(DISTINCT invoice_number) as invoice_count,
+                SUM(total_amount) as total_gross,
+                SUM(CASE WHEN is_paid = 1 THEN total_amount ELSE 0 END) as settled_gross,
+                SUM(CASE WHEN is_paid = 0 OR is_paid IS NULL THEN total_amount ELSE 0 END) as open_gross
+            FROM sales
+            WHERE customer_name = ?
+              AND invoice_type = 'Invoice'
+            GROUP BY strftime('%Y', invoice_date)
+            ORDER BY year DESC
+        ", [$customerName]);
+        
+        $currentYear = (int)date('Y');
+        $targetYears = [$currentYear, $currentYear - 1, $currentYear - 2, $currentYear - 3];
+        
+        $yearlyPurchases = [];
+        $indexedYearly = [];
+        $lifetimeTotal = 0;
+        $lifetimeInvoices = 0;
+        
+        foreach ($yearlyRows as $yr) {
+            $y = (int)$yr['year'];
+            $indexedYearly[$y] = [
+                'year' => (string)$y,
+                'is_ytd' => ($y === $currentYear),
+                'invoice_count' => (int)$yr['invoice_count'],
+                'total_gross' => (float)$yr['total_gross'],
+                'settled_gross' => (float)$yr['settled_gross'],
+                'open_gross' => (float)$yr['open_gross']
+            ];
+            $lifetimeTotal += (float)$yr['total_gross'];
+            $lifetimeInvoices += (int)$yr['invoice_count'];
+        }
+        
+        foreach ($targetYears as $ty) {
+            if (isset($indexedYearly[$ty])) {
+                $yearlyPurchases[] = $indexedYearly[$ty];
+            } else {
+                $yearlyPurchases[] = [
+                    'year' => (string)$ty,
+                    'is_ytd' => ($ty === $currentYear),
+                    'invoice_count' => 0,
+                    'total_gross' => 0.0,
+                    'settled_gross' => 0.0,
+                    'open_gross' => 0.0
+                ];
+            }
+        }
+        
+        return [
+            'customer_name' => $customerName,
+            'customer_type' => $profile['customer_type'] ?? 'Standard Account',
+            'sales_rep' => $profile['sales_rep'] ?? 'Unassigned',
+            'terms' => $profile['terms'] ?? 'Standard Net 30',
+            'settled_invoices_count' => $settledCount,
+            'open_invoices_count' => $openCount,
+            'total_settled_amount' => $totalSettledAmount,
+            'total_open_amount' => $totalOpenAmount,
+            'metrics_7' => [
+                'simple_avg' => [
+                    'label' => 'Simple Average (ADTP)',
+                    'short_label' => 'ADTP',
+                    'days' => $simpleAvg,
+                    'desc' => 'Average calendar turnaround per settled invoice',
+                    'status' => $simpleAvg <= 30 ? 'prompt' : ($simpleAvg <= 60 ? 'moderate' : 'extended')
+                ],
+                'weighted_avg' => [
+                    'label' => 'Value-Weighted Average (WDTP)',
+                    'short_label' => 'WDTP',
+                    'days' => $weightedAvg,
+                    'desc' => 'Turnaround weighted by invoice monetary value',
+                    'status' => $weightedAvg <= 30 ? 'prompt' : ($weightedAvg <= 60 ? 'moderate' : 'extended')
+                ],
+                'median_days' => [
+                    'label' => 'Median Turnaround (50th %ile)',
+                    'short_label' => 'Median',
+                    'days' => $medianDays,
+                    'desc' => 'Exact middle habit; immune to dispute outliers',
+                    'status' => $medianDays <= 30 ? 'prompt' : ($medianDays <= 60 ? 'moderate' : 'extended')
+                ],
+                'recent_weighted' => [
+                    'label' => 'Recent Trailing 12M Velocity',
+                    'short_label' => '12M Trend',
+                    'days' => $recentWeightedAvg,
+                    'desc' => 'Turnaround for invoices in the last 12 months',
+                    'status' => $recentWeightedAvg <= 30 ? 'prompt' : ($recentWeightedAvg <= 60 ? 'moderate' : 'extended')
+                ],
+                'min_days' => [
+                    'label' => 'Fastest Settlement (Best Case)',
+                    'short_label' => 'Min Days',
+                    'days' => $minDays,
+                    'desc' => 'Fastest recorded commercial settlement',
+                    'status' => 'prompt'
+                ],
+                'max_days' => [
+                    'label' => 'Slowest Delay (Tail Risk)',
+                    'short_label' => 'Max Delay',
+                    'days' => $maxDays,
+                    'desc' => 'Longest single payment delay recorded',
+                    'status' => $maxDays > 90 ? 'extended' : ($maxDays > 60 ? 'moderate' : 'prompt')
+                ],
+                'open_backlog_avg' => [
+                    'label' => 'Active Backlog Aging',
+                    'short_label' => 'Open Aging',
+                    'days' => $openBacklogAvgDays,
+                    'desc' => 'Average aging duration of currently unpaid bills',
+                    'status' => $openBacklogAvgDays > 90 ? 'extended' : ($openBacklogAvgDays > 45 ? 'moderate' : 'prompt')
+                ]
+            ],
+            'yearly_purchases' => $yearlyPurchases,
+            'lifetime_summary' => [
+                'total_purchases' => $lifetimeTotal,
+                'total_invoices' => $lifetimeInvoices
+            ]
+        ];
+    }
 }
+
 

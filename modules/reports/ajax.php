@@ -18,6 +18,20 @@ if (isset($_GET['ajax_customer_history'])) {
     exit;
 }
 
+// AJAX Handler for Customer Payment Profile (7 Metrics + 3-Year Purchases)
+if (isset($_GET['ajax_customer_payment_profile'])) {
+    $auth->requireReportAccess('unpaid_invoices');
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json');
+    $name = $_GET['ajax_customer_payment_profile'];
+    try {
+        echo json_encode($reports->getCustomerPaymentProfile($name), JSON_INVALID_UTF8_SUBSTITUTE);
+    } catch (Throwable $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // AJAX Handler for Invoice Details (Full Line Items, Serials, Payments)
 if (isset($_GET['ajax_invoice_details'])) {
     $auth->requireReportAccess('invoices');

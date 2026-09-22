@@ -665,6 +665,37 @@ $summary = $reportData['summary'] ?? ($invoiceSummary ?? ($unpaidSummary ?? ($co
         </div>
     </div>
 
+    <!-- Customer Payment Analytics & Turnaround Modal -->
+    <div id="customerPaymentModalOverlay" class="modal-overlay" onclick="if(event.target === this) closeCustomerPaymentModal()" style="display:none; align-items:flex-start; padding: 30px 15px; overflow-y:auto; z-index:9999;">
+        <div class="modal" style="max-width: 960px; width: 100%; margin: auto; background: #ffffff; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #cbd5e1; overflow:hidden;">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <h2 id="payModalCustomerTitle" style="margin: 0; font-size: 18px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                            <i class="icon-clock" style="color: var(--primary);"></i>
+                            <span id="payModalCustomerName">Customer Analytics</span>
+                        </h2>
+                        <span id="payModalTypeBadge" class="dense-badge" style="background: #e0e7ff; color: #4338ca; font-weight: 700;">Account</span>
+                        <span id="payModalTermsBadge" class="dense-badge" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1;">Terms: Net 30</span>
+                    </div>
+                    <p id="payModalSubtitle" style="color: #64748b; font-size: 12px; margin: 4px 0 0 0;">
+                        360° Historical Payment Turnaround Analysis & 3-Year Purchase Profile
+                    </p>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <a id="payModalDossierLink" href="#" class="btn-view" style="background: #2563eb; color: #ffffff !important; border: 1px solid #2563eb; text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; border-radius: 6px;" target="_blank">
+                        <i class="icon-building-2"></i> Full Dossier
+                    </a>
+                    <button class="modal-close" onclick="closeCustomerPaymentModal()" style="font-size: 24px; line-height: 1; border: none; background: transparent; cursor: pointer; color: #64748b; padding: 2px 6px;">×</button>
+                </div>
+            </div>
+            
+            <div class="modal-body" id="payModalBody" style="padding: 20px;">
+                <!-- Dynamically populated by renderCustomerPaymentModal(data) -->
+            </div>
+        </div>
+    </div>
+
     <script>
         function copyToClipboard(text, btn) {
             if (!text || text === 'UNASSIGNED') return;
@@ -1141,6 +1172,275 @@ $summary = $reportData['summary'] ?? ($invoiceSummary ?? ($unpaidSummary ?? ($co
             document.getElementById('invoiceModalOverlay').style.display = 'none';
         }
 
+        function closeCustomerPaymentModal() {
+            const overlay = document.getElementById('customerPaymentModalOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function openCustomerPaymentModal(customerName) {
+            const overlay = document.getElementById('customerPaymentModalOverlay');
+            const nameSpan = document.getElementById('payModalCustomerName');
+            const typeBadge = document.getElementById('payModalTypeBadge');
+            const termsBadge = document.getElementById('payModalTermsBadge');
+            const subtitle = document.getElementById('payModalSubtitle');
+            const dossierLink = document.getElementById('payModalDossierLink');
+            const body = document.getElementById('payModalBody');
+
+            if (!overlay) return;
+
+            nameSpan.innerText = customerName;
+            typeBadge.innerText = 'Loading...';
+            typeBadge.style.background = '#f1f5f9';
+            typeBadge.style.color = '#64748b';
+            termsBadge.style.display = 'none';
+            subtitle.innerText = 'Fetching 360° payment turnaround history and yearly purchases...';
+            dossierLink.href = 'customer_report.php?name=' + encodeURIComponent(customerName);
+            
+            body.innerHTML = `
+                <div style="text-align: center; padding: 50px 20px;">
+                    <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+                    <p style="margin-top: 15px; color: #64748b; font-size: 13.5px; font-weight: 500;">Computing 7 payment turnaround metrics & 3-year purchase aggregates...</p>
+                </div>
+            `;
+
+            overlay.style.display = 'flex';
+
+            fetch(`reports.php?ajax_customer_payment_profile=${encodeURIComponent(customerName)}`)
+                .then(async r => {
+                    const text = await r.text();
+                    let res;
+                    try {
+                        res = JSON.parse(text);
+                    } catch (e) {
+                        if (text.includes('<!DOCTYPE') || text.includes('<html') || text.includes('login.php')) {
+                            throw new Error('Your session has timed out. Please refresh and log in again.');
+                        }
+                        throw new Error(text.replace(/<[^>]*>?/gm, '').trim().substring(0, 120) || 'Invalid server response');
+                    }
+                    return res;
+                })
+                .then(res => {
+                    if (res.error) {
+                        body.innerHTML = `<div style="text-align: center; padding: 40px; color: #ef4444; font-weight: 600;">${escapeHtml(res.error)}</div>`;
+                        return;
+                    }
+                    renderCustomerPaymentModal(res);
+                })
+                .catch(err => {
+                    body.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: #ef4444;">
+                            <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px;">Failed to Load Payment Profile</div>
+                            <div style="font-size: 12px; color: #64748b;">${escapeHtml(err.message)}</div>
+                        </div>
+                    `;
+                    console.error(err);
+                });
+        }
+
+        function renderCustomerPaymentModal(data) {
+            const typeBadge = document.getElementById('payModalTypeBadge');
+            const termsBadge = document.getElementById('payModalTermsBadge');
+            const subtitle = document.getElementById('payModalSubtitle');
+            const body = document.getElementById('payModalBody');
+
+            if (typeBadge) {
+                typeBadge.innerText = data.customer_type || 'Account';
+                typeBadge.style.background = '#e0e7ff';
+                typeBadge.style.color = '#4338ca';
+            }
+            if (termsBadge) {
+                termsBadge.innerText = 'Terms: ' + (data.terms || 'Net 30');
+                termsBadge.style.display = 'inline-block';
+            }
+            if (subtitle) {
+                const totalGrossStr = new Intl.NumberFormat().format(Math.round(data.lifetime_summary?.total_purchases || 0));
+                const totalInvs = data.lifetime_summary?.total_invoices || 0;
+                subtitle.innerHTML = `Rep: <strong>${escapeHtml(data.sales_rep || 'Unassigned')}</strong> &bull; Lifetime Gross Billed: <strong>LKR ${totalGrossStr}</strong> across <strong>${totalInvs}</strong> invoices`;
+            }
+
+            const nf = new Intl.NumberFormat();
+            const m = data.metrics_7 || {};
+
+            function getDaysDisplay(days, status) {
+                let text = '#15803d';
+                if (status === 'extended' || days > 60) {
+                    text = '#b91c1c';
+                } else if (status === 'moderate' || days > 30) {
+                    text = '#b45309';
+                }
+                return `
+                    <div style="display:flex; align-items:baseline; gap:5px; margin: 4px 0;">
+                        <span style="font-size: 26px; font-weight: 800; color: ${text}; font-family: monospace; letter-spacing: -0.5px;">${days}</span>
+                        <span style="font-size: 13px; font-weight: 700; color: ${text};">days</span>
+                    </div>
+                `;
+            }
+
+            let html = `
+                <!-- High Level Balance Row -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; display:flex; justify-content:space-between;">
+                            <span>Settled Invoices</span>
+                            <span style="color: #10b981; font-weight: 800;">✓ Settled</span>
+                        </div>
+                        <div style="font-size: 18px; font-weight: 800; color: #0f172a;">LKR ${nf.format(Math.round(data.total_settled_amount || 0))}</div>
+                        <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">${data.settled_invoices_count || 0} historical settled bills</div>
+                    </div>
+
+                    <div style="background: #fff7ed; border: 1px solid #ffedd5; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #c2410c; margin-bottom: 4px; display:flex; justify-content:space-between;">
+                            <span>Active Open Receivables</span>
+                            <span style="color: #ea580c; font-weight: 800;">⏳ Open</span>
+                        </div>
+                        <div style="font-size: 18px; font-weight: 800; color: #c2410c;">LKR ${nf.format(Math.round(data.total_open_amount || 0))}</div>
+                        <div style="font-size: 11.5px; color: #9a3412; margin-top: 2px;">${data.open_invoices_count || 0} bills currently awaiting payment</div>
+                    </div>
+
+                    <div style="background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px; padding: 12px 14px;">
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #15803d; margin-bottom: 4px; display:flex; justify-content:space-between;">
+                            <span>Commercial Status</span>
+                            <span style="color: #16a34a; font-weight: 800;">Profile</span>
+                        </div>
+                        <div style="font-size: 15px; font-weight: 700; color: #166534; margin-top: 2px;">${escapeHtml(data.terms || 'Standard Net 30')}</div>
+                        <div style="font-size: 11.5px; color: #15803d; margin-top: 3px;">Weighted turnaround: <strong>${m.weighted_avg ? m.weighted_avg.days + ' days' : 'N/A'}</strong></div>
+                    </div>
+                </div>
+
+                <!-- Section 1: The 7 Payment Days Calculations -->
+                <div style="margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                        <h3 style="margin: 0; font-size: 13.5px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                            <i class="icon-activity" style="color: #2563eb;"></i> The 7 Payment Days Calculations
+                        </h3>
+                        <span style="font-size: 11px; color: #64748b; font-weight: 500;">Based on ${data.settled_invoices_count || 0} settled transactions</span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 10px;">
+            `;
+
+            const metricsConfig = [
+                { key: 'weighted_avg', badge: 'Core Cash Flow', highlight: true },
+                { key: 'simple_avg', badge: 'Arithmetic', highlight: false },
+                { key: 'median_days', badge: 'Dispute Proof', highlight: false },
+                { key: 'recent_weighted', badge: 'Trailing 12M', highlight: true },
+                { key: 'min_days', badge: 'Best Case', highlight: false },
+                { key: 'max_days', badge: 'Tail Risk', highlight: false },
+                { key: 'open_backlog_avg', badge: 'Current Unpaid', highlight: false }
+            ];
+
+            metricsConfig.forEach(cfg => {
+                const item = m[cfg.key];
+                if (!item) return;
+                const isHighlight = cfg.highlight;
+                html += `
+                    <div style="background: ${isHighlight ? '#f5f3ff' : '#ffffff'}; border: 1px solid ${isHighlight ? '#c4b5fd' : '#e2e8f0'}; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                                <span style="font-size: 10.5px; font-weight: 700; color: ${isHighlight ? '#6d28d9' : '#475569'}; text-transform: uppercase;">${escapeHtml(item.short_label || '')}</span>
+                                <span style="font-size: 9.5px; padding: 2px 6px; border-radius: 4px; background: ${isHighlight ? '#ede9fe' : '#f1f5f9'}; color: ${isHighlight ? '#5b21b6' : '#64748b'}; font-weight: 700;">${cfg.badge}</span>
+                            </div>
+                            <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 4px; line-height: 1.3;">${escapeHtml(item.label)}</div>
+                            ${getDaysDisplay(item.days, item.status)}
+                        </div>
+                        <div style="font-size: 10.5px; color: #64748b; margin-top: 6px; border-top: 1px dashed #e2e8f0; padding-top: 6px; line-height: 1.35;">
+                            ${escapeHtml(item.desc)}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+
+                <!-- Section 2: Yearly Purchases Breakdown for Last 3 Years + YTD -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                        <h3 style="margin: 0; font-size: 13.5px; font-weight: 800; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                            <i class="icon-calendar" style="color: #2563eb;"></i> Yearly Total Purchases (Last 3 Years + Current YTD)
+                        </h3>
+                        <span style="font-size: 11px; color: #64748b; font-weight: 500;">Billed Gross Revenue & Settlement Rate</span>
+                    </div>
+
+                    <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                            <thead>
+                                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 10.5px;">
+                                    <th style="padding: 10px 14px;">Fiscal / Calendar Year</th>
+                                    <th style="padding: 10px 14px; text-align: center;">Invoices</th>
+                                    <th style="padding: 10px 14px; text-align: right;">Total Gross Billed</th>
+                                    <th style="padding: 10px 14px; text-align: right;">Settled Amount</th>
+                                    <th style="padding: 10px 14px; text-align: right;">Currently Open</th>
+                                    <th style="padding: 10px 14px; text-align: center; width: 140px;">Collection Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            const yearly = data.yearly_purchases || [];
+            let sumTotal = 0, sumSettled = 0, sumOpen = 0, sumInvoices = 0;
+
+            if (yearly.length === 0) {
+                html += `<tr><td colspan="6" style="padding: 24px; text-align: center; color: #64748b;">No billing records found for this period.</td></tr>`;
+            } else {
+                yearly.forEach(yr => {
+                    sumTotal += yr.total_gross;
+                    sumSettled += yr.settled_gross;
+                    sumOpen += yr.open_gross;
+                    sumInvoices += yr.invoice_count;
+
+                    const rate = yr.total_gross > 0 ? Math.round((yr.settled_gross / yr.total_gross) * 100) : 0;
+                    const rateColor = rate >= 90 ? '#10b981' : (rate >= 50 ? '#f59e0b' : '#ef4444');
+
+                    html += `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 14px; font-weight: 700; color: #0f172a;">
+                                ${yr.year}
+                                ${yr.is_ytd ? '<span class="dense-badge" style="background:#e0f2fe; color:#0369a1; margin-left:6px; font-size:9.5px; padding:1px 5px;">Current YTD</span>' : ''}
+                            </td>
+                            <td style="padding: 10px 14px; text-align: center; font-weight: 600; color: #334155;">${yr.invoice_count}</td>
+                            <td style="padding: 10px 14px; text-align: right; font-weight: 800; color: #0f172a; font-family: monospace;">LKR ${nf.format(Math.round(yr.total_gross))}</td>
+                            <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: #16a34a; font-family: monospace;">LKR ${nf.format(Math.round(yr.settled_gross))}</td>
+                            <td style="padding: 10px 14px; text-align: right; font-weight: 700; color: ${yr.open_gross > 0 ? '#ea580c' : '#94a3b8'}; font-family: monospace;">LKR ${nf.format(Math.round(yr.open_gross))}</td>
+                            <td style="padding: 10px 14px; text-align: center;">
+                                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; max-width: 60px;">
+                                        <div style="width: ${rate}%; height: 100%; background: ${rateColor}; border-radius: 3px;"></div>
+                                    </div>
+                                    <span style="font-weight: 700; color: ${rateColor}; font-size: 11px; width: 34px; text-align: right;">${rate}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const overallRate = sumTotal > 0 ? Math.round((sumSettled / sumTotal) * 100) : 0;
+            const overallColor = overallRate >= 90 ? '#10b981' : (overallRate >= 50 ? '#f59e0b' : '#ef4444');
+
+            html += `
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 800;">
+                                    <td style="padding: 12px 14px; color: #0f172a;">Total (Analyzed 4-Year Period)</td>
+                                    <td style="padding: 12px 14px; text-align: center; color: #0f172a;">${sumInvoices}</td>
+                                    <td style="padding: 12px 14px; text-align: right; color: #0f172a; font-family: monospace;">LKR ${nf.format(Math.round(sumTotal))}</td>
+                                    <td style="padding: 12px 14px; text-align: right; color: #16a34a; font-family: monospace;">LKR ${nf.format(Math.round(sumSettled))}</td>
+                                    <td style="padding: 12px 14px; text-align: right; color: #ea580c; font-family: monospace;">LKR ${nf.format(Math.round(sumOpen))}</td>
+                                    <td style="padding: 12px 14px; text-align: center;">
+                                        <span style="font-weight: 800; color: ${overallColor}; font-size: 12px;">${overallRate}% Overall</span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            body.innerHTML = html;
+        }
+
         function escapeHtml(text) {
             if (!text) return '';
             const map = {
@@ -1158,6 +1458,7 @@ $summary = $reportData['summary'] ?? ($invoiceSummary ?? ($unpaidSummary ?? ($co
                 closeDrawer();
                 closeInvoiceDetails();
                 closeCustomerDetails();
+                closeCustomerPaymentModal();
             }
         });
 

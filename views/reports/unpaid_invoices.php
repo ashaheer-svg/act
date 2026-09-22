@@ -135,6 +135,9 @@
                                     <span class="dense-badge" style="background: #e0e7ff; color: #4338ca;">
                                         <?php echo htmlspecialchars($cust['customer_type']); ?>
                                     </span>
+                                    <button type="button" class="btn-customer-payment-days" onclick="openCustomerPaymentModal('<?php echo htmlspecialchars(addslashes($cust['customer_name'])); ?>')" title="View 7 payment turnaround metrics & 3-year purchase history">
+                                        <i class="icon-clock" style="font-size: 11px;"></i> Payment Days
+                                    </button>
                                     <?php if (!empty($cust['rep_name'])): ?>
                                         <span style="font-size: 10.5px; color: #64748b;">
                                             Rep: <strong style="color: #334155;"><?php echo htmlspecialchars($cust['rep_name']); ?></strong>
@@ -234,4 +237,33 @@
                         ?>
                     <?php endif; ?>
                 </div>
+
+                <style>
+                .btn-customer-payment-days {
+                    background: #eef2ff;
+                    border: 1px solid #c7d2fe;
+                    color: #4338ca;
+                    padding: 2px 7px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    transition: all 0.15s ease;
+                    text-decoration: none;
+                    line-height: 1.4;
+                }
+                .btn-customer-payment-days:hover {
+                    background: #4f46e5;
+                    border-color: #4f46e5;
+                    color: #ffffff;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+                }
+                .btn-customer-payment-days i {
+                    font-size: 11px;
+                }
+                </style>
 
