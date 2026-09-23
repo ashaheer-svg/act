@@ -4023,12 +4023,18 @@ class Reports {
             FROM sales
             WHERE customer_name = ?
               AND invoice_type = 'Invoice'
-              AND is_paid = 1
+              AND (
+                  is_paid = 1
+                  OR (paid_date IS NOT NULL AND paid_date != '')
+                  OR (balance_remaining IS NOT NULL AND balance_remaining <= 0.01)
+                  OR invoice_date <= '2021-12-31'
+              )
               AND days_to_pay IS NOT NULL
+              AND days_to_pay >= 0
             GROUP BY invoice_number
         ", [$customerName]);
         
-        // 3. Open/unpaid invoices
+        // 3. Open/unpaid invoices (strictly aligned with Unpaid Invoices Ledger rules)
         $openInvoices = $this->db->fetchAll("
             SELECT 
                 invoice_number,
@@ -4038,8 +4044,11 @@ class Reports {
             FROM sales
             WHERE customer_name = ?
               AND invoice_type = 'Invoice'
+              AND (paid_date IS NULL OR paid_date = '')
               AND (is_paid = 0 OR is_paid IS NULL)
+              AND (balance_remaining IS NULL OR balance_remaining > 0.01)
               AND total_amount > 0
+              AND invoice_date > '2021-12-31'
             GROUP BY invoice_number
         ", [$today, $customerName]);
         
@@ -4115,8 +4124,24 @@ class Reports {
                 strftime('%Y', invoice_date) as year,
                 COUNT(DISTINCT invoice_number) as invoice_count,
                 SUM(total_amount) as total_gross,
-                SUM(CASE WHEN is_paid = 1 THEN total_amount ELSE 0 END) as settled_gross,
-                SUM(CASE WHEN is_paid = 0 OR is_paid IS NULL THEN total_amount ELSE 0 END) as open_gross
+                SUM(CASE 
+                    WHEN (
+                        (paid_date IS NULL OR paid_date = '') 
+                        AND (is_paid = 0 OR is_paid IS NULL) 
+                        AND (balance_remaining IS NULL OR balance_remaining > 0.01) 
+                        AND invoice_date > '2021-12-31'
+                    ) THEN total_amount 
+                    ELSE 0 
+                END) as open_gross,
+                SUM(CASE 
+                    WHEN NOT (
+                        (paid_date IS NULL OR paid_date = '') 
+                        AND (is_paid = 0 OR is_paid IS NULL) 
+                        AND (balance_remaining IS NULL OR balance_remaining > 0.01) 
+                        AND invoice_date > '2021-12-31'
+                    ) THEN total_amount 
+                    ELSE 0 
+                END) as settled_gross
             FROM sales
             WHERE customer_name = ?
               AND invoice_type = 'Invoice'
