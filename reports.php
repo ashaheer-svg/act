@@ -283,6 +283,7 @@ $summary = $reportData['summary'] ?? ($invoiceSummary ?? ($unpaidSummary ?? ($co
                                     <?php if ($auth->canAccessReport('brand_growth')): ?><option value="brand_growth" <?php echo $type === 'brand_growth' ? 'selected' : ''; ?>>Brand & Category Performance</option><?php endif; ?>
                                     <?php if ($auth->canAccessReport('dso_trends')): ?><option value="dso_trends" <?php echo $type === 'dso_trends' ? 'selected' : ''; ?>>DSO Trends</option><?php endif; ?>
                                     <?php if ($auth->canAccessReport('tax_audit')): ?><option value="tax_audit" <?php echo $type === 'tax_audit' ? 'selected' : ''; ?>>Tax & IRD Audit (18%)</option><?php endif; ?>
+                                    <?php if ($auth->canAccessReport('unlinked_payments')): ?><option value="unlinked_payments" <?php echo $type === 'unlinked_payments' ? 'selected' : ''; ?>>Unlinked Payments Audit</option><?php endif; ?>
                                 </optgroup>
                                 <optgroup label="── Temporarily Archived Reports ──">
                                     <?php if ($auth->canAccessReport('renewals')): ?><option value="renewals" <?php echo $type === 'renewals' ? 'selected' : ''; ?>>SaaS Renewals (Archived)</option><?php endif; ?>
@@ -541,7 +542,7 @@ $summary = $reportData['summary'] ?? ($invoiceSummary ?? ($unpaidSummary ?? ($co
                             <i class="icon-file-text"></i> PDF
                         </button>
                         <?php 
-                        $activeReportsList = ['monthly', 'invoices', 'unpaid_invoices', 'warranties', 'ltv', 'churn', 'eol', 'contracts', 'rental_roi', 'brand_growth', 'dso_trends', 'tax_audit'];
+                        $activeReportsList = ['monthly', 'invoices', 'unpaid_invoices', 'warranties', 'ltv', 'churn', 'eol', 'contracts', 'rental_roi', 'brand_growth', 'dso_trends', 'tax_audit', 'unlinked_payments'];
                         if (in_array($type, $activeReportsList)): 
                             if ($type === 'monthly') {
                                 $csvUrl = "reports.php?type=monthly&export=csv&mode=" . urlencode($monthlyMode ?? 'rolling') . "&year=" . urlencode($selectedYear ?? $year);
@@ -580,7 +581,7 @@ $summary = $reportData['summary'] ?? ($invoiceSummary ?? ($unpaidSummary ?? ($co
                 </div>
             </div>
             <?php 
-            $activeTypes = ['monthly', 'invoices', 'unpaid_invoices', 'warranties', 'ltv', 'churn', 'eol', 'contracts', 'rental_roi', 'brand_growth', 'dso_trends', 'tax_audit'];
+            $activeTypes = ['monthly', 'invoices', 'unpaid_invoices', 'warranties', 'ltv', 'churn', 'eol', 'contracts', 'rental_roi', 'brand_growth', 'dso_trends', 'tax_audit', 'unlinked_payments'];
             if (!in_array($type, $activeTypes)): 
             ?>
                 <div style="background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #92400e;">

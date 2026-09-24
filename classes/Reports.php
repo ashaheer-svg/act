@@ -4253,6 +4253,82 @@ class Reports {
             ]
         ];
     }
+
+    /**
+     * Unlinked Payments Audit Ledger
+     * Retrieves all customer payment receipts recorded without direct commercial invoice link.
+     */
+    public function getUnlinkedPaymentsReport($filters = [], $page = 1, $limit = 50) {
+        $whereConditions = ["(invoice_num IS NULL OR invoice_num = '')"];
+        $params = [];
+
+        if (!empty($filters['search'])) {
+            $wild = '%' . trim($filters['search']) . '%';
+            $whereConditions[] = "(customer_name LIKE ? OR reference_num LIKE ? OR memo LIKE ?)";
+            $params[] = $wild;
+            $params[] = $wild;
+            $params[] = $wild;
+        }
+
+        if (!empty($filters['year']) && $filters['year'] !== 'all') {
+            $whereConditions[] = "strftime('%Y', payment_date) = ?";
+            $params[] = (string)$filters['year'];
+        }
+
+        $whereSql = "WHERE " . implode(" AND ", $whereConditions);
+
+        // Summary KPI
+        $summary = $this->db->fetch("
+            SELECT 
+                COUNT(*) as total_count,
+                COALESCE(SUM(amount), 0) as total_amount,
+                COUNT(DISTINCT customer_name) as distinct_customers,
+                MIN(payment_date) as earliest_date,
+                MAX(payment_date) as latest_date
+            FROM payments
+            $whereSql
+        ", $params);
+
+        // Overall total for pagination
+        $total = (int)($summary['total_count'] ?? 0);
+        $pages = max(1, (int)ceil($total / $limit));
+        $offset = ($page - 1) * $limit;
+
+        $rows = $this->db->fetchAll("
+            SELECT 
+                id,
+                payment_date,
+                customer_name,
+                reference_num,
+                amount,
+                payment_method,
+                deposit_account,
+                memo,
+                created_at
+            FROM payments
+            $whereSql
+            ORDER BY payment_date DESC, id DESC
+            LIMIT ? OFFSET ?
+        ", array_merge($params, [$limit, $offset]));
+
+        // Available years for dropdown
+        $yearRows = $this->db->fetchAll("
+            SELECT DISTINCT strftime('%Y', payment_date) as yr
+            FROM payments
+            WHERE (invoice_num IS NULL OR invoice_num = '') AND payment_date IS NOT NULL
+            ORDER BY yr DESC
+        ");
+        $availableYears = array_filter(array_column($yearRows, 'yr'));
+
+        return [
+            'rows' => $rows,
+            'total' => $total,
+            'pages' => $pages,
+            'summary' => $summary,
+            'available_years' => $availableYears
+        ];
+    }
 }
+
 
 

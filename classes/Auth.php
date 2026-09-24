@@ -459,6 +459,16 @@ class Auth {
                 'url' => 'reports.php?type=tax_audit',
                 'default_roles' => ['admin', 'accounts']
             ],
+            'unlinked_payments' => [
+                'key' => 'unlinked_payments',
+                'name' => 'Unlinked Payments Audit',
+                'category' => 'analytics',
+                'category_label' => 'Analytics & BI',
+                'desc' => 'Audit customer bank receipts and cheque credits unallocated to invoices',
+                'icon' => 'icon-link-2',
+                'url' => 'reports.php?type=unlinked_payments',
+                'default_roles' => ['admin', 'accounts']
+            ],
 
             // Operations & Tools
             'profit_entry' => [
@@ -810,7 +820,7 @@ class Auth {
                 $allowedKeys = [];
                 break;
             case 'finance':
-                $allowedKeys = ['invoices', 'edit_invoices', 'unpaid_invoices', 'tax_audit', 'dso_trends', 'profit_entry', 'vat_review', 'customers', 'customer_report', 'aging', 'credit', 'upload'];
+                $allowedKeys = ['invoices', 'edit_invoices', 'unpaid_invoices', 'tax_audit', 'unlinked_payments', 'dso_trends', 'profit_entry', 'vat_review', 'customers', 'customer_report', 'aging', 'credit', 'upload'];
                 break;
             case 'sales':
                 $allowedKeys = ['invoices', 'warranties', 'monthly_overview', 'monthly_customer', 'monthly_rep', 'contracts', 'brand_growth', 'customers', 'customer_report', 'eol'];
