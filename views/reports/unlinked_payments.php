@@ -193,12 +193,11 @@ if (!defined('DATABASE_PATH')) {
 </div>
 
 <!-- Pagination -->
-<?php if ($unlinkedPages > 1): ?>
+<?php if ($unlinkedPages > 1 || $unlinkedTotal > 0): ?>
     <div style="margin-top: 20px;">
-        <?php renderReportPagination($p, $unlinkedPages, $unlinkedTotal, $limit, $isAll, [
-            'type' => 'unlinked_payments',
-            'search' => $search,
-            'year' => $filterYear
-        ]); ?>
+        <?php 
+        $unlinkedBaseUrl = "reports.php?type=unlinked_payments&search=" . urlencode($search) . "&year=" . urlencode($filterYear);
+        echo renderPaginationRail($p, $unlinkedPages, $unlinkedTotal, $limit, $unlinkedBaseUrl, 'receipts'); 
+        ?>
     </div>
 <?php endif; ?>
